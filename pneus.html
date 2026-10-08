@@ -276,14 +276,14 @@ function mostrarIndices(m){
   const gc=$("cargas");gc.innerHTML="";$("carga").value="";
   const sug=CARGA[m]||[];
   sug.forEach((v,i)=>{const xl=sug.length===2&&i===1;const b=chip(String(v),sug.length===2?(xl?"XL":"normal"):"comercial");
-    b.onclick=()=>{carga=String(v);marcar(gc,b);$("carga").hidden=true;if(sug.length===2&&xl)escolherRef("XL");irPara("f-vel");};gc.appendChild(b);});
+    b.onclick=()=>{carga=String(v);marcar(gc,b);$("carga").hidden=true;if(sug.length===2&&xl)escolherRef("XL");};gc.appendChild(b);});
   const o=chip(sug.length?"Outro":"Escrever",null,true);o.onclick=()=>{carga=OUTRO;marcar(gc,o);$("carga").hidden=false;$("carga").focus();};gc.appendChild(o);
   $("carga").hidden=true;
   if(!sug.length){carga=OUTRO;marcar(gc,o);$("carga").hidden=false;}
   const gv=$("vels");gv.innerHTML="";
   const prim=[...new Set(tiposAtuais.flatMap(t=>VEL[t]||[]))];
   const lista=prim.length?[...VEL_TODAS.filter(v=>prim.includes(v)),...VEL_TODAS.filter(v=>!prim.includes(v))]:VEL_TODAS;
-  lista.forEach(v=>{const b=chip(v,prim.includes(v)?"comum":null,!prim.includes(v)&&prim.length>0);b.onclick=()=>{vel=v;marcar(gv,b);irPara("f-ref");};gv.appendChild(b);});
+  lista.forEach(v=>{const b=chip(v,prim.includes(v)?"comum":null,!prim.includes(v)&&prim.length>0);b.onclick=()=>{vel=v;marcar(gv,b);};gv.appendChild(b);});
   const gr=$("refs");gr.innerHTML="";
   [["TL","sem câmara"],["XL","reforçado"]].forEach(([v,t])=>{const b=chip(v,t);b.dataset.v=v;b.onclick=()=>escolherRef(ref===v?"":v);gr.appendChild(b);});
   ["f-carga","f-vel","f-ref"].forEach(i=>$(i).hidden=false);
