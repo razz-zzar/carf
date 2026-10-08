@@ -43,8 +43,10 @@ h1{font:700 34px/1.1 var(--display);letter-spacing:.06em;text-transform:uppercas
 <script>
 /* Para juntar uma nova aplicação ao hub, acrescentar uma linha a esta lista. */
 const ICONE_PNEU='<svg width="48" height="48" viewBox="0 0 48 48" aria-hidden="true" fill="none" stroke="#B9D406" stroke-linecap="round"><circle cx="24" cy="24" r="18" stroke-width="7"/><circle cx="24" cy="24" r="9.5" stroke-width="2.5"/><path stroke-width="2.2" d="M24 24V14.5M24 24l9-2.8M24 24l5.3 7.3M24 24l-5.3 7.3M24 24l-9-2.8"/><circle cx="24" cy="24" r="2.6" fill="#B9D406" stroke="none"/></svg>';
+const ICONE_CHEGADA='<svg width="48" height="48" viewBox="0 0 48 48" aria-hidden="true" fill="none" stroke="#B9D406" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14h22v18H4zM26 20h8l6 6v6H26z"/><circle cx="12" cy="34" r="3.5" fill="#0a0a0a"/><circle cx="33" cy="34" r="3.5" fill="#0a0a0a"/><path d="M10 23l4 4 7-8"/></svg>';
 const APPS=[
-  {nome:"Pneus em Falta",desc:"Registo de pneus em armazém por volta e guia",href:"pneus.html",icone:ICONE_PNEU}
+  {nome:"Pneus em Falta",desc:"Registo de pneus em armazém por volta e guia",href:"pneus.html",icone:ICONE_PNEU},
+  {nome:"Registo de Chegadas",desc:"Hora de chegada de cada volta",href:"chegadas.html",icone:ICONE_CHEGADA}
 ];
 const el=document.getElementById("apps");
 APPS.forEach(a=>{
