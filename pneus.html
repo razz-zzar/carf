@@ -155,10 +155,12 @@ input.mono{font-family:var(--mono);letter-spacing:.02em}
     <div class="field" id="f-vel" hidden>
       <span class="lbl" id="l-vel">Índice de velocidade</span>
       <div class="chips sizes" id="vels" role="group" aria-labelledby="l-vel"></div>
+      <input type="text" id="velOutra" class="mono" maxlength="3" autocapitalize="characters" autocomplete="off" placeholder="ex. W" hidden aria-labelledby="l-vel">
     </div>
     <div class="field" id="f-ref" hidden>
       <span class="lbl" id="l-ref">XL ou TL (opcional)</span>
       <div class="chips" id="refs" role="group" aria-labelledby="l-ref"></div>
+      <input type="text" id="refOutra" class="mono" maxlength="12" autocapitalize="characters" autocomplete="off" placeholder="ex. RF" hidden aria-labelledby="l-ref">
     </div>
     </div>
     <div class="btns">
@@ -268,8 +270,8 @@ const CATALOGO={
   "Linglong":[["Green-Max HP010","C"],["Sport Master","D"],["Green-Max All Season","T"]]
 };
 /* Opções acrescentadas pelo utilizador em "Outra marca / modelo / medida / índice": ficam guardadas neste telemóvel */
-let CUST={marcas:[],modelos:{},medidas:[],cargas:{}};
-try{const c=JSON.parse(localStorage.getItem("pneus_opcoes")||"{}");CUST={marcas:c.marcas||[],modelos:c.modelos||{},medidas:c.medidas||[],cargas:c.cargas||{}};}catch(e){}
+let CUST={marcas:[],modelos:{},medidas:[],cargas:{},vels:[],refs:[]};
+try{const c=JSON.parse(localStorage.getItem("pneus_opcoes")||"{}");CUST={marcas:c.marcas||[],modelos:c.modelos||{},medidas:c.medidas||[],cargas:c.cargas||{},vels:c.vels||[],refs:c.refs||[]};}catch(e){}
 function gravarCust(){try{localStorage.setItem("pneus_opcoes",JSON.stringify(CUST));return true}catch(e){return false}}
 const igual=(a,b)=>String(a).toLowerCase()===String(b).toLowerCase();
 const chaveMed=m=>String(m||"").toUpperCase().replace(/\s+/g,"");
@@ -285,6 +287,8 @@ function memorizar(p,fl){
   if(fl.medida&&p.medida){const ja=[...Object.values(MED).flat(),...CUST.medidas];if(!ja.some(k=>igual(k,p.medida))){CUST.medidas.push(p.medida);mudou=true;}}
   if(fl.carga&&p.carga&&p.medida){const k=chaveMed(p.medida),ja=[...(CARGA[p.medida]||[]).map(String),...(CUST.cargas[k]||[])];
     if(!ja.includes(String(p.carga))){(CUST.cargas[k]=CUST.cargas[k]||[]).push(String(p.carga));mudou=true;}}
+  if(fl.vel&&p.vel&&!VEL_TODAS.includes(p.vel)&&!CUST.vels.includes(p.vel)){CUST.vels.push(p.vel);mudou=true;}
+  if(fl.ref&&p.ref&&!["TL","XL"].includes(p.ref)&&!CUST.refs.includes(p.ref)){CUST.refs.push(p.ref);mudou=true;}
   if(mudou)gravarCust();
   return mudou;
 }
@@ -312,13 +316,18 @@ function mostrarIndices(m){
   const gv=$("vels");gv.innerHTML="";
   const prim=[...new Set(tiposAtuais.flatMap(t=>VEL[t]||[]))];
   const lista=prim.length?[...VEL_TODAS.filter(v=>prim.includes(v)),...VEL_TODAS.filter(v=>!prim.includes(v))]:VEL_TODAS;
-  lista.forEach(v=>{const b=chip(v,prim.includes(v)?"comum":null,!prim.includes(v)&&prim.length>0);b.onclick=()=>{vel=v;marcar(gv,b);};gv.appendChild(b);});
+  $("velOutra").hidden=true;$("velOutra").value="";
+  lista.forEach(v=>{const b=chip(v,prim.includes(v)?"comum":null,!prim.includes(v)&&prim.length>0);b.onclick=()=>{vel=v;marcar(gv,b);$("velOutra").hidden=true;};gv.appendChild(b);});
+  CUST.vels.filter(v=>!lista.includes(v)).forEach(v=>{const b=chip(v,"guardado");b.onclick=()=>{vel=v;marcar(gv,b);$("velOutra").hidden=true;};gv.appendChild(b);});
+  const ov=chip("Outro",null,true);ov.onclick=()=>{vel=OUTRO;marcar(gv,ov);$("velOutra").hidden=false;$("velOutra").focus();};gv.appendChild(ov);
   const gr=$("refs");gr.innerHTML="";
-  [["TL","sem câmara"],["XL","reforçado"]].forEach(([v,t])=>{const b=chip(v,t);b.dataset.v=v;b.onclick=()=>escolherRef(ref===v?"":v);gr.appendChild(b);});
+  $("refOutra").hidden=true;$("refOutra").value="";
+  [["TL","sem câmara"],["XL","reforçado"],...CUST.refs.filter(v=>v!=="TL"&&v!=="XL").map(v=>[v,"guardado"])].forEach(([v,t])=>{const b=chip(v,t);b.dataset.v=v;b.onclick=()=>escolherRef(ref===v?"":v);gr.appendChild(b);});
+  const orf=chip("Outro",null,true);orf.dataset.v=OUTRO;orf.onclick=()=>{if(ref===OUTRO){escolherRef("");}else{escolherRef(OUTRO);$("refOutra").focus();}};gr.appendChild(orf);
   ["f-carga","f-vel","f-ref"].forEach(i=>$(i).hidden=false);
 }
-function escolherRef(v){ref=v;$("refs").querySelectorAll(".chip").forEach(c=>c.setAttribute("aria-pressed",c.dataset.v===v?"true":"false"));}
-function esconderIndices(){carga="";vel="";ref="";["f-carga","f-vel","f-ref"].forEach(i=>$(i).hidden=true);$("carga").value="";}
+function escolherRef(v){ref=v;$("refOutra").hidden=v!==OUTRO;if(v!==OUTRO)$("refOutra").value="";$("refs").querySelectorAll(".chip").forEach(c=>c.setAttribute("aria-pressed",c.dataset.v===v?"true":"false"));}
+function esconderIndices(){carga="";vel="";ref="";["f-carga","f-vel","f-ref"].forEach(i=>$(i).hidden=true);$("carga").value="";$("velOutra").hidden=true;$("refOutra").hidden=true;}
 let modelo="", medida="";
 const $=id=>document.getElementById(id);
 const hoje=()=>{const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")};
@@ -418,14 +427,15 @@ $("lista").addEventListener("click",async e=>{
 
 let pendentes=[];
 function lerPneu(){
-  novoFlags={marca:marca==="Outra",modelo:modelo===OUTRO,medida:medida===OUTRO,carga:carga===OUTRO};
+  novoFlags={marca:marca==="Outra",modelo:modelo===OUTRO,medida:medida===OUTRO,carga:carga===OUTRO,vel:vel===OUTRO,ref:ref===OUTRO};
   let mc=marca==="Outra"?$("marcaOutra").value.replace(/\s+/g," ").trim():marca;
   const cm=todasMarcas().find(k=>igual(k,mc));if(cm)mc=cm;
   let md=modelo===OUTRO?$("modelo").value.replace(/\s+/g," ").trim():modelo;
   const cd=[...(CATALOGO[mc]||[]).map(x=>x[0]),...(CUST.modelos[mc]||[])].find(k=>igual(k,md));if(cd)md=cd;
   return {qtd:total()>1?(parseInt($("qtdL").value,10)||0):1,marca:mc,modelo:md,
     medida:medida===OUTRO?normMedida($("medida").value):medida,
-    carga:carga===OUTRO?$("carga").value.replace(/\s+/g,"").trim():carga,vel,ref};
+    carga:carga===OUTRO?$("carga").value.replace(/\s+/g,"").trim():carga,
+    vel:vel===OUTRO?$("velOutra").value.replace(/\s+/g,"").toUpperCase():vel,ref:ref===OUTRO?$("refOutra").value.replace(/\s+/g," ").trim().toUpperCase():ref};
 }
 function pneuVazio(p){return !marca&&!p.modelo&&!p.medida&&!p.carga&&!p.vel&&!p.ref;}
 const indice=p=>[(p.carga||"")+(p.vel||""),p.ref].filter(Boolean).join(" ");
@@ -502,6 +512,8 @@ function itensGuardados(){const l=[];
   Object.keys(CUST.modelos).forEach(m=>CUST.modelos[m].forEach(n=>l.push({tipo:"Modelo",txt:n,sub:m,ref:["modelo",m,n]})));
   CUST.medidas.forEach(x=>l.push({tipo:"Medida",txt:x,ref:["medida",x]}));
   Object.keys(CUST.cargas).forEach(k=>CUST.cargas[k].forEach(c=>l.push({tipo:"Índice de carga",txt:c,sub:k,ref:["carga",k,c]})));
+  CUST.vels.forEach(v=>l.push({tipo:"Índice de velocidade",txt:v,ref:["vel",v]}));
+  CUST.refs.forEach(v=>l.push({tipo:"XL / TL / outro",txt:v,ref:["ref",v]}));
   return l;}
 function renderGuardados(){
   const l=itensGuardados();$("guardados").hidden=!l.length;if(!l.length)return;
@@ -515,6 +527,8 @@ $("guardadosLista").addEventListener("click",e=>{
   if(r[0]==="marca"){CUST.marcas=CUST.marcas.filter(x=>x!==r[1]);delete CUST.modelos[r[1]];}
   else if(r[0]==="modelo"){CUST.modelos[r[1]]=CUST.modelos[r[1]].filter(x=>x!==r[2]);if(!CUST.modelos[r[1]].length)delete CUST.modelos[r[1]];}
   else if(r[0]==="medida"){CUST.medidas=CUST.medidas.filter(x=>x!==r[1]);}
+  else if(r[0]==="vel"){CUST.vels=CUST.vels.filter(x=>x!==r[1]);}
+  else if(r[0]==="ref"){CUST.refs=CUST.refs.filter(x=>x!==r[1]);}
   else{CUST.cargas[r[1]]=CUST.cargas[r[1]].filter(x=>x!==r[2]);if(!CUST.cargas[r[1]].length)delete CUST.cargas[r[1]];}
   gravarCust();limparPneu();construirMarcas();renderGuardados();
 });
