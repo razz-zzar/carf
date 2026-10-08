@@ -7,7 +7,7 @@
 <meta name="application-name" content="OPS SJT">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<title>Registo de Chegadas</title>
+<title>Chegadas e Saídas</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="carf-icon-192.png">
 <link rel="apple-touch-icon" href="carf-icon-192.png">
@@ -68,6 +68,9 @@ h2{font-family:var(--display);font-size:20px;font-weight:700;text-transform:uppe
 .editor input{width:100%;background:var(--panel);color:var(--fg);border:1px solid var(--green);border-radius:8px;padding:10px;font:600 24px var(--mono)}
 .ed-btns{display:flex;gap:8px;justify-content:flex-end}
 .guardar{border:0;border-radius:8px;padding:10px 18px;font:700 17px var(--display);letter-spacing:.06em;text-transform:uppercase;background:var(--green);color:var(--green-ink);cursor:pointer}
+.abas{display:grid;grid-template-columns:1fr 1fr;gap:6px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:6px}
+.abas button{border:0;border-radius:8px;padding:14px 8px;background:transparent;color:var(--muted);font:700 19px var(--display);letter-spacing:.06em;text-transform:uppercase;cursor:pointer}
+.abas button[aria-selected=true]{background:var(--green);color:var(--green-ink)}
 .btn{border-radius:10px;padding:16px;font:700 20px var(--display);letter-spacing:.06em;text-transform:uppercase;cursor:pointer;background:transparent;color:var(--green);border:2px solid var(--green)}
 .msg{font-size:14px;min-height:20px}
 .msg.ok{color:var(--green)} .msg.err{color:var(--danger)}
@@ -79,31 +82,37 @@ h2{font-family:var(--display);font-size:20px;font-weight:700;text-transform:uppe
   <header>
     <div class="brand">
       <img class="logo" alt="Logotipo" src="data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0idXRmLTgiPz4KPCEtLSBHZW5lcmF0b3I6IEFkb2JlIElsbHVzdHJhdG9yIDI3LjAuMCwgU1ZHIEV4cG9ydCBQbHVnLUluIC4gU1ZHIFZlcnNpb246IDYuMDAgQnVpbGQgMCkgIC0tPgo8c3ZnIHZlcnNpb249IjEuMSIgaWQ9IkxheWVyXzEiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgeG1sbnM6eGxpbms9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkveGxpbmsiIHg9IjBweCIgeT0iMHB4IgoJIHZpZXdCb3g9IjAgMCA0NTYgMTg0LjMiIHN0eWxlPSJlbmFibGUtYmFja2dyb3VuZDpuZXcgMCAwIDQ1NiAxODQuMzsiIHhtbDpzcGFjZT0icHJlc2VydmUiPgo8c3R5bGUgdHlwZT0idGV4dC9jc3MiPgoJLnN0MHtmaWxsOiNCOUQ0MDY7fQoJLnN0MXtmaWxsOiMwMDdCN0Y7fQoJLnN0MntmaWxsOiMzRjlCOUU7fQo8L3N0eWxlPgo8Zz4KCTxwYXRoIGNsYXNzPSJzdDAiIGQ9Ik00NDQuMiw3Mi43Yy0yMy40LDcuNi00Ni41LDE1LjEtNjkuNywyMi43Yy0zLTMuNC00LjItNy40LTUuNi0xMS4yYy0zLjQtOS4xLTQuOS0xOC42LTUuMS0yOC4zCgkJYy0wLjMtMTcuOCwxMC4zLTI5LjksMjMuOC0zNC4yYzIyLjMtNy4xLDQ0LjUtMTQuMyw2Ni43LTIxLjVjMC41LTAuMSwxLTAuMSwxLjUtMC4yQzQ1Ni41LDMuNiw0NDguNSw1My41LDQ0NC4yLDcyLjd6Ii8+Cgk8cGF0aCBjbGFzcz0ic3QxIiBkPSJNNDU1LDE0Ny4xYy04LjcsNi43LTE4LjEsMTIuMy0yNy4xLDE4LjZjLTguMyw1LjgtMTYuOSwxMS4zLTI1LjMsMTdjLTEuNiwxLjEtMywxLjktNSwxLjQKCQljLTE2LjItNC4xLTMwLjYtMTEuMS00MS0yNC43Yy01LjEtNi43LTguMy0xNC40LTkuNy0yMi43Yy0wLjQtMi4xLTAuNC00LjQtMC4xLTYuNWMyLTE0LDQuMi0yNy45LDYuMy00MS45CgkJYzEuMy04LjYsMi42LTE3LjMsNC4xLTI1LjljMS40LDcuNCwxLjksMTQuOCw0LjMsMjJjMTEuMiwzMi43LDMzLjIsNTMuMyw2Ny4yLDYwLjhjNi45LDEuNSwxMy44LDEuOCwyMC44LDEuOAoJCUM0NTEuMywxNDYuNSw0NTMuMiwxNDYuMiw0NTUsMTQ3LjF6Ii8+Cgk8cGF0aCBjbGFzcz0ic3QyIiBkPSJNNDU1LDE0Ny4xYy0xLjgtMC4xLTMuNy0wLjEtNS41LTAuMmMyLTEuNCw0LjMtMC43LDYuNS0wLjljMCwwLjQsMCwwLjgtMC4xLDAuOQoJCUM0NTUuNywxNDcuMSw0NTUuMywxNDcuMSw0NTUsMTQ3LjF6Ii8+Cgk8cGF0aCBkPSJNMzMzLjIsNTMuNmMtMTUuMywwLTMwLjctMC40LTQ2LDAuMWMtMTQuMywwLjQtMjUuOSwxMC43LTI4LjQsMjQuM2MtMS41LDgtMi44LDE2LjEtNC4zLDI0LjFjLTEuNyw5LjItMy41LDE4LjQtNS4zLDI4LjIKCQljLTYuNS00LjctMTIuNi05LjEtMTkuMS0xMy44YzEuOS0xLjMsMy4zLTIuMiw0LjYtMy4xYzguMi01LjgsMTMuOC0xMy40LDE2LjMtMjMuMWM1LTE5LjItNy4xLTM1LjYtMjQuOS0zNi4zCgkJYy05LjMtMC40LTE4LjcsMC0yOC0wLjNjLTE2LjMtMC41LTI5LDExLTMxLjUsMjYuMmMtMi4yLDEzLjEtNC45LDI2LjEtNy4zLDM5LjFjLTAuMywwLTAuNiwwLjEtMC45LDAuMQoJCWMtMy44LTIxLjYtNy42LTQzLjMtMTEuNS02NC45Yy04LjMsMC0xNi4xLDAtMjQuMywwYy03LjksMTEuMS0xNiwyMi4zLTI0LDMzLjZjLTgsMTEuMi0xNiwyMi40LTI0LDMzLjZjLTExLjUsMC0yMi42LDAuMS0zMy44LDAKCQljLTE0LjEtMC4xLTIyLjUtMTEuNS0xOC44LTI1LjFjMy4yLTExLjgsMTUuNC0yMS44LDI4LjEtMjEuNWMxMi4zLDAuMiwyNC43LDAuMSwzNywwYzEuNiwwLDMuMywwLjQsNC42LTEuMgoJCWM1LjEtNi4zLDEwLjMtMTIuNiwxNS43LTE5LjJjLTEuNC0wLjEtMi4yLTAuMi0zLTAuMmMtMTksMC0zOCwwLTU3LDBjLTIuMiwwLTQuMywwLjEtNi40LDAuNmMtMTUuMywzLjQtMjYuMywxMi4zLTM0LDI1LjYKCQljLTYsMTAuNC04LjcsMjEuNi02LjIsMzMuNmMzLjQsMTYuOSwxNy43LDI4LjIsMzUuNiwyOC41YzEwLjMsMC4yLDIwLjcsMCwzMSwwYzYuMiwwLDEyLjMsMCwxOC40LDBjNS4yLTcuMiwxMC4yLTE0LjIsMTUuMi0yMS4yCgkJYzUuOC0wLjEsMTEuMSwxLjQsMTYuMiwzLjRjOS4zLDMuOCwxNi44LDkuOSwyMi44LDE3LjRjMTIuNCwwLDI0LjMsMCwzNi4yLDBjMi40LTEyLjgsNC44LTI1LjMsNy4zLTM4LjNjMS45LDEuNCwzLjIsMi40LDQuNSwzLjQKCQljMTMuOSwxMC45LDI3LjgsMjEuOCw0MS42LDMyLjhjMi4yLDEuOCw0LjQsMi42LDcuMiwyLjZjOS4yLTAuMiwxOC4zLDAsMjcuNS0wLjFjMS4zLDAsMi43LDAuNCwzLjktMC44CgkJYzIuMi0xMS42LDQuNC0yMy4zLDYuNy0zNS41YzE0LDAsMjcuNywwLDQxLjYsMGMxLjYtNi44LDMuMS0xMy4yLDQuNy0yMC4yYy0xNC41LDAtMjguNCwwLTQyLjYsMGMwLjMtMS41LDAuNi0yLjUsMC43LTMuNAoJCWMxLjMtNy41LDIuMy04LjQsOS42LTguNGMxMi43LDAsMjUuMywwLDM4LDBjMS40LDAsMywwLjUsNC40LTAuOGMwLjktNi4yLDIuOC0xMi41LDMuMy0xOC45QzMzNC4xLDUzLjksMzMzLjcsNTMuNiwzMzMuMiw1My42egoJCSBNMTA4LjIsMTExLjJjNy05LjksMTMuNy0xOS4yLDIxLTI5LjVjMi4xLDExLjcsMy45LDIyLjQsNS45LDMzLjVDMTI2LjMsMTEyLjEsMTE3LjcsMTExLjIsMTA4LjIsMTExLjJ6IE0yMTcuMiwxMDAuMgoJCWMtMi44LDAuNC01LjYsMC4zLTguNSwwLjNjLTcuOCwwLTE1LjYsMC0yMy43LDBjLTEtMi43LDAuMi00LjcsMC41LTYuOGMwLjgtNC42LDEuNi05LjIsMi42LTEzLjdjMS00LjgsMi42LTYuMSw3LjUtNi4xCgkJYzguMywwLDE2LjcsMCwyNSwwYzguNCwwLDEzLjMsNi41LDEwLjYsMTQuNEMyMjksOTUsMjI0LjMsOTkuMiwyMTcuMiwxMDAuMnoiLz4KPC9nPgo8L3N2Zz4K">
-      <div style="min-width:0"><h1>Registo de Chegadas</h1><a class="voltar" href="./">‹ Início</a></div>
+      <div style="min-width:0"><h1>Chegadas e Saídas</h1><a class="voltar" href="./">‹ Início</a></div>
     </div>
     <div class="datebox"><input type="date" id="dia" aria-label="Dia"></div>
   </header>
 
+  <div class="abas" role="tablist" aria-label="Registo">
+    <button type="button" role="tab" id="abaC" aria-selected="true">Chegadas</button>
+    <button type="button" role="tab" id="abaS" aria-selected="false">Saídas</button>
+  </div>
+
   <section class="card" aria-labelledby="t-res">
     <h2 id="t-res">Resumo do dia</h2>
     <div class="summary">
-      <div class="stat"><b id="sOk">0</b><span>Chegaram</span></div>
-      <div class="stat falta"><b id="sFalta">0</b><span>Em falta</span></div>
+      <div class="stat"><b id="sOk">0</b><span id="lOk">Chegaram</span></div>
+      <div class="stat falta"><b id="sFalta">0</b><span id="lFalta">Por chegar</span></div>
     </div>
     <div class="barra" aria-hidden="true"><i id="barra"></i></div>
   </section>
 
   <section class="card" aria-labelledby="t-voltas">
-    <h2 id="t-voltas">Voltas</h2>
-    <div class="aviso" id="aviso" hidden>Está a ver outro dia. Só é possível registar chegadas no dia de hoje.</div>
+    <h2 id="t-voltas">Voltas — chegadas</h2>
+    <div class="aviso" id="aviso" hidden>Está a ver outro dia. Só é possível fazer registos no dia de hoje.</div>
     <div class="msg" id="msg" role="status"></div>
     <div id="lista"></div>
-    <div class="hint">Carregue em “Chegou” quando a volta chegar: fica registada a hora desse momento. Se não viu a chegada, use “Indicar hora”, ou toque na hora já registada para a corrigir. Os registos ficam guardados neste telemóvel, mesmo sem internet.</div>
+    <div class="hint" id="dica"></div>
   </section>
 
-  <section class="card">
+  <section class="card" id="exportar" hidden>
     <button class="btn" id="excel" type="button">Exportar Excel do dia</button>
     <div class="msg" id="msgX" role="status"></div>
+      <div class="hint">O Excel inclui as chegadas e as saídas do dia.</div>
   </section>
 </div>
 
@@ -118,19 +127,35 @@ const hoje=()=>diaDe(new Date());
 const hora=iso=>{const d=new Date(iso);return pad(d.getHours())+":"+pad(d.getMinutes());};
 const horaSeg=iso=>{const d=new Date(iso);return hora(iso)+":"+pad(d.getSeconds());};
 
-let dados={},aConfirmar=null,diaAberto=hoje();
-try{dados=JSON.parse(localStorage.getItem("chegadas")||"{}")||{};}catch(e){dados={};}
-function gravar(){try{localStorage.setItem("chegadas",JSON.stringify(dados));return true}catch(e){return false}}
+/* Dois registos separados, com a mesma lista de voltas: c = chegadas, s = saídas */
+const MODOS={
+  c:{chave:"chegadas",btn:"Chegou",feito:"Chegou",falta:"Por chegar",ok:"Chegaram",lfalta:"Por chegar",campo:"Hora de chegada",tit:"Voltas — chegadas",
+     dica:"Carregue em “Chegou” quando a volta chegar: fica registada a hora desse momento. Se não viu a chegada, use “Indicar hora”, ou toque na hora já registada para a corrigir. Os registos ficam guardados neste telemóvel, mesmo sem internet.",
+     fez:(v,h)=>"Volta "+v+" chegou às "+h+".",nome:"chegada"},
+  s:{chave:"saidas",btn:"Saiu",feito:"Saiu",falta:"Por sair",ok:"Saíram",lfalta:"Por sair",campo:"Hora de saída",tit:"Voltas — saídas",
+     dica:"Carregue em “Saiu” quando a volta sair: fica registada a hora desse momento. Se não viu a saída, use “Indicar hora”, ou toque na hora já registada para a corrigir. Os registos ficam guardados neste telemóvel, mesmo sem internet.",
+     fez:(v,h)=>"Volta "+v+" saiu às "+h+".",nome:"saída"}
+};
+let modo="c",BD={c:{},s:{}},aConfirmar=null,diaAberto=hoje();
+for(const k of ["c","s"]){try{BD[k]=JSON.parse(localStorage.getItem(MODOS[k].chave)||"{}")||{};}catch(e){BD[k]={};}}
+try{const m=localStorage.getItem("chegadas_aba");if(m==="s")modo="s";}catch(e){}
+const D=()=>BD[modo],T=()=>MODOS[modo];
+function gravar(){try{localStorage.setItem(T().chave,JSON.stringify(D()));return true}catch(e){return false}}
+function mudarAba(m){modo=m;aConfirmar=null;aEditar=null;msg("msg","");msg("msgX","");try{localStorage.setItem("chegadas_aba",m);}catch(e){}render();}
 function msg(id,t,ok){const m=$(id);m.textContent=t||"";m.className="msg "+(ok?"ok":"err");}
 
 $("dia").value=diaAberto;
+$("abaC").onclick=()=>mudarAba("c");$("abaS").onclick=()=>mudarAba("s");
 $("dia").addEventListener("change",()=>{aConfirmar=null;msg("msg","");msg("msgX","");render();});
 
 /* Cada chegada: {t: hora ISO}. Registos antigos podem ser só a hora ISO. */
 const reg=x=>!x?null:typeof x==="string"?{t:x}:x;
 let aEditar=null;
 function render(){
-  const dia=$("dia").value||hoje(),doDia=dados[dia]||{},eHoje=dia===hoje();
+  const dia=$("dia").value||hoje(),doDia=D()[dia]||{},eHoje=dia===hoje(),t=T();
+  $("abaC").setAttribute("aria-selected",modo==="c");$("abaS").setAttribute("aria-selected",modo==="s");
+  $("lOk").textContent=t.ok;$("lFalta").textContent=t.lfalta;$("t-voltas").textContent=t.tit;$("dica").textContent=t.dica;
+  $("exportar").hidden=modo!=="s";
   const ok=VOLTAS.filter(v=>doDia[v]).length;
   $("sOk").textContent=ok;$("sFalta").textContent=VOLTAS.length-ok;
   $("barra").style.width=(VOLTAS.length?ok/VOLTAS.length*100:0)+"%";
@@ -147,16 +172,16 @@ function render(){
       b.setAttribute("aria-label","Corrigir hora da volta "+v);b.textContent=hora(r.t);
       if(eHoje){const p=document.createElement("span");p.className="lapis";p.textContent="Editar";b.appendChild(p);}
       b.onclick=()=>abrirEditor(v);
-      e.append(b,"Chegou");
+      e.append(b,t.feito);
     }else{
-      e.append("Por chegar");
+      e.append(t.falta);
       if(eHoje){const i=document.createElement("button");i.type="button";i.className="indicar";i.textContent="Indicar hora";i.onclick=()=>abrirEditor(v);e.appendChild(i);}
     }
     let btn;
     if(r){btn=document.createElement("button");btn.type="button";btn.className="anular"+(aConfirmar===v?" confirm":"");
       btn.textContent=aConfirmar===v?"Confirmar":"Anular";btn.onclick=()=>anular(v);btn.hidden=!eHoje;}
-    else{btn=document.createElement("button");btn.type="button";btn.className="chegou";btn.textContent="Chegou";
-      btn.disabled=!eHoje;btn.onclick=()=>chegou(v);btn.setAttribute("aria-label","Volta "+v+" chegou");}
+    else{btn=document.createElement("button");btn.type="button";btn.className="chegou";btn.textContent=t.btn;
+      btn.disabled=!eHoje;btn.onclick=()=>chegou(v);btn.setAttribute("aria-label","Volta "+v+" "+t.btn.toLowerCase());}
     row.append(n,e,btn);l.appendChild(row);
   });
   if(aEditar){const i=$("hEd");if(i)i.focus();}
@@ -164,7 +189,7 @@ function render(){
 function abrirEditor(v){aEditar=v;aConfirmar=null;msg("msg","");render();}
 function editor(v,r){
   const w=document.createElement("div");w.className="editor";
-  const lb=document.createElement("label");lb.htmlFor="hEd";lb.textContent="Hora de chegada";
+  const lb=document.createElement("label");lb.htmlFor="hEd";lb.textContent=T().campo;
   const i=document.createElement("input");i.type="time";i.id="hEd";
   const base=r?new Date(r.t):new Date();i.value=pad(base.getHours())+":"+pad(base.getMinutes());
   const g=document.createElement("button");g.type="button";g.className="guardar";g.textContent="Guardar";
@@ -176,29 +201,29 @@ function editor(v,r){
 }
 function guardarHora(v,val){
   const m=/^(\d{1,2}):(\d{2})/.exec(val||"");
-  if(!m){msg("msg","Escreva a hora de chegada (horas e minutos).",false);return;}
+  if(!m){msg("msg","Escreva a hora (horas e minutos).",false);return;}
   const dia=$("dia").value,[y,mo,d]=dia.split("-").map(Number);
   const dt=new Date(y,mo-1,d,+m[1],+m[2],0);
   if(dt.getTime()>Date.now()+60000){msg("msg","A hora "+val+" ainda não chegou. Indique uma hora até agora.",false);return;}
-  const antes=(dados[dia]||{})[v];
+  const dados=D(),antes=(dados[dia]||{})[v];
   (dados[dia]=dados[dia]||{})[v]={t:dt.toISOString()};
   if(!gravar()){if(antes)dados[dia][v]=antes;else delete dados[dia][v];msg("msg","O telemóvel não deixou guardar (sem espaço ou armazenamento bloqueado).",false);return;}
-  aEditar=null;msg("msg","Volta "+v+": chegada registada às "+hora(dt.toISOString())+".",true);render();
+  aEditar=null;msg("msg","Volta "+v+": "+T().nome+" registada às "+hora(dt.toISOString())+".",true);render();
 }
 function chegou(v){
-  const agora=new Date(),dia=diaDe(agora);
+  const agora=new Date(),dia=diaDe(agora),dados=D();
   if($("dia").value!==dia){$("dia").value=dia;}
   (dados[dia]=dados[dia]||{});
   if(dados[dia][v]){render();return;}
   dados[dia][v]={t:agora.toISOString()};
   if(!gravar()){delete dados[dia][v];msg("msg","O telemóvel não deixou guardar (sem espaço ou armazenamento bloqueado).",false);render();return;}
-  aConfirmar=null;aEditar=null;msg("msg","Volta "+v+" chegou às "+hora(agora.toISOString())+".",true);render();
+  aConfirmar=null;aEditar=null;msg("msg",T().fez(v,hora(agora.toISOString())),true);render();
 }
 function anular(v){
   if(aConfirmar!==v){aConfirmar=v;render();setTimeout(()=>{if(aConfirmar===v){aConfirmar=null;render();}},4000);return;}
-  aConfirmar=null;const dia=$("dia").value;
+  aConfirmar=null;const dia=$("dia").value,dados=D();
   if(dados[dia]){delete dados[dia][v];if(!Object.keys(dados[dia]).length)delete dados[dia];}
-  gravar();msg("msg","Chegada da volta "+v+" anulada.",true);render();
+  gravar();msg("msg",(modo==="c"?"Chegada":"Saída")+" da volta "+v+" anulada.",true);render();
 }
 /* Se a app ficar aberta e passar a meia-noite, muda para o novo dia */
 document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible"&&$("dia").value===diaAberto&&hoje()!==diaAberto){diaAberto=hoje();$("dia").value=diaAberto;render();}});
@@ -246,16 +271,17 @@ function criarXlsx({titulo,folha,cab,linhas,larguras}){
   return zipStore([["[Content_Types].xml",e.encode(ct)],["_rels/.rels",e.encode(rels)],["xl/workbook.xml",e.encode(wb)],["xl/_rels/workbook.xml.rels",e.encode(wrels)],["xl/styles.xml",e.encode(styles)],["xl/worksheets/sheet1.xml",e.encode(sheet)]]);
 }
 function gerarExcel(dia){
-  const doDia=dados[dia]||{};
-  if(!Object.keys(doDia).length)return null;
+  const ch=BD.c[dia]||{},sa=BD.s[dia]||{};
+  if(!Object.keys(ch).length&&!Object.keys(sa).length)return null;
   const [y,m,d]=dia.split("-");
-  const linhas=VOLTAS.map(v=>{const r=reg(doDia[v]);return [/^\d+$/.test(v)?+v:v,r?hora(r.t):"",r?"Chegou":"Em falta"];});
-  return {bytes:criarXlsx({titulo:"REGISTO DE CHEGADAS — "+d+"/"+m+"/"+y,folha:"Chegadas",cab:["Volta","Hora de chegada","Estado"],linhas,larguras:[12,20,14]}),nome:`chegadas-${y}-${m}-${d}.xlsx`};
+  const h=x=>{const r=reg(x);return r?hora(r.t):"";};
+  const linhas=VOLTAS.map(v=>[/^\d+$/.test(v)?+v:v,h(ch[v]),h(sa[v])]);
+  return {bytes:criarXlsx({titulo:"CHEGADAS E SAÍDAS — "+d+"/"+m+"/"+y,folha:"Chegadas e saídas",cab:["Volta","Hora de chegada","Hora de saída"],linhas,larguras:[12,20,20]}),nome:`chegadas-saidas-${y}-${m}-${d}.xlsx`};
 }
 $("excel").onclick=()=>{
   try{
     const x=gerarExcel($("dia").value||hoje());
-    if(!x){msg("msgX","Ainda não há chegadas registadas neste dia.",false);return;}
+    if(!x){msg("msgX","Ainda não há chegadas nem saídas registadas neste dia.",false);return;}
     const url=URL.createObjectURL(new Blob([x.bytes],{type:MIME_XLSX}));
     const a=document.createElement("a");a.href=url;a.download=x.nome;document.body.appendChild(a);a.click();a.remove();
     setTimeout(()=>URL.revokeObjectURL(url),15000);
