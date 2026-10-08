@@ -39,7 +39,7 @@ h1{font-family:var(--display);font-weight:700;font-size:26px;letter-spacing:.02e
 .datebox input{background:var(--panel);color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:8px;font:500 14px var(--mono)}
 section.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:16px}
 h2{font-family:var(--display);font-size:20px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;margin:0;color:var(--green)}
-.row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:end}
 .field{display:flex;flex-direction:column;gap:6px;min-width:0}
 label,.lbl{font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
 input[type=text],input[type=number]{width:100%;background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:12px;font:500 18px var(--body)}
@@ -104,7 +104,7 @@ input.mono{font-family:var(--mono);letter-spacing:.02em}
     <h2 id="t-novo">Novo registo</h2>
     <div class="row">
       <div class="field"><label for="volta">Volta</label><input type="text" id="volta" inputmode="numeric" autocomplete="off" placeholder="ex. 12"></div>
-      <div class="field"><label for="guia">Guia de transporte</label><input type="text" id="guia" class="mono" autocomplete="off" placeholder="nº da guia"></div>
+      <div class="field"><label for="guia">Nº da guia</label><input type="text" id="guia" class="mono" autocomplete="off" placeholder="ex. 48113"></div>
     </div>
     <div class="field">
       <span class="lbl" id="l-qtd">Nº total de pneus em falta nesta guia</span>
