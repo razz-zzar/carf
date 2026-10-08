@@ -47,12 +47,13 @@ h2{font-family:var(--display);font-size:20px;font-weight:700;text-transform:uppe
 @media (prefers-reduced-motion:reduce){.barra i{transition:none}}
 .aviso{font-size:14px;color:var(--muted);background:var(--bg);border-radius:8px;padding:10px 12px}
 #lista{display:flex;flex-direction:column;gap:8px}
-.v{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 10px 10px 14px;min-height:68px}
+.v{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"num btn" "est btn";column-gap:12px;row-gap:4px;align-items:center;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 10px 10px 14px;min-height:68px}
 .v.ok{border-color:#3a4a12}
-.num{font:700 26px/1 var(--display);letter-spacing:.03em;font-variant-numeric:tabular-nums;min-width:3.2ch}
+.num{font:700 26px/1 var(--display);letter-spacing:.03em;font-variant-numeric:tabular-nums;min-width:0}
+.num.txt{font-size:22px;line-height:1.1;overflow-wrap:break-word}
 .num small{display:block;font:600 11px var(--body);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:3px}
 .est{min-width:0;font-size:14px;color:var(--muted)}
-.chegou{border:0;border-radius:10px;padding:14px 18px;min-width:120px;font:700 19px var(--display);letter-spacing:.06em;text-transform:uppercase;cursor:pointer;background:var(--green);color:var(--green-ink)}
+.chegou{border:0;border-radius:10px;padding:14px 14px;min-width:100px;font:700 19px var(--display);letter-spacing:.06em;text-transform:uppercase;cursor:pointer;background:var(--green);color:var(--green-ink)}
 .chegou:active{background:var(--green-dk)}
 .chegou:disabled{background:var(--line);color:var(--muted);cursor:default}
 .anular{background:none;border:1px solid var(--line);color:var(--muted);border-radius:8px;padding:10px 12px;font:600 13px var(--body);cursor:pointer}
@@ -60,9 +61,10 @@ h2{font-family:var(--display);font-size:20px;font-weight:700;text-transform:uppe
 .hora{display:inline-flex;align-items:baseline;gap:8px;background:none;border:0;padding:2px 0;margin:0;font:600 22px var(--mono);color:var(--green);font-variant-numeric:tabular-nums;cursor:pointer}
 .hora:disabled{cursor:default}
 .lapis{font:600 12px var(--body);color:var(--muted);text-decoration:underline;text-underline-offset:3px}
-.est{display:flex;flex-direction:column;align-items:flex-start}
+.est{display:flex;flex-wrap:wrap;align-items:baseline;column-gap:12px;row-gap:2px}
 .indicar{background:none;border:0;padding:4px 0;margin-top:2px;color:var(--green);font:600 13px var(--body);text-decoration:underline;text-underline-offset:3px;cursor:pointer}
-.v.ed{grid-template-columns:auto 1fr}
+.v.ed{grid-template-areas:"num num" "ed ed"}
+.v>.num{grid-area:num}.v>.est{grid-area:est}.v>button{grid-area:btn}.v>.editor{grid-area:ed}
 .editor{display:flex;flex-direction:column;gap:8px;min-width:0}
 .editor label{font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
 .editor input{width:100%;background:var(--panel);color:var(--fg);border:1px solid var(--green);border-radius:8px;padding:10px;font:600 24px var(--mono)}
@@ -117,8 +119,8 @@ h2{font-family:var(--display);font-size:20px;font-weight:700;text-transform:uppe
 </div>
 
 <script>
-/* Lista das voltas — números provisórios, a substituir pela lista real */
-const VOLTAS=["170","183","236","280","300","373","464","506","593","719","746","752","762","770","782","832","841","860","960","966"];
+/* Lista das voltas, pela ordem indicada */
+const VOLTAS=["1123","1633","1636","1419","1420","1639","1627","1638","1205","1235","1603","1201","1602","1204","1113","1112","1311","1330","1337","1340","1445","1315","1318","1624","1316","1334","1314","1317","1641","Arrasto Norte","Carro Leiria","Recolha Santogal","AS Parts Seixal"];
 
 const $=id=>document.getElementById(id);
 const pad=n=>String(n).padStart(2,"0");
@@ -164,7 +166,7 @@ function render(){
   const l=$("lista");l.textContent="";
   VOLTAS.forEach(v=>{
     const r=reg(doDia[v]),row=document.createElement("div");row.className="v"+(r?" ok":"");
-    const n=document.createElement("div");n.className="num";n.innerHTML="<small>Volta</small>";n.append(v);
+    const n=document.createElement("div");n.className="num"+(/^\d+$/.test(v)?"":" txt");n.innerHTML="<small>Volta</small>";n.append(v);
     if(aEditar===v){row.classList.add("ed");row.append(n,editor(v,r));l.appendChild(row);return;}
     const e=document.createElement("div");e.className="est";
     if(r){
