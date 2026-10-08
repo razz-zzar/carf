@@ -1,14 +1,14 @@
 {
-  "name": "Pneus em Falta",
-  "short_name": "Pneus",
-  "description": "Registo de pneus em falta por volta e guia de transporte",
+  "name": "CARF",
+  "short_name": "CARF",
+  "description": "Operações SJT",
   "lang": "pt-PT",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#0c0f0d",
-  "theme_color": "#0c0f0d",
+  "background_color": "#ffffff",
+  "theme_color": "#ffffff",
   "icons": [
     {
       "src": "icon-192.png",
