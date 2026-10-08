@@ -171,7 +171,6 @@ input.mono{font-family:var(--mono);letter-spacing:.02em}
     </div>
     <div id="lista"></div>
     <button class="btn btn-ghost" id="excel" type="button">Exportar Excel do dia</button>
-    <button class="btn btn-ghost" id="partilhar" type="button" hidden>Partilhar Excel (WhatsApp, email…)</button>
     <div class="msg" id="msgX" role="status"></div>
     <div class="hint">Os registos ficam guardados neste telemóvel, mesmo sem internet. Exporte o Excel no fim do dia.</div>
   </section>
@@ -453,14 +452,6 @@ $("excel").onclick=async()=>{
     setTimeout(()=>URL.revokeObjectURL(url),15000);
     msg("msgX","Excel gerado: "+x.nome+" (ver em Transferências).",true);
   }catch(err){msg("msgX","Não foi possível gerar o Excel.",false);}
-};
-try{if(navigator.canShare&&navigator.canShare({files:[new File([new Uint8Array(1)],"a.xlsx",{type:MIME_XLSX})]}))$("partilhar").hidden=false;}catch(e){}
-$("partilhar").onclick=async()=>{
-  try{
-    const x=await gerarExcel();if(!x)return;
-    await navigator.share({files:[new File([x.bytes],x.nome,{type:MIME_XLSX})],title:"Pneus em falta"});
-    msg("msgX","Excel partilhado.",true);
-  }catch(err){if(!err||err.name!=="AbortError")msg("msgX","Não foi possível partilhar. Use Exportar Excel.",false);}
 };
 
 render();atualizarQtd();
