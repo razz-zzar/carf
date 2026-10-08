@@ -31,8 +31,7 @@ h1{font:700 34px/1.1 var(--display);letter-spacing:.06em;text-transform:uppercas
 .ico{width:72px;height:72px;border-radius:18px;background:#0a0a0a;border:1px solid var(--line);display:grid;place-items:center;flex:none}
 .app b{font:700 19px/1.15 var(--display);letter-spacing:.03em;text-transform:uppercase;overflow-wrap:normal;max-width:100%}
 .app small{color:var(--muted);font-size:12px;line-height:1.3}
-.rodape{max-width:560px;margin:0 auto;padding:18px 16px calc(24px + env(safe-area-inset-bottom,0px));border-top:1px solid var(--line);text-align:center;color:var(--muted);font-size:12px;line-height:1.5}
-.rodape strong{color:var(--fg);font-weight:600}
+.rodape{max-width:560px;margin:0 auto;padding:18px 16px calc(24px + env(safe-area-inset-bottom,0px));border-top:1px solid var(--line);text-align:center;color:var(--muted);font-size:12px;line-height:1.5;white-space:nowrap;overflow:hidden}
 </style>
 </head>
 <body>
@@ -42,7 +41,7 @@ h1{font:700 34px/1.1 var(--display);letter-spacing:.06em;text-transform:uppercas
   <p class="lbl">Aplicações</p>
   <nav class="apps" id="apps" aria-label="Aplicações"></nav>
 </main>
-<footer class="rodape">© <span id="ano">2026</span> OPS SJT™ · Aplicação em desenvolvimento por <strong>Fábio Lopes</strong></footer>
+<footer class="rodape">© <span id="ano">2026</span> OPS SJT™ · Aplicação em desenvolvimento por Fábio Lopes</footer>
 <script>
 /* Para juntar uma nova aplicação ao hub, acrescentar uma linha a esta lista. */
 const ICONE_PNEU='<svg width="48" height="48" viewBox="0 0 48 48" aria-hidden="true" fill="none" stroke="#B9D406" stroke-linecap="round"><circle cx="24" cy="24" r="18" stroke-width="7"/><circle cx="24" cy="24" r="9.5" stroke-width="2.5"/><path stroke-width="2.2" d="M24 24V14.5M24 24l9-2.8M24 24l5.3 7.3M24 24l-5.3 7.3M24 24l-9-2.8"/><circle cx="24" cy="24" r="2.6" fill="#B9D406" stroke="none"/></svg>';
@@ -56,6 +55,8 @@ const APPS=[
   {nome:"Frota",desc:"Viaturas, pedidos de intervenção e revisão",href:"frota.html",icone:ICONE_FROTA}
 ];
 document.getElementById("ano").textContent=new Date().getFullYear();
+function caberRodape(){const r=document.querySelector(".rodape");if(!r)return;r.style.fontSize="";let f=12;while(r.scrollWidth>r.clientWidth&&f>8){f-=.5;r.style.fontSize=f+"px";}}
+caberRodape();addEventListener("resize",caberRodape);
 const el=document.getElementById("apps");
 APPS.forEach(a=>{
   const l=document.createElement("a");l.className="app";l.href=a.href;
