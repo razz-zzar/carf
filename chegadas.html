@@ -52,12 +52,22 @@ h2{font-family:var(--display);font-size:20px;font-weight:700;text-transform:uppe
 .num{font:700 26px/1 var(--display);letter-spacing:.03em;font-variant-numeric:tabular-nums;min-width:3.2ch}
 .num small{display:block;font:600 11px var(--body);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:3px}
 .est{min-width:0;font-size:14px;color:var(--muted)}
-.est b{display:block;font:600 22px var(--mono);color:var(--green);font-variant-numeric:tabular-nums}
 .chegou{border:0;border-radius:10px;padding:14px 18px;min-width:120px;font:700 19px var(--display);letter-spacing:.06em;text-transform:uppercase;cursor:pointer;background:var(--green);color:var(--green-ink)}
 .chegou:active{background:var(--green-dk)}
 .chegou:disabled{background:var(--line);color:var(--muted);cursor:default}
 .anular{background:none;border:1px solid var(--line);color:var(--muted);border-radius:8px;padding:10px 12px;font:600 13px var(--body);cursor:pointer}
 .anular.confirm{border-color:var(--danger);color:var(--danger)}
+.hora{display:inline-flex;align-items:baseline;gap:8px;background:none;border:0;padding:2px 0;margin:0;font:600 22px var(--mono);color:var(--green);font-variant-numeric:tabular-nums;cursor:pointer}
+.hora:disabled{cursor:default}
+.lapis{font:600 12px var(--body);color:var(--muted);text-decoration:underline;text-underline-offset:3px}
+.est{display:flex;flex-direction:column;align-items:flex-start}
+.indicar{background:none;border:0;padding:4px 0;margin-top:2px;color:var(--green);font:600 13px var(--body);text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+.v.ed{grid-template-columns:auto 1fr}
+.editor{display:flex;flex-direction:column;gap:8px;min-width:0}
+.editor label{font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.editor input{width:100%;background:var(--panel);color:var(--fg);border:1px solid var(--green);border-radius:8px;padding:10px;font:600 24px var(--mono)}
+.ed-btns{display:flex;gap:8px;justify-content:flex-end}
+.guardar{border:0;border-radius:8px;padding:10px 18px;font:700 17px var(--display);letter-spacing:.06em;text-transform:uppercase;background:var(--green);color:var(--green-ink);cursor:pointer}
 .btn{border-radius:10px;padding:16px;font:700 20px var(--display);letter-spacing:.06em;text-transform:uppercase;cursor:pointer;background:transparent;color:var(--green);border:2px solid var(--green)}
 .msg{font-size:14px;min-height:20px}
 .msg.ok{color:var(--green)} .msg.err{color:var(--danger)}
@@ -88,7 +98,7 @@ h2{font-family:var(--display);font-size:20px;font-weight:700;text-transform:uppe
     <div class="aviso" id="aviso" hidden>Está a ver outro dia. Só é possível registar chegadas no dia de hoje.</div>
     <div class="msg" id="msg" role="status"></div>
     <div id="lista"></div>
-    <div class="hint">Carregue em “Chegou” quando a volta chegar: fica registada a hora desse momento. Os registos ficam guardados neste telemóvel, mesmo sem internet.</div>
+    <div class="hint">Carregue em “Chegou” quando a volta chegar: fica registada a hora desse momento. Se não viu a chegada, use “Indicar hora”, ou toque na hora já registada para a corrigir. Os registos ficam guardados neste telemóvel, mesmo sem internet.</div>
   </section>
 
   <section class="card">
@@ -116,34 +126,73 @@ function msg(id,t,ok){const m=$(id);m.textContent=t||"";m.className="msg "+(ok?"
 $("dia").value=diaAberto;
 $("dia").addEventListener("change",()=>{aConfirmar=null;msg("msg","");msg("msgX","");render();});
 
+/* Cada chegada: {t: hora ISO, c: true se a hora foi corrigida à mão}. Registos antigos podem ser só a hora ISO. */
+const reg=x=>!x?null:typeof x==="string"?{t:x}:x;
+let aEditar=null;
 function render(){
   const dia=$("dia").value||hoje(),doDia=dados[dia]||{},eHoje=dia===hoje();
   const ok=VOLTAS.filter(v=>doDia[v]).length;
   $("sOk").textContent=ok;$("sFalta").textContent=VOLTAS.length-ok;
   $("barra").style.width=(VOLTAS.length?ok/VOLTAS.length*100:0)+"%";
   $("aviso").hidden=eHoje;
+  if(!eHoje)aEditar=null;
   const l=$("lista");l.textContent="";
   VOLTAS.forEach(v=>{
-    const t=doDia[v],row=document.createElement("div");row.className="v"+(t?" ok":"");
+    const r=reg(doDia[v]),row=document.createElement("div");row.className="v"+(r?" ok":"");
     const n=document.createElement("div");n.className="num";n.innerHTML="<small>Volta</small>";n.append(v);
+    if(aEditar===v){row.classList.add("ed");row.append(n,editor(v,r));l.appendChild(row);return;}
     const e=document.createElement("div");e.className="est";
-    if(t){const b=document.createElement("b");b.textContent=hora(t);e.append(b,"Chegou");}else e.textContent="Por chegar";
+    if(r){
+      const b=document.createElement("button");b.type="button";b.className="hora";b.disabled=!eHoje;
+      b.setAttribute("aria-label","Corrigir hora da volta "+v);b.textContent=hora(r.t);
+      if(eHoje){const p=document.createElement("span");p.className="lapis";p.textContent="Editar";b.appendChild(p);}
+      b.onclick=()=>abrirEditor(v);
+      e.append(b,r.c?"Hora corrigida":"Chegou");
+    }else{
+      e.append("Por chegar");
+      if(eHoje){const i=document.createElement("button");i.type="button";i.className="indicar";i.textContent="Indicar hora";i.onclick=()=>abrirEditor(v);e.appendChild(i);}
+    }
     let btn;
-    if(t){btn=document.createElement("button");btn.type="button";btn.className="anular"+(aConfirmar===v?" confirm":"");
-      btn.textContent=aConfirmar===v?"Confirmar":"Anular";btn.onclick=()=>anular(v);btn.disabled=!eHoje;btn.hidden=!eHoje;}
+    if(r){btn=document.createElement("button");btn.type="button";btn.className="anular"+(aConfirmar===v?" confirm":"");
+      btn.textContent=aConfirmar===v?"Confirmar":"Anular";btn.onclick=()=>anular(v);btn.hidden=!eHoje;}
     else{btn=document.createElement("button");btn.type="button";btn.className="chegou";btn.textContent="Chegou";
       btn.disabled=!eHoje;btn.onclick=()=>chegou(v);btn.setAttribute("aria-label","Volta "+v+" chegou");}
     row.append(n,e,btn);l.appendChild(row);
   });
+  if(aEditar){const i=$("hEd");if(i)i.focus();}
+}
+function abrirEditor(v){aEditar=v;aConfirmar=null;msg("msg","");render();}
+function editor(v,r){
+  const w=document.createElement("div");w.className="editor";
+  const lb=document.createElement("label");lb.htmlFor="hEd";lb.textContent="Hora de chegada";
+  const i=document.createElement("input");i.type="time";i.id="hEd";
+  const base=r?new Date(r.t):new Date();i.value=pad(base.getHours())+":"+pad(base.getMinutes());
+  const g=document.createElement("button");g.type="button";g.className="guardar";g.textContent="Guardar";
+  const c=document.createElement("button");c.type="button";c.className="anular";c.textContent="Cancelar";
+  g.onclick=()=>guardarHora(v,i.value);c.onclick=()=>{aEditar=null;render();};
+  i.addEventListener("keydown",e=>{if(e.key==="Enter")guardarHora(v,i.value);if(e.key==="Escape"){aEditar=null;render();}});
+  const bs=document.createElement("div");bs.className="ed-btns";bs.append(c,g);
+  w.append(lb,i,bs);return w;
+}
+function guardarHora(v,val){
+  const m=/^(\d{1,2}):(\d{2})/.exec(val||"");
+  if(!m){msg("msg","Escreva a hora de chegada (horas e minutos).",false);return;}
+  const dia=$("dia").value,[y,mo,d]=dia.split("-").map(Number);
+  const dt=new Date(y,mo-1,d,+m[1],+m[2],0);
+  if(dt.getTime()>Date.now()+60000){msg("msg","A hora "+val+" ainda não chegou. Indique uma hora até agora.",false);return;}
+  const antes=(dados[dia]||{})[v];
+  (dados[dia]=dados[dia]||{})[v]={t:dt.toISOString(),c:true};
+  if(!gravar()){if(antes)dados[dia][v]=antes;else delete dados[dia][v];msg("msg","O telemóvel não deixou guardar (sem espaço ou armazenamento bloqueado).",false);return;}
+  aEditar=null;msg("msg","Volta "+v+": chegada registada às "+hora(dt.toISOString())+".",true);render();
 }
 function chegou(v){
   const agora=new Date(),dia=diaDe(agora);
   if($("dia").value!==dia){$("dia").value=dia;}
   (dados[dia]=dados[dia]||{});
   if(dados[dia][v]){render();return;}
-  dados[dia][v]=agora.toISOString();
+  dados[dia][v]={t:agora.toISOString()};
   if(!gravar()){delete dados[dia][v];msg("msg","O telemóvel não deixou guardar (sem espaço ou armazenamento bloqueado).",false);render();return;}
-  aConfirmar=null;msg("msg","Volta "+v+" chegou às "+hora(agora.toISOString())+".",true);render();
+  aConfirmar=null;aEditar=null;msg("msg","Volta "+v+" chegou às "+hora(agora.toISOString())+".",true);render();
 }
 function anular(v){
   if(aConfirmar!==v){aConfirmar=v;render();setTimeout(()=>{if(aConfirmar===v){aConfirmar=null;render();}},4000);return;}
@@ -200,8 +249,8 @@ function gerarExcel(dia){
   const doDia=dados[dia]||{};
   if(!Object.keys(doDia).length)return null;
   const [y,m,d]=dia.split("-");
-  const linhas=VOLTAS.map(v=>[/^\d+$/.test(v)?+v:v,doDia[v]?horaSeg(doDia[v]):"",doDia[v]?"Chegou":"Em falta"]);
-  return {bytes:criarXlsx({titulo:"REGISTO DE CHEGADAS — "+d+"/"+m+"/"+y,folha:"Chegadas",cab:["Volta","Hora de chegada","Estado"],linhas,larguras:[12,20,14]}),nome:`chegadas-${y}-${m}-${d}.xlsx`};
+  const linhas=VOLTAS.map(v=>{const r=reg(doDia[v]);return [/^\d+$/.test(v)?+v:v,r?(r.c?hora(r.t):horaSeg(r.t)):"",r?(r.c?"Chegou (hora indicada)":"Chegou"):"Em falta"];});
+  return {bytes:criarXlsx({titulo:"REGISTO DE CHEGADAS — "+d+"/"+m+"/"+y,folha:"Chegadas",cab:["Volta","Hora de chegada","Estado"],linhas,larguras:[12,20,24]}),nome:`chegadas-${y}-${m}-${d}.xlsx`};
 }
 $("excel").onclick=()=>{
   try{
