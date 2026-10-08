@@ -53,6 +53,12 @@ input.mono{font-family:var(--mono);letter-spacing:.02em}
 .chip[aria-pressed=true]{background:var(--green);border-color:var(--green);color:var(--green-ink)}
 .hint{font-size:13px;color:var(--muted)}
 .field{scroll-margin-top:12px}
+.guardados{border-top:1px solid var(--line);padding-top:12px}
+.guardados summary{cursor:pointer;color:var(--muted);font-size:14px;font-weight:600;min-height:32px}
+.guardados summary:focus-visible{outline:2px solid var(--green);outline-offset:2px;border-radius:4px}
+#guardadosLista{display:flex;flex-direction:column;gap:8px;margin-top:10px}
+.opc{display:flex;justify-content:space-between;align-items:center;gap:10px;background:var(--bg);border-radius:8px;padding:8px 10px}
+.opc div{min-width:0}.opc b{font-weight:600;overflow-wrap:anywhere}.opc small{display:block;color:var(--muted);font-size:12px;overflow-wrap:anywhere}
 .pneu{border:1px dashed var(--line);border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:16px}
 .pneu-h{display:flex;justify-content:space-between;align-items:baseline;font:700 17px var(--display);text-transform:uppercase;letter-spacing:.05em}
 .pneu-h span{font:500 12px var(--body);color:var(--muted);text-transform:none;letter-spacing:0}
@@ -160,6 +166,7 @@ input.mono{font-family:var(--mono);letter-spacing:.02em}
       <button class="btn btn-main" id="guardar" type="button">Guardar guia</button>
     </div>
     <div class="msg" id="msg" role="status"></div>
+    <details class="guardados" id="guardados" hidden><summary id="guardadosTit">Opções guardadas neste telemóvel</summary><div id="guardadosLista"></div></details>
     <div class="hint">Com mais de 1 pneu em falta, se não forem todos iguais, carregue em “Adicionar outro pneu diferente” e escolha o seguinte. No fim, “Guardar guia”.</div>
   </section>
 
@@ -260,7 +267,27 @@ const CATALOGO={
   "Sailun":[["Atrezzo Elite","C"],["Atrezzo ZSR","D"],["Atrezzo 4Seasons","T"],["Commercio Pro","V"]],
   "Linglong":[["Green-Max HP010","C"],["Sport Master","D"],["Green-Max All Season","T"]]
 };
-const MARCAS=[...Object.keys(CATALOGO),"Outra"];
+/* Opções acrescentadas pelo utilizador em "Outra marca / modelo / medida / índice": ficam guardadas neste telemóvel */
+let CUST={marcas:[],modelos:{},medidas:[],cargas:{}};
+try{const c=JSON.parse(localStorage.getItem("pneus_opcoes")||"{}");CUST={marcas:c.marcas||[],modelos:c.modelos||{},medidas:c.medidas||[],cargas:c.cargas||{}};}catch(e){}
+function gravarCust(){try{localStorage.setItem("pneus_opcoes",JSON.stringify(CUST));return true}catch(e){return false}}
+const igual=(a,b)=>String(a).toLowerCase()===String(b).toLowerCase();
+const chaveMed=m=>String(m||"").toUpperCase().replace(/\s+/g,"");
+const todasMarcas=()=>[...Object.keys(CATALOGO),...CUST.marcas];
+const tiposDe=m=>[...new Set((CATALOGO[m]||[]).map(x=>x[1]))];
+function normMedida(s){s=String(s||"").toUpperCase().replace(/\s+/g," ").trim();const m=s.match(/^(\d{3})\s*\/\s*(\d{2})\s*(Z?R)\s*(\d{2})\s*(C?)$/);return m?`${m[1]}/${m[2]} ${m[3]}${m[4]}${m[5]}`:s;}
+let novoFlags={};
+function memorizar(p,fl){
+  let mudou=false;
+  if(fl.marca&&p.marca&&!todasMarcas().some(k=>igual(k,p.marca))){CUST.marcas.push(p.marca);mudou=true;}
+  if(fl.modelo&&p.marca&&p.modelo){const ja=[...(CATALOGO[p.marca]||[]).map(x=>x[0]),...(CUST.modelos[p.marca]||[])];
+    if(!ja.some(k=>igual(k,p.modelo))){(CUST.modelos[p.marca]=CUST.modelos[p.marca]||[]).push(p.modelo);mudou=true;}}
+  if(fl.medida&&p.medida){const ja=[...Object.values(MED).flat(),...CUST.medidas];if(!ja.some(k=>igual(k,p.medida))){CUST.medidas.push(p.medida);mudou=true;}}
+  if(fl.carga&&p.carga&&p.medida){const k=chaveMed(p.medida),ja=[...(CARGA[p.medida]||[]).map(String),...(CUST.cargas[k]||[])];
+    if(!ja.includes(String(p.carga))){(CUST.cargas[k]=CUST.cargas[k]||[]).push(String(p.carga));mudou=true;}}
+  if(mudou)gravarCust();
+  return mudou;
+}
 const OUTRO="__outro";
 /* Índice de carga por medida: [normal, XL]; comerciais: [índice C] */
 const CARGA={"155/65 R14":[75,79],"165/65 R14":[79,83],"165/70 R14":[81,85],"175/65 R14":[82,86],"175/70 R14":[84,88],"185/60 R15":[84,88],"185/65 R15":[88,92],"195/65 R15":[91,95],
@@ -275,11 +302,13 @@ function mostrarIndices(m){
   carga="";vel="";ref="";
   const gc=$("cargas");gc.innerHTML="";$("carga").value="";
   const sug=CARGA[m]||[];
+  const extra=(CUST.cargas[chaveMed(m)]||[]).filter(x=>!sug.map(String).includes(String(x)));
   sug.forEach((v,i)=>{const xl=sug.length===2&&i===1;const b=chip(String(v),sug.length===2?(xl?"XL":"normal"):"comercial");
     b.onclick=()=>{carga=String(v);marcar(gc,b);$("carga").hidden=true;if(sug.length===2&&xl)escolherRef("XL");};gc.appendChild(b);});
-  const o=chip(sug.length?"Outro":"Escrever",null,true);o.onclick=()=>{carga=OUTRO;marcar(gc,o);$("carga").hidden=false;$("carga").focus();};gc.appendChild(o);
+  extra.forEach(v=>{const b=chip(String(v),"guardado");b.onclick=()=>{carga=String(v);marcar(gc,b);$("carga").hidden=true;};gc.appendChild(b);});
+  const o=chip(sug.length||extra.length?"Outro":"Escrever",null,true);o.onclick=()=>{carga=OUTRO;marcar(gc,o);$("carga").hidden=false;$("carga").focus();};gc.appendChild(o);
   $("carga").hidden=true;
-  if(!sug.length){carga=OUTRO;marcar(gc,o);$("carga").hidden=false;}
+  if(!sug.length&&!extra.length){carga=OUTRO;marcar(gc,o);$("carga").hidden=false;}
   const gv=$("vels");gv.innerHTML="";
   const prim=[...new Set(tiposAtuais.flatMap(t=>VEL[t]||[]))];
   const lista=prim.length?[...VEL_TODAS.filter(v=>prim.includes(v)),...VEL_TODAS.filter(v=>!prim.includes(v))]:VEL_TODAS;
@@ -306,8 +335,8 @@ function marcar(grupo,b){grupo.querySelectorAll(".chip").forEach(c=>c.setAttribu
 function mostrarMedidas(lista,tipos){
   tiposAtuais=tipos||[];esconderIndices();
   const g=$("medidas");g.innerHTML="";medida="";$("medida").hidden=true;$("medida").value="";
-  lista.forEach(m=>{const b=chip(m);b.onclick=()=>{medida=m;marcar(g,b);$("medida").hidden=true;mostrarIndices(m);irPara("f-carga");};g.appendChild(b);});
-  const o=chip("Outra medida",null,true);o.onclick=()=>{medida=OUTRO;marcar(g,o);$("medida").hidden=false;$("medida").focus();mostrarIndices("");};g.appendChild(o);
+  [...lista,...CUST.medidas.filter(x=>!lista.includes(x))].forEach(m=>{const b=chip(m,lista.includes(m)?null:"guardada");b.onclick=()=>{medida=m;marcar(g,b);$("medida").hidden=true;mostrarIndices(m);irPara("f-carga");};g.appendChild(b);});
+  const o=chip("Outra medida",null,true);o.onclick=()=>{medida=OUTRO;medIdx="";marcar(g,o);$("medida").hidden=false;$("medida").focus();mostrarIndices("");};g.appendChild(o);
   $("f-medida").hidden=false;
 }
 function todasMedidas(tipos){return [...new Set(tipos.flatMap(t=>MED[t]))].sort((a,b)=>{const p=s=>s.match(/\d+/g).map(Number);const x=p(a),y=p(b);return x[2]-y[2]||x[0]-y[0]||x[1]-y[1];});}
@@ -318,9 +347,12 @@ function escolherMarca(m){
   const g=$("modelos");g.innerHTML="";$("modelo").value="";
   if(m==="Outra"){$("modelo").hidden=false;modelo=OUTRO;$("f-modelo").hidden=false;mostrarMedidas(todasMedidas(["C","S","V"]),[]);return;}
   $("modelo").hidden=true;
-  CATALOGO[m].forEach(([nome,t])=>{const b=chip(nome,TIPO[t]);b.onclick=()=>{modelo=nome;marcar(g,b);$("modelo").hidden=true;mostrarMedidas(MED[t],[t]);irPara("f-medida");};g.appendChild(b);});
+  const padrao=CATALOGO[m]||[],meus=(CUST.modelos[m]||[]).filter(n=>!padrao.some(x=>igual(x[0],n)));
+  const ts=tiposDe(m),base=ts.length?ts:["C","S","V"];
+  padrao.forEach(([nome,t])=>{const b=chip(nome,TIPO[t]);b.onclick=()=>{modelo=nome;marcar(g,b);$("modelo").hidden=true;mostrarMedidas(MED[t],[t]);irPara("f-medida");};g.appendChild(b);});
+  meus.forEach(nome=>{const b=chip(nome,"guardado");b.onclick=()=>{modelo=nome;marcar(g,b);$("modelo").hidden=true;mostrarMedidas(todasMedidas(base),ts);irPara("f-medida");};g.appendChild(b);});
   const o=chip("Outro modelo",null,true);
-  o.onclick=()=>{modelo=OUTRO;marcar(g,o);$("modelo").hidden=false;$("modelo").focus();{const ts=[...new Set(CATALOGO[m].map(x=>x[1]))];mostrarMedidas(todasMedidas(ts),ts);}};
+  o.onclick=()=>{modelo=OUTRO;marcar(g,o);$("modelo").hidden=false;$("modelo").focus();mostrarMedidas(todasMedidas(base),ts);};
   g.appendChild(o);
   $("f-modelo").hidden=false;$("f-medida").hidden=true;esconderIndices();
 }
@@ -329,7 +361,8 @@ function limparPneu(){
   ["marcaOutra","modelo","medida"].forEach(i=>{$(i).value="";$(i).hidden=true;});
   $("f-modelo").hidden=true;$("f-medida").hidden=true;marcar($("marcas"),null);esconderIndices();
 }
-MARCAS.forEach(m=>{const b=chip(m,null,m==="Outra");b.onclick=()=>{marcar($("marcas"),b);escolherMarca(m);if(m!=="Outra")irPara("f-modelo");};$("marcas").appendChild(b);});
+function construirMarcas(){const g=$("marcas");g.innerHTML="";[...todasMarcas(),"Outra"].forEach(m=>{const b=chip(m,null,m==="Outra");b.onclick=()=>{marcar(g,b);escolherMarca(m);if(m!=="Outra")irPara("f-modelo");};g.appendChild(b);});}
+construirMarcas();
 const total=()=>Math.max(1,parseInt($("qtd").value,10)||1);
 const atribuidos=()=>pendentes.reduce((a,p)=>a+p.qtd,0);
 const restam=()=>total()-atribuidos();
@@ -346,7 +379,8 @@ $("qtd").addEventListener("input",()=>{if(!pendentes.length)$("qtdL").value=tota
 $("menosL").onclick=()=>{$("qtdL").value=Math.max(1,(parseInt($("qtdL").value,10)||1)-1);atualizarQtd();};
 $("maisL").onclick=()=>{$("qtdL").value=Math.min(restam(),(parseInt($("qtdL").value,10)||1)+1);atualizarQtd();};
 $("qtdL").addEventListener("change",atualizarQtd);
-$("medida").addEventListener("blur",e=>{e.target.value=e.target.value.toUpperCase().replace(/\s+/g," ").trim();if(medida===OUTRO&&CARGA[e.target.value])mostrarIndices(e.target.value);});
+let medIdx="";
+$("medida").addEventListener("blur",e=>{e.target.value=normMedida(e.target.value);const v=e.target.value;if(medida===OUTRO&&v!==medIdx&&(CARGA[v]||(CUST.cargas[chaveMed(v)]||[]).length)){medIdx=v;mostrarIndices(v);}});
 $("dia").onchange=render;
 
 function msg(id,t,ok){const m=$(id);m.textContent=t;m.className="msg "+(ok?"ok":"err");}
@@ -383,11 +417,16 @@ $("lista").addEventListener("click",async e=>{
 });
 
 let pendentes=[];
-function lerPneu(){return {qtd:total()>1?(parseInt($("qtdL").value,10)||0):1,
-  marca:marca==="Outra"?$("marcaOutra").value.trim():marca,
-  modelo:modelo===OUTRO?$("modelo").value.trim():modelo,
-  medida:medida===OUTRO?$("medida").value.toUpperCase().replace(/\s+/g," ").trim():medida,
-  carga:carga===OUTRO?$("carga").value.replace(/\s+/g,"").trim():carga,vel,ref};}
+function lerPneu(){
+  novoFlags={marca:marca==="Outra",modelo:modelo===OUTRO,medida:medida===OUTRO,carga:carga===OUTRO};
+  let mc=marca==="Outra"?$("marcaOutra").value.replace(/\s+/g," ").trim():marca;
+  const cm=todasMarcas().find(k=>igual(k,mc));if(cm)mc=cm;
+  let md=modelo===OUTRO?$("modelo").value.replace(/\s+/g," ").trim():modelo;
+  const cd=[...(CATALOGO[mc]||[]).map(x=>x[0]),...(CUST.modelos[mc]||[])].find(k=>igual(k,md));if(cd)md=cd;
+  return {qtd:total()>1?(parseInt($("qtdL").value,10)||0):1,marca:mc,modelo:md,
+    medida:medida===OUTRO?normMedida($("medida").value):medida,
+    carga:carga===OUTRO?$("carga").value.replace(/\s+/g,"").trim():carga,vel,ref};
+}
 function pneuVazio(p){return !marca&&!p.modelo&&!p.medida&&!p.carga&&!p.vel&&!p.ref;}
 const indice=p=>[(p.carga||"")+(p.vel||""),p.ref].filter(Boolean).join(" ");
 function faltaPneu(p){const f=[];if(p.qtd<1)f.push("nº de pneus");if(!p.marca)f.push("marca");if(!p.modelo)f.push("modelo");if(!p.medida)f.push("medida");if(!p.carga)f.push("índice de carga");if(!p.vel)f.push("índice de velocidade");return f;}
@@ -402,14 +441,14 @@ $("adicionar").onclick=()=>{
   const p=lerPneu(),f=faltaPneu(p);
   if(f.length){msg("msg","Para adicionar outro pneu, preencha primeiro: "+f.join(", ")+".",false);return;}
   if(p.qtd>=restam()){msg("msg",`Este pneu já cobre os ${restam()} que faltam. Carregue em Guardar guia, ou baixe a quantidade deste pneu.`,false);return;}
-  pendentes.push(p);$("qtdL").value=restam();limparPneu();renderPend();
+  const fl=novoFlags;pendentes.push(p);memorizar(p,fl);$("qtdL").value=restam();limparPneu();construirMarcas();renderPend();renderGuardados();
   msg("msg",`Adicionado à guia: ${p.qtd} × ${p.marca} ${p.modelo} ${p.medida} ${indice(p)}. Escolha agora o próximo pneu.`,true);
   $("marcas").scrollIntoView({behavior:"smooth",block:"center"});
 };
 
 $("guardar").onclick=async()=>{
   const volta=$("volta").value.trim(),guia=$("guia").value.trim(),dia=$("dia").value||hoje();
-  const atual=lerPneu();let linhas=[...pendentes];
+  const atual=lerPneu(),flAtual=novoFlags;let linhas=[...pendentes];
   if(!pneuVazio(atual)){const f=faltaPneu(atual);if(f.length){msg("msg","Falta preencher no pneu "+(pendentes.length+1)+": "+f.join(", ")+".",false);return;}linhas.push(atual);}
   const falta=[];if(!volta)falta.push("volta");if(!guia)falta.push("guia");if(!linhas.length)falta.push("pelo menos um pneu");
   if(falta.length){msg("msg","Falta preencher: "+falta.join(", ")+".",false);return;}
@@ -424,9 +463,10 @@ $("guardar").onclick=async()=>{
       feitos++;
     }
     if(local)render();
+    if(linhas.includes(atual))memorizar(atual,flAtual);
     const tot=linhas.reduce((a,p)=>a+p.qtd,0);
     msg("msg",`Guia ${guia} guardada: ${tot} pneu${tot===1?"":"s"} em ${linhas.length} linha${linhas.length===1?"":"s"} (volta ${volta}).`,true);
-    pendentes=[];$("qtd").value=1;$("qtdL").value=1;limparPneu();renderPend();$("guia").value="";$("guia").focus();
+    pendentes=[];$("qtd").value=1;$("qtdL").value=1;limparPneu();construirMarcas();renderPend();renderGuardados();$("guia").value="";$("guia").focus();
   }catch(err){
     pendentes=linhas.slice(feitos);renderPend();
     msg("msg",(err&&err.message==="storage"?"O telemóvel não deixou guardar (sem espaço ou armazenamento bloqueado). Exporte o Excel e liberte espaço.":"Não foi possível guardar tudo. Carregue outra vez em Guardar guia.")+(feitos?` (${feitos} já ficaram guardados)`:""),false);
@@ -456,7 +496,29 @@ $("excel").onclick=async()=>{
   }catch(err){msg("msgX","Não foi possível gerar o Excel.",false);}
 };
 
-render();atualizarQtd();
+let apagarOpc=null;
+function itensGuardados(){const l=[];
+  CUST.marcas.forEach(m=>l.push({tipo:"Marca",txt:m,ref:["marca",m]}));
+  Object.keys(CUST.modelos).forEach(m=>CUST.modelos[m].forEach(n=>l.push({tipo:"Modelo",txt:n,sub:m,ref:["modelo",m,n]})));
+  CUST.medidas.forEach(x=>l.push({tipo:"Medida",txt:x,ref:["medida",x]}));
+  Object.keys(CUST.cargas).forEach(k=>CUST.cargas[k].forEach(c=>l.push({tipo:"Índice de carga",txt:c,sub:k,ref:["carga",k,c]})));
+  return l;}
+function renderGuardados(){
+  const l=itensGuardados();$("guardados").hidden=!l.length;if(!l.length)return;
+  $("guardadosTit").textContent=`Opções guardadas neste telemóvel (${l.length})`;
+  $("guardadosLista").innerHTML=l.map((i,n)=>`<div class="opc"><div><b>${esc(i.txt)}</b><small>${esc(i.tipo)}${i.sub?" · "+esc(i.sub):""}</small></div><button type="button" class="del${apagarOpc===n?" confirm":""}" data-n="${n}">${apagarOpc===n?"Confirmar":"Apagar"}</button></div>`).join("");
+}
+$("guardadosLista").addEventListener("click",e=>{
+  const b=e.target.closest(".del");if(!b)return;const n=+b.dataset.n,l=itensGuardados();
+  if(apagarOpc!==n){apagarOpc=n;renderGuardados();setTimeout(()=>{if(apagarOpc===n){apagarOpc=null;renderGuardados();}},4000);return;}
+  apagarOpc=null;const r=l[n].ref;
+  if(r[0]==="marca"){CUST.marcas=CUST.marcas.filter(x=>x!==r[1]);delete CUST.modelos[r[1]];}
+  else if(r[0]==="modelo"){CUST.modelos[r[1]]=CUST.modelos[r[1]].filter(x=>x!==r[2]);if(!CUST.modelos[r[1]].length)delete CUST.modelos[r[1]];}
+  else if(r[0]==="medida"){CUST.medidas=CUST.medidas.filter(x=>x!==r[1]);}
+  else{CUST.cargas[r[1]]=CUST.cargas[r[1]].filter(x=>x!==r[2]);if(!CUST.cargas[r[1]].length)delete CUST.cargas[r[1]];}
+  gravarCust();limparPneu();construirMarcas();renderGuardados();
+});
+render();atualizarQtd();renderGuardados();
 
 try{navigator.storage&&navigator.storage.persist&&navigator.storage.persist();}catch(e){}
 if("serviceWorker" in navigator&&location.protocol!=="file:"){navigator.serviceWorker.register("sw.js").catch(()=>{});}
