@@ -1,0 +1,469 @@
+<!doctype html>
+<html lang="pt-PT">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0c0f0d">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Pneus em Falta</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+/* Layout: ecrã único de armazém — formulário em cima, lista do dia em baixo, botões grandes para usar com uma mão */
+:root{
+  --bg:#0c0f0d; --panel:#151a17; --line:#26302a; --fg:#eef3ef; --muted:#93a39a;
+  --green:#B9D406; --green-dk:#94aa05; --green-ink:#0a0a0a; --danger:#e0574f;
+  --display:"Roboto Condensed","sans-serif-condensed","Arial Narrow",Arial,sans-serif;
+  --body:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --mono:"Roboto Mono",ui-monospace,Menlo,Consolas,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+img{max-width:100%}
+body{margin:0}
+button{-webkit-tap-highlight-color:transparent}
+html,body{background:var(--bg);color:var(--fg)}
+body{font-family:var(--body);font-size:16px;line-height:1.4;padding-inline:16px;padding-block:0 40px}
+.wrap{max-width:560px;margin:0 auto;display:flex;flex-direction:column;gap:20px}
+header{padding-block:calc(14px + env(safe-area-inset-top,0px)) 12px;border-bottom:2px solid var(--green);display:flex;align-items:center;justify-content:space-between;gap:12px}
+.brand{display:flex;align-items:center;gap:10px;min-width:0}
+.logo{height:40px;width:auto;max-width:42%;background:#fff;border-radius:8px;padding:5px 8px;flex:none}
+h1{font-family:var(--display);font-weight:700;font-size:26px;letter-spacing:.02em;text-transform:uppercase;margin:0;line-height:1}
+.sub{font-size:12px;color:var(--muted);letter-spacing:.06em;text-transform:uppercase}
+.datebox input{background:var(--panel);color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:8px;font:500 14px var(--mono)}
+section.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:16px}
+h2{font-family:var(--display);font-size:20px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;margin:0;color:var(--green)}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.field{display:flex;flex-direction:column;gap:6px;min-width:0}
+label,.lbl{font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+input[type=text],input[type=number]{width:100%;background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:12px;font:500 18px var(--body)}
+input:focus-visible,button:focus-visible{outline:2px solid var(--green);outline-offset:2px}
+input.mono{font-family:var(--mono);letter-spacing:.02em}
+.stepper{display:grid;grid-template-columns:56px 1fr 56px;gap:8px}
+.stepper button{background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:8px;font:700 26px var(--display);cursor:pointer}
+.stepper input{text-align:center;font:600 24px var(--mono)}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:999px;padding:10px 14px;font:600 15px var(--body);cursor:pointer}
+.chip[aria-pressed=true]{background:var(--green);border-color:var(--green);color:var(--green-ink)}
+.hint{font-size:13px;color:var(--muted)}
+.pneu{border:1px dashed var(--line);border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:16px}
+.pneu-h{display:flex;justify-content:space-between;align-items:baseline;font:700 17px var(--display);text-transform:uppercase;letter-spacing:.05em}
+.pneu-h span{font:500 12px var(--body);color:var(--muted);text-transform:none;letter-spacing:0}
+.pend{display:flex;flex-direction:column;gap:8px}
+.pend-h{font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.btns{display:flex;flex-direction:column;gap:10px}
+.guia-h{font-size:13px;color:var(--muted);display:flex;justify-content:space-between;padding:2px 2px 0}
+.guia-h b{color:var(--fg);font-family:var(--mono);font-weight:500}
+.chips.sizes .chip{font:500 14px var(--mono);padding:9px 12px;border-radius:8px}
+.chip.alt{border-style:dashed;color:var(--muted)}
+.chip .tag{display:block;font-size:11px;font-weight:500;color:var(--muted);letter-spacing:.04em}
+.chip[aria-pressed=true] .tag{color:var(--green-ink)}
+.btn{border:0;border-radius:10px;padding:16px;font:700 20px var(--display);letter-spacing:.06em;text-transform:uppercase;cursor:pointer}
+.btn-main{background:var(--green);color:var(--green-ink)}
+.btn-main:active{background:var(--green-dk)}
+.btn-ghost{background:transparent;color:var(--green);border:2px solid var(--green)}
+.msg{font-size:14px;min-height:20px}
+.msg.ok{color:var(--green)} .msg.err{color:var(--danger)}
+.summary{display:flex;gap:12px}
+.stat{flex:1;border-left:3px solid var(--green);padding-left:10px}
+.stat b{display:block;font:600 28px var(--mono);font-variant-numeric:tabular-nums}
+.stat span{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
+.volta{border-top:1px solid var(--line);padding-top:12px;display:flex;flex-direction:column;gap:8px}
+.volta-h{display:flex;justify-content:space-between;align-items:baseline}
+.volta-h strong{font:700 20px var(--display);text-transform:uppercase;letter-spacing:.04em}
+.volta-h span{font:500 14px var(--mono);color:var(--green)}
+.item{display:grid;grid-template-columns:44px 1fr auto;gap:10px;align-items:center;background:var(--bg);border-radius:8px;padding:10px}
+.qty{font:600 20px var(--mono);text-align:center;color:var(--green)}
+.item .t{min-width:0}
+.item .t b{display:block;font-weight:600;overflow-wrap:anywhere}
+.item .t small{color:var(--muted);font-size:13px;overflow-wrap:anywhere}
+.del{background:none;border:1px solid var(--line);color:var(--muted);border-radius:8px;padding:8px 10px;font:600 13px var(--body);cursor:pointer}
+.del.confirm{border-color:var(--danger);color:var(--danger)}
+.empty{color:var(--muted);text-align:center;padding:12px;font-size:15px}
+.example{font-size:12px;color:var(--muted);font-style:italic}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <div class="brand">
+      <img class="logo" alt="Logotipo" src="data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0idXRmLTgiPz4KPCEtLSBHZW5lcmF0b3I6IEFkb2JlIElsbHVzdHJhdG9yIDI3LjAuMCwgU1ZHIEV4cG9ydCBQbHVnLUluIC4gU1ZHIFZlcnNpb246IDYuMDAgQnVpbGQgMCkgIC0tPgo8c3ZnIHZlcnNpb249IjEuMSIgaWQ9IkxheWVyXzEiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgeG1sbnM6eGxpbms9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkveGxpbmsiIHg9IjBweCIgeT0iMHB4IgoJIHZpZXdCb3g9IjAgMCA0NTYgMTg0LjMiIHN0eWxlPSJlbmFibGUtYmFja2dyb3VuZDpuZXcgMCAwIDQ1NiAxODQuMzsiIHhtbDpzcGFjZT0icHJlc2VydmUiPgo8c3R5bGUgdHlwZT0idGV4dC9jc3MiPgoJLnN0MHtmaWxsOiNCOUQ0MDY7fQoJLnN0MXtmaWxsOiMwMDdCN0Y7fQoJLnN0MntmaWxsOiMzRjlCOUU7fQo8L3N0eWxlPgo8Zz4KCTxwYXRoIGNsYXNzPSJzdDAiIGQ9Ik00NDQuMiw3Mi43Yy0yMy40LDcuNi00Ni41LDE1LjEtNjkuNywyMi43Yy0zLTMuNC00LjItNy40LTUuNi0xMS4yYy0zLjQtOS4xLTQuOS0xOC42LTUuMS0yOC4zCgkJYy0wLjMtMTcuOCwxMC4zLTI5LjksMjMuOC0zNC4yYzIyLjMtNy4xLDQ0LjUtMTQuMyw2Ni43LTIxLjVjMC41LTAuMSwxLTAuMSwxLjUtMC4yQzQ1Ni41LDMuNiw0NDguNSw1My41LDQ0NC4yLDcyLjd6Ii8+Cgk8cGF0aCBjbGFzcz0ic3QxIiBkPSJNNDU1LDE0Ny4xYy04LjcsNi43LTE4LjEsMTIuMy0yNy4xLDE4LjZjLTguMyw1LjgtMTYuOSwxMS4zLTI1LjMsMTdjLTEuNiwxLjEtMywxLjktNSwxLjQKCQljLTE2LjItNC4xLTMwLjYtMTEuMS00MS0yNC43Yy01LjEtNi43LTguMy0xNC40LTkuNy0yMi43Yy0wLjQtMi4xLTAuNC00LjQtMC4xLTYuNWMyLTE0LDQuMi0yNy45LDYuMy00MS45CgkJYzEuMy04LjYsMi42LTE3LjMsNC4xLTI1LjljMS40LDcuNCwxLjksMTQuOCw0LjMsMjJjMTEuMiwzMi43LDMzLjIsNTMuMyw2Ny4yLDYwLjhjNi45LDEuNSwxMy44LDEuOCwyMC44LDEuOAoJCUM0NTEuMywxNDYuNSw0NTMuMiwxNDYuMiw0NTUsMTQ3LjF6Ii8+Cgk8cGF0aCBjbGFzcz0ic3QyIiBkPSJNNDU1LDE0Ny4xYy0xLjgtMC4xLTMuNy0wLjEtNS41LTAuMmMyLTEuNCw0LjMtMC43LDYuNS0wLjljMCwwLjQsMCwwLjgtMC4xLDAuOQoJCUM0NTUuNywxNDcuMSw0NTUuMywxNDcuMSw0NTUsMTQ3LjF6Ii8+Cgk8cGF0aCBkPSJNMzMzLjIsNTMuNmMtMTUuMywwLTMwLjctMC40LTQ2LDAuMWMtMTQuMywwLjQtMjUuOSwxMC43LTI4LjQsMjQuM2MtMS41LDgtMi44LDE2LjEtNC4zLDI0LjFjLTEuNyw5LjItMy41LDE4LjQtNS4zLDI4LjIKCQljLTYuNS00LjctMTIuNi05LjEtMTkuMS0xMy44YzEuOS0xLjMsMy4zLTIuMiw0LjYtMy4xYzguMi01LjgsMTMuOC0xMy40LDE2LjMtMjMuMWM1LTE5LjItNy4xLTM1LjYtMjQuOS0zNi4zCgkJYy05LjMtMC40LTE4LjcsMC0yOC0wLjNjLTE2LjMtMC41LTI5LDExLTMxLjUsMjYuMmMtMi4yLDEzLjEtNC45LDI2LjEtNy4zLDM5LjFjLTAuMywwLTAuNiwwLjEtMC45LDAuMQoJCWMtMy44LTIxLjYtNy42LTQzLjMtMTEuNS02NC45Yy04LjMsMC0xNi4xLDAtMjQuMywwYy03LjksMTEuMS0xNiwyMi4zLTI0LDMzLjZjLTgsMTEuMi0xNiwyMi40LTI0LDMzLjZjLTExLjUsMC0yMi42LDAuMS0zMy44LDAKCQljLTE0LjEtMC4xLTIyLjUtMTEuNS0xOC44LTI1LjFjMy4yLTExLjgsMTUuNC0yMS44LDI4LjEtMjEuNWMxMi4zLDAuMiwyNC43LDAuMSwzNywwYzEuNiwwLDMuMywwLjQsNC42LTEuMgoJCWM1LjEtNi4zLDEwLjMtMTIuNiwxNS43LTE5LjJjLTEuNC0wLjEtMi4yLTAuMi0zLTAuMmMtMTksMC0zOCwwLTU3LDBjLTIuMiwwLTQuMywwLjEtNi40LDAuNmMtMTUuMywzLjQtMjYuMywxMi4zLTM0LDI1LjYKCQljLTYsMTAuNC04LjcsMjEuNi02LjIsMzMuNmMzLjQsMTYuOSwxNy43LDI4LjIsMzUuNiwyOC41YzEwLjMsMC4yLDIwLjcsMCwzMSwwYzYuMiwwLDEyLjMsMCwxOC40LDBjNS4yLTcuMiwxMC4yLTE0LjIsMTUuMi0yMS4yCgkJYzUuOC0wLjEsMTEuMSwxLjQsMTYuMiwzLjRjOS4zLDMuOCwxNi44LDkuOSwyMi44LDE3LjRjMTIuNCwwLDI0LjMsMCwzNi4yLDBjMi40LTEyLjgsNC44LTI1LjMsNy4zLTM4LjNjMS45LDEuNCwzLjIsMi40LDQuNSwzLjQKCQljMTMuOSwxMC45LDI3LjgsMjEuOCw0MS42LDMyLjhjMi4yLDEuOCw0LjQsMi42LDcuMiwyLjZjOS4yLTAuMiwxOC4zLDAsMjcuNS0wLjFjMS4zLDAsMi43LDAuNCwzLjktMC44CgkJYzIuMi0xMS42LDQuNC0yMy4zLDYuNy0zNS41YzE0LDAsMjcuNywwLDQxLjYsMGMxLjYtNi44LDMuMS0xMy4yLDQuNy0yMC4yYy0xNC41LDAtMjguNCwwLTQyLjYsMGMwLjMtMS41LDAuNi0yLjUsMC43LTMuNAoJCWMxLjMtNy41LDIuMy04LjQsOS42LTguNGMxMi43LDAsMjUuMywwLDM4LDBjMS40LDAsMywwLjUsNC40LTAuOGMwLjktNi4yLDIuOC0xMi41LDMuMy0xOC45QzMzNC4xLDUzLjksMzMzLjcsNTMuNiwzMzMuMiw1My42egoJCSBNMTA4LjIsMTExLjJjNy05LjksMTMuNy0xOS4yLDIxLTI5LjVjMi4xLDExLjcsMy45LDIyLjQsNS45LDMzLjVDMTI2LjMsMTEyLjEsMTE3LjcsMTExLjIsMTA4LjIsMTExLjJ6IE0yMTcuMiwxMDAuMgoJCWMtMi44LDAuNC01LjYsMC4zLTguNSwwLjNjLTcuOCwwLTE1LjYsMC0yMy43LDBjLTEtMi43LDAuMi00LjcsMC41LTYuOGMwLjgtNC42LDEuNi05LjIsMi42LTEzLjdjMS00LjgsMi42LTYuMSw3LjUtNi4xCgkJYzguMywwLDE2LjcsMCwyNSwwYzguNCwwLDEzLjMsNi41LDEwLjYsMTQuNEMyMjksOTUsMjI0LjMsOTkuMiwyMTcuMiwxMDAuMnoiLz4KPC9nPgo8L3N2Zz4K">
+      <div style="min-width:0"><h1>Pneus em Falta</h1><div class="sub">Levantamento em armazém</div></div>
+    </div>
+    <div class="datebox"><input type="date" id="dia" aria-label="Dia do levantamento"></div>
+  </header>
+
+  <section class="card" aria-labelledby="t-novo">
+    <h2 id="t-novo">Novo registo</h2>
+    <div class="row">
+      <div class="field"><label for="volta">Volta</label><input type="text" id="volta" inputmode="numeric" autocomplete="off" placeholder="ex. 12"></div>
+      <div class="field"><label for="guia">Guia de transporte</label><input type="text" id="guia" class="mono" autocomplete="off" placeholder="nº da guia"></div>
+    </div>
+    <div class="field">
+      <span class="lbl" id="l-qtd">Nº total de pneus em falta nesta guia</span>
+      <div class="stepper" role="group" aria-labelledby="l-qtd">
+        <button type="button" id="menos" aria-label="Menos um">−</button>
+        <input type="number" id="qtd" min="1" value="1" inputmode="numeric" aria-labelledby="l-qtd">
+        <button type="button" id="mais" aria-label="Mais um">+</button>
+      </div>
+    </div>
+    <div class="pend" id="pend" hidden><div class="pend-h">Pneus já adicionados a esta guia</div><div id="pendLista" class="pend"></div></div>
+    <div class="pneu">
+    <div class="pneu-h" id="pneuTit">Pneu 1<span id="pneuSub"></span></div>
+    <div class="field" id="f-qtdL" hidden>
+      <span class="lbl" id="l-qtdL">Quantos são deste pneu</span>
+      <div class="stepper" role="group" aria-labelledby="l-qtdL">
+        <button type="button" id="menosL" aria-label="Menos um">−</button>
+        <input type="number" id="qtdL" min="1" value="1" inputmode="numeric" aria-labelledby="l-qtdL">
+        <button type="button" id="maisL" aria-label="Mais um">+</button>
+      </div>
+    </div>
+    <div class="field">
+      <span class="lbl" id="l-marca">Marca</span>
+      <div class="chips" id="marcas" role="group" aria-labelledby="l-marca"></div>
+      <input type="text" id="marcaOutra" placeholder="Escreva a marca" hidden autocomplete="off">
+    </div>
+    <div class="field" id="f-modelo" hidden>
+      <span class="lbl" id="l-modelo">Modelo</span>
+      <div class="chips" id="modelos" role="group" aria-labelledby="l-modelo"></div>
+      <input type="text" id="modelo" autocomplete="off" placeholder="Escreva o modelo" hidden aria-labelledby="l-modelo">
+    </div>
+    <div class="field" id="f-medida" hidden>
+      <span class="lbl" id="l-medida">Medida</span>
+      <div class="chips sizes" id="medidas" role="group" aria-labelledby="l-medida"></div>
+      <input type="text" id="medida" class="mono" autocomplete="off" placeholder="ex. 205/55 R16" hidden aria-labelledby="l-medida">
+    </div>
+    <div class="field" id="f-carga" hidden>
+      <span class="lbl" id="l-carga">Índice de carga</span>
+      <div class="chips sizes" id="cargas" role="group" aria-labelledby="l-carga"></div>
+      <input type="text" id="carga" class="mono" inputmode="numeric" autocomplete="off" placeholder="ex. 91 ou 104/102" hidden aria-labelledby="l-carga">
+    </div>
+    <div class="field" id="f-vel" hidden>
+      <span class="lbl" id="l-vel">Índice de velocidade</span>
+      <div class="chips sizes" id="vels" role="group" aria-labelledby="l-vel"></div>
+    </div>
+    <div class="field" id="f-ref" hidden>
+      <span class="lbl" id="l-ref">XL ou TL (opcional)</span>
+      <div class="chips" id="refs" role="group" aria-labelledby="l-ref"></div>
+    </div>
+    </div>
+    <div class="btns">
+      <button class="btn btn-ghost" id="adicionar" type="button" hidden>+ Adicionar outro pneu diferente</button>
+      <button class="btn btn-main" id="guardar" type="button">Guardar guia</button>
+    </div>
+    <div class="msg" id="msg" role="status"></div>
+    <div class="hint">Com mais de 1 pneu em falta, se não forem todos iguais, carregue em “Adicionar outro pneu diferente” e escolha o seguinte. No fim, “Guardar guia”.</div>
+  </section>
+
+  <section class="card" aria-labelledby="t-lista">
+    <h2 id="t-lista">Registos do dia</h2>
+    <div class="summary">
+      <div class="stat"><b id="sPneus">0</b><span>Pneus em falta</span></div>
+      <div class="stat"><b id="sVoltas">0</b><span>Voltas</span></div>
+      <div class="stat"><b id="sGuias">0</b><span>Guias</span></div>
+    </div>
+    <div id="lista"></div>
+    <button class="btn btn-ghost" id="excel" type="button">Exportar Excel do dia</button>
+    <button class="btn btn-ghost" id="partilhar" type="button" hidden>Partilhar Excel (WhatsApp, email…)</button>
+    <div class="msg" id="msgX" role="status"></div>
+    <div class="hint">Os registos ficam guardados neste telemóvel, mesmo sem internet. Exporte o Excel no fim do dia.</div>
+  </section>
+</div>
+
+<script>/* Gerador mínimo de .xlsx (sem bibliotecas, funciona offline) */
+const MIME_XLSX="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+const CRC_T=(()=>{const t=new Uint32Array(256);for(let n=0;n<256;n++){let c=n;for(let k=0;k<8;k++)c=c&1?0xEDB88320^(c>>>1):c>>>1;t[n]=c>>>0;}return t;})();
+function crc32(b){let c=0xFFFFFFFF;for(let i=0;i<b.length;i++)c=CRC_T[(c^b[i])&255]^(c>>>8);return (c^0xFFFFFFFF)>>>0;}
+function zipStore(files){
+  const enc=new TextEncoder(),parts=[],central=[];let off=0;
+  const u16=n=>[n&255,(n>>8)&255],u32=n=>[n&255,(n>>8)&255,(n>>16)&255,(n>>>24)&255];
+  for(const [name,data] of files){
+    const nb=enc.encode(name),crc=crc32(data);
+    const lh=new Uint8Array([0x50,0x4b,3,4,...u16(20),...u16(0x0800),...u16(0),...u16(0),...u16(0x21),...u32(crc),...u32(data.length),...u32(data.length),...u16(nb.length),...u16(0)]);
+    parts.push(lh,nb,data);
+    central.push(new Uint8Array([0x50,0x4b,1,2,...u16(20),...u16(20),...u16(0x0800),...u16(0),...u16(0),...u16(0x21),...u32(crc),...u32(data.length),...u32(data.length),...u16(nb.length),...u16(0),...u16(0),...u16(0),...u16(0),...u32(0),...u32(off)]),nb);
+    off+=lh.length+nb.length+data.length;
+  }
+  const cdSize=central.reduce((a,p)=>a+p.length,0);
+  const end=new Uint8Array([0x50,0x4b,5,6,...u16(0),...u16(0),...u16(files.length),...u16(files.length),...u32(cdSize),...u32(off),...u16(0)]);
+  const all=[...parts,...central,end],out=new Uint8Array(all.reduce((a,p)=>a+p.length,0));let o=0;
+  for(const p of all){out.set(p,o);o+=p.length;}return out;
+}
+function criarXlsx({titulo,cab,linhas,total}){
+  const X=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])).replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g,"");
+  const L="ABCDEF";
+  const cel=(r,c,v,s)=>v===""||v==null?`<c r="${L[c]}${r}" s="${s}"/>`:typeof v==="number"?`<c r="${L[c]}${r}" s="${s}"><v>${v}</v></c>`:`<c r="${L[c]}${r}" s="${s}" t="inlineStr"><is><t xml:space="preserve">${X(v)}</t></is></c>`;
+  let rows=`<row r="1" ht="26" customHeight="1">`+[titulo,"","","","",""].map((v,c)=>cel(1,c,v,1)).join("")+`</row><row r="2"/>`;
+  rows+=`<row r="3" ht="30" customHeight="1">`+cab.map((v,c)=>cel(3,c,v,2)).join("")+`</row>`;
+  linhas.forEach((l,i)=>{const r=4+i;rows+=`<row r="${r}">`+l.map((v,c)=>cel(r,c,v,(i%2?5:3)+(c===2?1:0))).join("")+`</row>`;});
+  const rt=4+linhas.length+1,ult=3+linhas.length;
+  rows+=`<row r="${rt}">`+["","TOTAL",total,"","",""].map((v,c)=>cel(rt,c,v,c===1||c===2?7:0)).join("")+`</row>`;
+  const NS='xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"',H='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>';
+  const W=[10,22,12,16,24,24].map((w,i)=>`<col min="${i+1}" max="${i+1}" width="${w}" customWidth="1"/>`).join("");
+  const sheet=`${H}<worksheet ${NS}><sheetViews><sheetView workbookViewId="0" showGridLines="0"><pane ySplit="3" topLeftCell="A4" activePane="bottomLeft" state="frozen"/><selection pane="bottomLeft"/></sheetView></sheetViews><sheetFormatPr defaultRowHeight="15"/><cols>${W}</cols><sheetData>${rows}</sheetData><autoFilter ref="A3:F${ult}"/><mergeCells count="1"><mergeCell ref="A1:F1"/></mergeCells></worksheet>`;
+  const fill=c=>`<fill><patternFill patternType="solid"><fgColor rgb="FF${c}"/><bgColor indexed="64"/></patternFill></fill>`;
+  const bd=`<border><left style="thin"><color rgb="FF000000"/></left><right style="thin"><color rgb="FF000000"/></right><top style="thin"><color rgb="FF000000"/></top><bottom style="thin"><color rgb="FF000000"/></bottom><diagonal/></border>`;
+  const xf=(f,fi,b,h,wrap)=>`<xf numFmtId="0" fontId="${f}" fillId="${fi}" borderId="${b}" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="${h}" vertical="center"${wrap?' wrapText="1"':''}/></xf>`;
+  const styles=`${H}<styleSheet ${NS}><fonts count="4"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="14"/><color rgb="FFB9D406"/><name val="Calibri"/></font><font><b/><sz val="11"/><color rgb="FFB9D406"/><name val="Calibri"/></font><font><b/><sz val="11"/><color rgb="FFFFFFFF"/><name val="Calibri"/></font></fonts><fills count="5"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill>${fill("000000")}${fill("FFFFFF")}${fill("EEF5B8")}</fills><borders count="2"><border><left/><right/><top/><bottom/><diagonal/></border>${bd}</borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="8"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>${xf(1,2,0,"left")}${xf(2,2,1,"center",1)}${xf(0,3,1,"left")}${xf(0,3,1,"center")}${xf(0,4,1,"left")}${xf(0,4,1,"center")}${xf(3,2,1,"center")}</cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>`;
+  const wb=`${H}<workbook ${NS} xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="Pneus em falta" sheetId="1" r:id="rId1"/></sheets><definedNames><definedName name="_xlnm._FilterDatabase" localSheetId="0" hidden="1">'Pneus em falta'!$A$3:$F$${ult}</definedName></definedNames></workbook>`;
+  const R="http://schemas.openxmlformats.org/officeDocument/2006/relationships",P="http://schemas.openxmlformats.org/package/2006/relationships";
+  const ct=`${H}<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>`;
+  const rels=`${H}<Relationships xmlns="${P}"><Relationship Id="rId1" Type="${R}/officeDocument" Target="xl/workbook.xml"/></Relationships>`;
+  const wrels=`${H}<Relationships xmlns="${P}"><Relationship Id="rId1" Type="${R}/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="${R}/styles" Target="styles.xml"/></Relationships>`;
+  const e=new TextEncoder();
+  return zipStore([["[Content_Types].xml",e.encode(ct)],["_rels/.rels",e.encode(rels)],["xl/workbook.xml",e.encode(wb)],["xl/_rels/workbook.xml.rels",e.encode(wrels)],["xl/styles.xml",e.encode(styles)],["xl/worksheets/sheet1.xml",e.encode(sheet)]]);
+}
+
+
+/* Medidas mais vendidas por tipo de pneu (ligeiros e comerciais, mercado europeu) */
+const MED={
+  C:["165/70 R14","175/65 R14","185/65 R15","195/65 R15","185/60 R15","195/55 R16","205/55 R16","205/60 R16","215/60 R16","215/55 R17"],
+  E:["155/65 R14","165/65 R14","165/70 R14","175/65 R14","175/70 R14","185/60 R15","185/65 R15","195/65 R15"],
+  D:["205/55 R16","225/50 R17","225/45 R17","225/40 R18","225/45 R18","235/45 R18","245/40 R18","245/45 R18","235/40 R19","255/35 R19"],
+  T:["175/65 R14","185/65 R15","195/65 R15","205/55 R16","215/60 R16","225/45 R17","215/55 R17","215/65 R16","225/65 R17","235/55 R18"],
+  S:["215/65 R16","215/60 R17","225/65 R17","215/55 R18","225/55 R18","235/55 R18","235/60 R18","255/55 R18","235/55 R19","255/50 R19"],
+  V:["195/70 R15C","215/70 R15C","225/70 R15C","195/75 R16C","205/65 R16C","215/65 R16C","225/65 R16C","235/65 R16C","215/75 R16C"]
+};
+const TIPO={C:"Turismo",E:"Económico",D:"Desportivo",T:"4 estações",S:"SUV / 4x4",V:"Comercial"};
+/* Marca → [modelo, tipo] */
+const CATALOGO={
+  "Michelin":[["Primacy 4+","C"],["e.Primacy","E"],["Pilot Sport 5","D"],["Pilot Sport 4","D"],["CrossClimate 2","T"],["CrossClimate 2 SUV","S"],["Primacy SUV+","S"],["Agilis 3","V"]],
+  "Continental":[["EcoContact 6","C"],["PremiumContact 7","C"],["UltraContact","C"],["SportContact 7","D"],["AllSeasonContact 2","T"],["CrossContact ATR","S"],["VanContact Eco","V"]],
+  "Bridgestone":[["Turanza 6","C"],["Ecopia EP150","E"],["Potenza Sport","D"],["Turanza All Season 6","T"],["Weather Control A005 Evo","T"],["Alenza 001","S"],["Duravis Van","V"]],
+  "Goodyear":[["EfficientGrip Performance 2","C"],["Eagle F1 Asymmetric 6","D"],["Vector 4Seasons Gen-3","T"],["EfficientGrip 2 SUV","S"],["Eagle F1 Asymmetric 3 SUV","S"],["Cargo Vector 2","V"]],
+  "Pirelli":[["Cinturato P7","C"],["Powergy","C"],["P Zero","D"],["Cinturato All Season SF3","T"],["Scorpion Verde","S"],["Scorpion","S"],["Carrier","V"]],
+  "Hankook":[["Ventus Prime 4","C"],["Kinergy Eco 2","E"],["Ventus S1 evo3","D"],["Kinergy 4S2","T"],["Dynapro HP2","S"],["Vantra LT","V"]],
+  "Dunlop":[["Sport BluResponse","C"],["Sport Maxx RT2","D"],["Sport All Season","T"],["Grandtrek PT3","S"],["Econodrive LT","V"]],
+  "Firestone":[["Roadhawk 2","C"],["Firehawk Sport","D"],["Multiseason 2","T"],["Destination HP","S"],["Vanhawk 2","V"]],
+  "Nokian":[["Wetproof 1","C"],["Powerproof 1","D"],["Seasonproof 1","T"],["Wetproof SUV","S"]],
+  "Kumho":[["Ecsta HS52","C"],["Ecsta PS71","D"],["Solus 4S HA32","T"],["Crugen HP71","S"],["PorTran KC53","V"]],
+  "Yokohama":[["BluEarth-GT AE51","C"],["Advan Sport V107","D"],["BluEarth-4S AW21","T"],["Geolandar G055","S"]],
+  "Toyo":[["Proxes Comfort","C"],["Proxes Sport 2","D"],["Celsius AS2","T"],["Proxes CF2 SUV","S"]],
+  "Falken":[["Ziex ZE310 Ecorun","C"],["Azenis FK520","D"],["EuroAllSeason AS210","T"],["Linam Van01","V"]],
+  "Nexen":[["N'blue HD Plus","E"],["N'Fera Sport","D"],["N'blue 4Season 2","T"],["Roadian HP","S"]],
+  "BFGoodrich":[["Advantage","C"],["Advantage All-Season","T"],["All-Terrain T/A KO2","S"],["Activan","V"]],
+  "Vredestein":[["Ultrac","C"],["Ultrac Pro","D"],["Quatrac","T"]],
+  "Uniroyal":[["RainExpert 5","C"],["RainSport 5","D"],["AllSeasonExpert 2","T"],["RainMax 3","V"]],
+  "Kleber":[["Dynaxer HP4","C"],["Quadraxer 3","T"],["Transpro 2","V"]],
+  "Barum":[["Bravuris 5HM","C"],["Quartaris 5","T"],["Vanis 3","V"]],
+  "Semperit":[["Speed-Life 3","C"],["Comfort-Life 2","E"],["Van-Life 3","V"]],
+  "Maxxis":[["Premitra HP5","C"],["Premitra All Season AP3","T"],["Vansmart MCV5","V"]],
+  "GT Radial":[["FE2","E"],["Sport Active 2","D"],["4Seasons","T"],["Maxmiler Pro","V"]],
+  "Kormoran":[["Road Performance","C"],["Ultra High Performance","D"],["All Season","T"],["Vanpro","V"]],
+  "Sailun":[["Atrezzo Elite","C"],["Atrezzo ZSR","D"],["Atrezzo 4Seasons","T"],["Commercio Pro","V"]],
+  "Linglong":[["Green-Max HP010","C"],["Sport Master","D"],["Green-Max All Season","T"]]
+};
+const MARCAS=[...Object.keys(CATALOGO),"Outra"];
+const OUTRO="__outro";
+/* Índice de carga por medida: [normal, XL]; comerciais: [índice C] */
+const CARGA={"155/65 R14":[75,79],"165/65 R14":[79,83],"165/70 R14":[81,85],"175/65 R14":[82,86],"175/70 R14":[84,88],"185/60 R15":[84,88],"185/65 R15":[88,92],"195/65 R15":[91,95],
+ "195/55 R16":[87,91],"205/55 R16":[91,94],"205/60 R16":[92,96],"215/60 R16":[95,99],"215/65 R16":[98,102],"215/55 R17":[94,98],"225/50 R17":[94,98],"225/45 R17":[91,94],
+ "215/60 R17":[96,100],"225/65 R17":[102,106],"225/40 R18":[88,92],"225/45 R18":[91,95],"235/45 R18":[94,98],"245/40 R18":[93,97],"245/45 R18":[96,100],"215/55 R18":[95,99],
+ "225/55 R18":[98,102],"235/55 R18":[100,104],"235/60 R18":[103,107],"255/55 R18":[105,109],"235/40 R19":[92,96],"255/35 R19":[92,96],"235/55 R19":[101,105],"255/50 R19":[103,107],
+ "195/70 R15C":["104/102"],"215/70 R15C":["109/107"],"225/70 R15C":["112/110"],"195/75 R16C":["107/105"],"205/65 R16C":["107/105"],"215/65 R16C":["109/107"],"225/65 R16C":["112/110"],"235/65 R16C":["115/113"],"215/75 R16C":["116/114"]};
+const VEL={C:["T","H","V"],E:["T","H"],D:["V","W","Y"],T:["H","V","W"],S:["H","V","W"],V:["R","S","T"]};
+const VEL_TODAS=["Q","R","S","T","H","V","W","Y"];
+let carga="",vel="",ref="",tiposAtuais=[];
+function mostrarIndices(m){
+  carga="";vel="";ref="";
+  const gc=$("cargas");gc.innerHTML="";$("carga").value="";
+  const sug=CARGA[m]||[];
+  sug.forEach((v,i)=>{const xl=sug.length===2&&i===1;const b=chip(String(v),sug.length===2?(xl?"XL":"normal"):"comercial");
+    b.onclick=()=>{carga=String(v);marcar(gc,b);$("carga").hidden=true;if(sug.length===2&&xl)escolherRef("XL");};gc.appendChild(b);});
+  const o=chip(sug.length?"Outro":"Escrever",null,true);o.onclick=()=>{carga=OUTRO;marcar(gc,o);$("carga").hidden=false;$("carga").focus();};gc.appendChild(o);
+  $("carga").hidden=true;
+  if(!sug.length){carga=OUTRO;marcar(gc,o);$("carga").hidden=false;}
+  const gv=$("vels");gv.innerHTML="";
+  const prim=[...new Set(tiposAtuais.flatMap(t=>VEL[t]||[]))];
+  const lista=prim.length?[...VEL_TODAS.filter(v=>prim.includes(v)),...VEL_TODAS.filter(v=>!prim.includes(v))]:VEL_TODAS;
+  lista.forEach(v=>{const b=chip(v,prim.includes(v)?"comum":null,!prim.includes(v)&&prim.length>0);b.onclick=()=>{vel=v;marcar(gv,b);};gv.appendChild(b);});
+  const gr=$("refs");gr.innerHTML="";
+  [["TL","sem câmara"],["XL","reforçado"]].forEach(([v,t])=>{const b=chip(v,t);b.dataset.v=v;b.onclick=()=>escolherRef(ref===v?"":v);gr.appendChild(b);});
+  ["f-carga","f-vel","f-ref"].forEach(i=>$(i).hidden=false);
+}
+function escolherRef(v){ref=v;$("refs").querySelectorAll(".chip").forEach(c=>c.setAttribute("aria-pressed",c.dataset.v===v?"true":"false"));}
+function esconderIndices(){carga="";vel="";ref="";["f-carga","f-vel","f-ref"].forEach(i=>$(i).hidden=true);$("carga").value="";}
+let modelo="", medida="";
+const $=id=>document.getElementById(id);
+const hoje=()=>{const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")};
+let marca="", registos=[], db=null, local=true, aConfirmar=null;
+
+try{registos=JSON.parse(localStorage.getItem("pneus")||"[]")}catch(e){registos=[]}
+
+$("dia").value=hoje();
+function chip(txt,tag,alt){const b=document.createElement("button");b.type="button";b.className="chip"+(alt?" alt":"");b.setAttribute("aria-pressed","false");
+  b.textContent=txt;if(tag){const s=document.createElement("span");s.className="tag";s.textContent=tag;b.appendChild(s);}return b;}
+function marcar(grupo,b){grupo.querySelectorAll(".chip").forEach(c=>c.setAttribute("aria-pressed",c===b?"true":"false"));}
+
+function mostrarMedidas(lista,tipos){
+  tiposAtuais=tipos||[];esconderIndices();
+  const g=$("medidas");g.innerHTML="";medida="";$("medida").hidden=true;$("medida").value="";
+  lista.forEach(m=>{const b=chip(m);b.onclick=()=>{medida=m;marcar(g,b);$("medida").hidden=true;mostrarIndices(m);};g.appendChild(b);});
+  const o=chip("Outra medida",null,true);o.onclick=()=>{medida=OUTRO;marcar(g,o);$("medida").hidden=false;$("medida").focus();mostrarIndices("");};g.appendChild(o);
+  $("f-medida").hidden=false;
+}
+function todasMedidas(tipos){return [...new Set(tipos.flatMap(t=>MED[t]))].sort((a,b)=>{const p=s=>s.match(/\d+/g).map(Number);const x=p(a),y=p(b);return x[2]-y[2]||x[0]-y[0]||x[1]-y[1];});}
+
+function escolherMarca(m){
+  marca=m;modelo="";medida="";
+  $("marcaOutra").hidden=m!=="Outra";if(m==="Outra")$("marcaOutra").focus();
+  const g=$("modelos");g.innerHTML="";$("modelo").value="";
+  if(m==="Outra"){$("modelo").hidden=false;modelo=OUTRO;$("f-modelo").hidden=false;mostrarMedidas(todasMedidas(["C","S","V"]),[]);return;}
+  $("modelo").hidden=true;
+  CATALOGO[m].forEach(([nome,t])=>{const b=chip(nome,TIPO[t]);b.onclick=()=>{modelo=nome;marcar(g,b);$("modelo").hidden=true;mostrarMedidas(MED[t],[t]);};g.appendChild(b);});
+  const o=chip("Outro modelo",null,true);
+  o.onclick=()=>{modelo=OUTRO;marcar(g,o);$("modelo").hidden=false;$("modelo").focus();{const ts=[...new Set(CATALOGO[m].map(x=>x[1]))];mostrarMedidas(todasMedidas(ts),ts);}};
+  g.appendChild(o);
+  $("f-modelo").hidden=false;$("f-medida").hidden=true;esconderIndices();
+}
+function limparPneu(){
+  marca="";modelo="";medida="";
+  ["marcaOutra","modelo","medida"].forEach(i=>{$(i).value="";$(i).hidden=true;});
+  $("f-modelo").hidden=true;$("f-medida").hidden=true;marcar($("marcas"),null);esconderIndices();
+}
+MARCAS.forEach(m=>{const b=chip(m,null,m==="Outra");b.onclick=()=>{marcar($("marcas"),b);escolherMarca(m);};$("marcas").appendChild(b);});
+const total=()=>Math.max(1,parseInt($("qtd").value,10)||1);
+const atribuidos=()=>pendentes.reduce((a,p)=>a+p.qtd,0);
+const restam=()=>total()-atribuidos();
+function atualizarQtd(){
+  const t=total(),r=restam(),multi=t>1;
+  $("f-qtdL").hidden=!multi;
+  $("adicionar").hidden=!(multi&&r>1);
+  let q=parseInt($("qtdL").value,10)||1;if(q>r)q=Math.max(1,r);$("qtdL").value=q;
+  $("pneuSub").textContent=multi?(r>0?`faltam ${r} de ${t}`:`já estão os ${t} atribuídos`):"";
+}
+$("menos").onclick=()=>{$("qtd").value=Math.max(1,total()-1);atualizarQtd();};
+$("mais").onclick=()=>{const antes=restam();$("qtd").value=total()+1;if(+$("qtdL").value===antes)$("qtdL").value=restam();atualizarQtd();};
+$("qtd").addEventListener("input",()=>{if(!pendentes.length)$("qtdL").value=total();atualizarQtd();});
+$("menosL").onclick=()=>{$("qtdL").value=Math.max(1,(parseInt($("qtdL").value,10)||1)-1);atualizarQtd();};
+$("maisL").onclick=()=>{$("qtdL").value=Math.min(restam(),(parseInt($("qtdL").value,10)||1)+1);atualizarQtd();};
+$("qtdL").addEventListener("change",atualizarQtd);
+$("medida").addEventListener("blur",e=>{e.target.value=e.target.value.toUpperCase().replace(/\s+/g," ").trim();if(medida===OUTRO&&CARGA[e.target.value])mostrarIndices(e.target.value);});
+$("dia").onchange=render;
+
+function msg(id,t,ok){const m=$(id);m.textContent=t;m.className="msg "+(ok?"ok":"err");}
+const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+function doDia(){return registos.filter(r=>r.dia===$("dia").value)}
+
+function render(){
+  const lista=doDia();
+  $("sPneus").textContent=lista.reduce((a,r)=>a+(+r.qtd||0),0);
+  $("sVoltas").textContent=new Set(lista.map(r=>r.volta)).size;
+  $("sGuias").textContent=new Set(lista.map(r=>r.guia)).size;
+  const el=$("lista");
+  if(!lista.length){el.innerHTML='<div class="empty">Ainda não há pneus registados neste dia.<br>Preencha o formulário acima para começar.</div>';return;}
+  const grupos={};lista.forEach(r=>(grupos[r.volta]=grupos[r.volta]||[]).push(r));
+  const chaves=Object.keys(grupos).sort((a,b)=>a.localeCompare(b,"pt",{numeric:true}));
+  el.innerHTML=(lista[0].exemplo?'<div class="example">Exemplo — os seus registos aparecem aqui.</div>':"")+chaves.map(v=>{
+    const g=grupos[v],tot=g.reduce((a,r)=>a+(+r.qtd||0),0);
+    const porGuia={};g.forEach(r=>(porGuia[r.guia]=porGuia[r.guia]||[]).push(r));
+    return `<div class="volta"><div class="volta-h"><strong>Volta ${esc(v)}</strong><span>${tot} pneu${tot===1?"":"s"}</span></div>`+
+      Object.keys(porGuia).map(gk=>{const gl=porGuia[gk],gt=gl.reduce((a,r)=>a+(+r.qtd||0),0);
+        return `<div class="guia-h"><span>Guia <b>${esc(gk)}</b></span><span>${gt} pneu${gt===1?"":"s"}</span></div>`+
+        gl.map(r=>`<div class="item"><div class="qty">${esc(r.qtd)}</div><div class="t"><b>${esc(r.marca)} ${esc(r.modelo)}</b><small>${esc(r.medida)} ${esc(indice(r))}</small></div>`+
+        (r.exemplo?"":`<button class="del${aConfirmar===r.id?" confirm":""}" data-id="${esc(r.id)}">${aConfirmar===r.id?"Confirmar":"Apagar"}</button>`)+`</div>`).join("");}).join("")+`</div>`;
+  }).join("");
+}
+
+$("lista").addEventListener("click",async e=>{
+  const b=e.target.closest(".del");if(!b)return;const id=b.dataset.id;
+  if(aConfirmar!==id){aConfirmar=id;render();setTimeout(()=>{if(aConfirmar===id){aConfirmar=null;render();}},4000);return;}
+  aConfirmar=null;
+  if(local){registos=registos.filter(r=>r.id!==id);guardarLocal();render();return;}
+  try{await db.collection("registos").doc(id).delete();}catch(err){msg("msgX","Não foi possível apagar. Tente de novo.",false);}
+});
+
+let pendentes=[];
+function lerPneu(){return {qtd:total()>1?(parseInt($("qtdL").value,10)||0):1,
+  marca:marca==="Outra"?$("marcaOutra").value.trim():marca,
+  modelo:modelo===OUTRO?$("modelo").value.trim():modelo,
+  medida:medida===OUTRO?$("medida").value.toUpperCase().replace(/\s+/g," ").trim():medida,
+  carga:carga===OUTRO?$("carga").value.replace(/\s+/g,"").trim():carga,vel,ref};}
+function pneuVazio(p){return !marca&&!p.modelo&&!p.medida&&!p.carga&&!p.vel&&!p.ref;}
+const indice=p=>[(p.carga||"")+(p.vel||""),p.ref].filter(Boolean).join(" ");
+function faltaPneu(p){const f=[];if(p.qtd<1)f.push("nº de pneus");if(!p.marca)f.push("marca");if(!p.modelo)f.push("modelo");if(!p.medida)f.push("medida");if(!p.carga)f.push("índice de carga");if(!p.vel)f.push("índice de velocidade");return f;}
+function renderPend(){
+  $("pend").hidden=!pendentes.length;
+  $("pendLista").innerHTML=pendentes.map((p,i)=>`<div class="item"><div class="qty">${esc(p.qtd)}</div><div class="t"><b>${esc(p.marca)} ${esc(p.modelo)}</b><small>${esc(p.medida)} ${esc(indice(p))}</small></div><button class="del" data-i="${i}">Tirar</button></div>`).join("");
+  $("pneuTit").firstChild.textContent="Pneu "+(pendentes.length+1);
+  $("qtd").readOnly=false;atualizarQtd();
+}
+$("pendLista").addEventListener("click",e=>{const b=e.target.closest(".del");if(!b)return;pendentes.splice(+b.dataset.i,1);renderPend();});
+$("adicionar").onclick=()=>{
+  const p=lerPneu(),f=faltaPneu(p);
+  if(f.length){msg("msg","Para adicionar outro pneu, preencha primeiro: "+f.join(", ")+".",false);return;}
+  if(p.qtd>=restam()){msg("msg",`Este pneu já cobre os ${restam()} que faltam. Carregue em Guardar guia, ou baixe a quantidade deste pneu.`,false);return;}
+  pendentes.push(p);$("qtdL").value=restam();limparPneu();renderPend();
+  msg("msg",`Adicionado à guia: ${p.qtd} × ${p.marca} ${p.modelo} ${p.medida} ${indice(p)}. Escolha agora o próximo pneu.`,true);
+  $("marcas").scrollIntoView({behavior:"smooth",block:"center"});
+};
+
+$("guardar").onclick=async()=>{
+  const volta=$("volta").value.trim(),guia=$("guia").value.trim(),dia=$("dia").value||hoje();
+  const atual=lerPneu();let linhas=[...pendentes];
+  if(!pneuVazio(atual)){const f=faltaPneu(atual);if(f.length){msg("msg","Falta preencher no pneu "+(pendentes.length+1)+": "+f.join(", ")+".",false);return;}linhas.push(atual);}
+  const falta=[];if(!volta)falta.push("volta");if(!guia)falta.push("guia");if(!linhas.length)falta.push("pelo menos um pneu");
+  if(falta.length){msg("msg","Falta preencher: "+falta.join(", ")+".",false);return;}
+  const soma=linhas.reduce((a,p)=>a+p.qtd,0);
+  if(soma!==total()){msg("msg",`Indicou ${total()} pneus em falta mas os pneus escolhidos somam ${soma}. Acerte as quantidades.`,false);return;}
+  $("guardar").disabled=true;
+  const agora=Date.now();let feitos=0;
+  try{
+    for(const [i,p] of linhas.entries()){
+      const r={dia,volta,guia,...p,criado:new Date(agora+i).toISOString()};
+      r.id="l"+(agora+i);registos=[r,...registos];if(!guardarLocal()){registos.shift();throw new Error("storage");}
+      feitos++;
+    }
+    if(local)render();
+    const tot=linhas.reduce((a,p)=>a+p.qtd,0);
+    msg("msg",`Guia ${guia} guardada: ${tot} pneu${tot===1?"":"s"} em ${linhas.length} linha${linhas.length===1?"":"s"} (volta ${volta}).`,true);
+    pendentes=[];$("qtd").value=1;$("qtdL").value=1;limparPneu();renderPend();$("guia").value="";$("guia").focus();
+  }catch(err){
+    pendentes=linhas.slice(feitos);renderPend();
+    msg("msg",(err&&err.message==="storage"?"O telemóvel não deixou guardar (sem espaço ou armazenamento bloqueado). Exporte o Excel e liberte espaço.":"Não foi possível guardar tudo. Carregue outra vez em Guardar guia.")+(feitos?` (${feitos} já ficaram guardados)`:""),false);
+  }
+  $("guardar").disabled=false;
+};
+
+function guardarLocal(){try{localStorage.setItem("pneus",JSON.stringify(registos));return true}catch(e){return false}}
+
+async function gerarExcel(){
+  const lista=doDia().sort((a,b)=>a.volta.localeCompare(b.volta,"pt",{numeric:true})||a.guia.localeCompare(b.guia)||(a.criado||"").localeCompare(b.criado||""));
+  if(!lista.length){msg("msgX","Não há registos neste dia para exportar.",false);return null;}
+  const cab=["Volta","Guia de transporte","Nº pneus em falta","Marca","Modelo","Medida"];
+  const medidaTxt=r=>[String(r.medida||"").replace(/\s+(?=Z?R\d)/i,""),indice(r)].filter(Boolean).join(" ");
+  const linhas=lista.map(r=>[/^\d+$/.test(r.volta)?+r.volta:r.volta,r.guia,+r.qtd,r.marca,r.modelo,medidaTxt(r)]);
+  const total=lista.reduce((a,r)=>a+(+r.qtd||0),0);
+  const [y,m,d]=$("dia").value.split("-");
+  return {bytes:criarXlsx({titulo:"PNEUS EM FALTA — "+d+"/"+m+"/"+y,cab,linhas,total}),nome:`pneus-em-falta-${y}-${m}-${d}.xlsx`};
+}
+$("excel").onclick=async()=>{
+  try{
+    const x=await gerarExcel();if(!x)return;
+    const url=URL.createObjectURL(new Blob([x.bytes],{type:MIME_XLSX}));
+    const a=document.createElement("a");a.href=url;a.download=x.nome;document.body.appendChild(a);a.click();a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),15000);
+    msg("msgX","Excel gerado: "+x.nome+" (ver em Transferências).",true);
+  }catch(err){msg("msgX","Não foi possível gerar o Excel.",false);}
+};
+try{if(navigator.canShare&&navigator.canShare({files:[new File([new Uint8Array(1)],"a.xlsx",{type:MIME_XLSX})]}))$("partilhar").hidden=false;}catch(e){}
+$("partilhar").onclick=async()=>{
+  try{
+    const x=await gerarExcel();if(!x)return;
+    await navigator.share({files:[new File([x.bytes],x.nome,{type:MIME_XLSX})],title:"Pneus em falta"});
+    msg("msgX","Excel partilhado.",true);
+  }catch(err){if(!err||err.name!=="AbortError")msg("msgX","Não foi possível partilhar. Use Exportar Excel.",false);}
+};
+
+render();atualizarQtd();
+
+try{navigator.storage&&navigator.storage.persist&&navigator.storage.persist();}catch(e){}
+if("serviceWorker" in navigator&&location.protocol!=="file:"){navigator.serviceWorker.register("sw.js").catch(()=>{});}
+</script>
+</body>
+</html>
