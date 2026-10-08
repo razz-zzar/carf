@@ -412,7 +412,7 @@ function render(){
     return `<div class="volta"><div class="volta-h"><strong>Volta ${esc(v)}</strong><span>${tot} pneu${tot===1?"":"s"}</span></div>`+
       Object.keys(porGuia).map(gk=>{const gl=porGuia[gk],gt=gl.reduce((a,r)=>a+(+r.qtd||0),0);
         return `<div class="guia-h"><span>Guia <b>${esc(gk)}</b></span><span>${gt} pneu${gt===1?"":"s"}</span></div>`+
-        gl.map(r=>`<div class="item"><div class="qty">${esc(r.qtd)}</div><div class="t"><b>${esc(r.marca)} ${esc(r.modelo)}</b><small>${esc(r.medida)} ${esc(indice(r))}</small></div>`+
+        gl.map(r=>`<div class="item"><div class="qty">${esc(r.qtd)}</div><div class="t"><b>${esc(r.marca)} ${esc(r.modelo)}</b><small>${esc(medTxt(r))}</small></div>`+
         (r.exemplo?"":`<button class="del${aConfirmar===r.id?" confirm":""}" data-id="${esc(r.id)}">${aConfirmar===r.id?"Confirmar":"Apagar"}</button>`)+`</div>`).join("");}).join("")+`</div>`;
   }).join("");
 }
@@ -438,11 +438,13 @@ function lerPneu(){
     vel:vel===OUTRO?$("velOutra").value.replace(/\s+/g,"").toUpperCase():vel,ref:ref===OUTRO?$("refOutra").value.replace(/\s+/g," ").trim().toUpperCase():ref};
 }
 function pneuVazio(p){return !marca&&!p.modelo&&!p.medida&&!p.carga&&!p.vel&&!p.ref;}
+const medSemEsp=m=>String(m||"").replace(/\s+(?=Z?R\d)/i,"");
+const medTxt=r=>[medSemEsp(r.medida),indice(r)].filter(Boolean).join(" ");
 const indice=p=>[(p.carga||"")+(p.vel||""),p.ref].filter(Boolean).join(" ");
 function faltaPneu(p){const f=[];if(p.qtd<1)f.push("nº de pneus");if(!p.marca)f.push("marca");if(!p.modelo)f.push("modelo");if(!p.medida)f.push("medida");if(!p.carga)f.push("índice de carga");if(!p.vel)f.push("índice de velocidade");return f;}
 function renderPend(){
   $("pend").hidden=!pendentes.length;
-  $("pendLista").innerHTML=pendentes.map((p,i)=>`<div class="item"><div class="qty">${esc(p.qtd)}</div><div class="t"><b>${esc(p.marca)} ${esc(p.modelo)}</b><small>${esc(p.medida)} ${esc(indice(p))}</small></div><button class="del" data-i="${i}">Tirar</button></div>`).join("");
+  $("pendLista").innerHTML=pendentes.map((p,i)=>`<div class="item"><div class="qty">${esc(p.qtd)}</div><div class="t"><b>${esc(p.marca)} ${esc(p.modelo)}</b><small>${esc(medTxt(p))}</small></div><button class="del" data-i="${i}">Tirar</button></div>`).join("");
   $("pneuTit").firstChild.textContent="Pneu "+(pendentes.length+1);
   $("qtd").readOnly=false;atualizarQtd();
 }
@@ -452,7 +454,7 @@ $("adicionar").onclick=()=>{
   if(f.length){msg("msg","Para adicionar outro pneu, preencha primeiro: "+f.join(", ")+".",false);return;}
   if(p.qtd>=restam()){msg("msg",`Este pneu já cobre os ${restam()} que faltam. Carregue em Guardar guia, ou baixe a quantidade deste pneu.`,false);return;}
   const fl=novoFlags;pendentes.push(p);memorizar(p,fl);$("qtdL").value=restam();limparPneu();construirMarcas();renderPend();renderGuardados();
-  msg("msg",`Adicionado à guia: ${p.qtd} × ${p.marca} ${p.modelo} ${p.medida} ${indice(p)}. Escolha agora o próximo pneu.`,true);
+  msg("msg",`Adicionado à guia: ${p.qtd} × ${p.marca} ${p.modelo} ${medTxt(p)}. Escolha agora o próximo pneu.`,true);
   $("marcas").scrollIntoView({behavior:"smooth",block:"center"});
 };
 
@@ -490,7 +492,7 @@ async function gerarExcel(){
   const lista=doDia().sort((a,b)=>a.volta.localeCompare(b.volta,"pt",{numeric:true})||a.guia.localeCompare(b.guia)||(a.criado||"").localeCompare(b.criado||""));
   if(!lista.length){msg("msgX","Não há registos neste dia para exportar.",false);return null;}
   const cab=["Volta","Guia de transporte","Nº pneus em falta","Marca","Modelo","Medida"];
-  const medidaTxt=r=>[String(r.medida||"").replace(/\s+(?=Z?R\d)/i,""),indice(r)].filter(Boolean).join(" ");
+  const medidaTxt=medTxt;
   const linhas=lista.map(r=>[/^\d+$/.test(r.volta)?+r.volta:r.volta,r.guia,+r.qtd,r.marca,r.modelo,medidaTxt(r)]);
   const total=lista.reduce((a,r)=>a+(+r.qtd||0),0);
   const [y,m,d]=$("dia").value.split("-");
