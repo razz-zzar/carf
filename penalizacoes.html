@@ -39,6 +39,10 @@ h2{font-family:var(--display);font-size:20px;font-weight:700;text-transform:uppe
 h2 span{font:600 15px var(--mono);color:var(--muted)}
 .campo{display:flex;flex-direction:column;gap:6px}
 .campo label{font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.campo textarea{width:100%;background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:12px;font:500 17px var(--body);min-height:84px;resize:vertical}
+.campo textarea:focus{border-color:var(--green);outline:none}
+.campo label i{font-style:normal;text-transform:none;letter-spacing:0;font-weight:400}
+.r .obs{font-size:14px;color:var(--fg);border-left:2px solid var(--line);padding-left:8px;white-space:pre-wrap;overflow-wrap:anywhere}
 .campo input,.campo select{width:100%;background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:12px;font:500 18px var(--body);min-height:50px}
 .campo input:focus,.campo select:focus{border-color:var(--green);outline:none}
 .campo input.mono{font-family:var(--mono);font-weight:600}
@@ -93,6 +97,10 @@ select{appearance:none;-webkit-appearance:none;background-image:linear-gradient(
       <label for="motivo">Motivo</label>
       <select id="motivo"><option value="">Escolha o motivo</option></select>
     </div>
+    <div class="campo">
+      <label for="obs">Observações <i>(opcional)</i></label>
+      <textarea id="obs" rows="3" placeholder="Detalhes da penalização"></textarea>
+    </div>
     <button class="registar" id="registar" type="button">Registar penalização</button>
     <div class="msg" id="msg" role="status"></div>
   </section>
@@ -142,7 +150,7 @@ $("dia").addEventListener("change",()=>{aConfirmar=null;msg("msg","");msg("msgX"
 function render(){
   const dia=$("dia").value||hoje(),eHoje=dia===hoje(),l=(BD[dia]||[]).slice().sort((a,b)=>b.t.localeCompare(a.t));
   $("aviso").hidden=eHoje;$("registar").disabled=!eHoje;
-  ["volta","motorista","motivo"].forEach(k=>$(k).disabled=!eHoje);
+  ["volta","motorista","motivo","obs"].forEach(k=>$(k).disabled=!eHoje);
   $("total").textContent=l.length;
   const el=$("lista");el.textContent="";
   if(!l.length){const p=document.createElement("div");p.className="vazio";p.textContent="Sem penalizações registadas neste dia.";el.appendChild(p);return;}
@@ -156,6 +164,7 @@ function render(){
     const m=document.createElement("div");m.className="mot";m.textContent=r.motivo;
     const mt=document.createElement("div");mt.className="mtr";mt.textContent=r.motorista;
     info.append(top,m,mt);
+    if(r.obs){const o=document.createElement("div");o.className="obs";o.textContent=r.obs;info.appendChild(o);}
     const b=document.createElement("button");b.type="button";b.className="anular"+(aConfirmar===r.id?" confirm":"");
     b.textContent=aConfirmar===r.id?"Confirmar":"Apagar";b.hidden=!eHoje;b.onclick=()=>apagar(r.id);
     b.setAttribute("aria-label",(aConfirmar===r.id?"Confirmar apagar":"Apagar")+" penalização da volta "+r.volta);
@@ -164,7 +173,7 @@ function render(){
 }
 
 $("registar").onclick=()=>{
-  const volta=$("volta").value.trim(),motorista=$("motorista").value.trim().replace(/\s+/g," "),motivo=$("motivo").value;
+  const volta=$("volta").value.trim(),motorista=$("motorista").value.trim().replace(/\s+/g," "),motivo=$("motivo").value,obs=$("obs").value.trim();
   const falta=[];
   if(!volta){falta.push("a volta");$("c-volta").classList.add("erro");}
   if(!motorista){falta.push("o motorista");$("c-motorista").classList.add("erro");}
@@ -172,10 +181,10 @@ $("registar").onclick=()=>{
   if(falta.length){msg("msg","Falta indicar "+falta.join(", ").replace(/, ([^,]*)$/," e $1")+".",false);return;}
   const agora=new Date(),dia=diaDe(agora);
   if($("dia").value!==dia)$("dia").value=dia;
-  const r={id:agora.getTime().toString(36)+Math.random().toString(36).slice(2,6),t:agora.toISOString(),volta,motorista,motivo};
+  const r={id:agora.getTime().toString(36)+Math.random().toString(36).slice(2,6),t:agora.toISOString(),volta,motorista,motivo,obs};
   (BD[dia]=BD[dia]||[]).push(r);
   if(!gravar()){BD[dia].pop();if(!BD[dia].length)delete BD[dia];msg("msg","O telemóvel não deixou guardar (sem espaço ou armazenamento bloqueado).",false);return;}
-  $("volta").value="";$("motorista").value="";$("motivo").value="";
+  $("volta").value="";$("motorista").value="";$("motivo").value="";$("obs").value="";
   aConfirmar=null;msg("msg","Penalização registada: volta "+volta+", "+motorista+", "+motivo+".",true);
   sugerirMotoristas();render();$("volta").focus();
 };
@@ -237,8 +246,8 @@ function gerarExcel(dia){
   const l=(BD[dia]||[]).slice().sort((a,b)=>a.t.localeCompare(b.t));
   if(!l.length)return null;
   const [y,m,d]=dia.split("-");
-  const linhas=l.map(r=>[hora(r.t),/^\d+$/.test(r.volta)?+r.volta:r.volta,r.motorista,r.motivo]);
-  return {bytes:criarXlsx({titulo:"PENALIZAÇÕES — "+d+"/"+m+"/"+y,folha:"Penalizações",cab:["Hora","Volta","Motorista","Motivo"],linhas,larguras:[10,12,30,36]}),nome:`penalizacoes-${y}-${m}-${d}.xlsx`};
+  const linhas=l.map(r=>[d+"/"+m+"/"+y,/^\d+$/.test(r.volta)?+r.volta:r.volta,r.motorista,r.motivo,(r.obs||"").replace(/\s*\n\s*/g," ")]);
+  return {bytes:criarXlsx({titulo:"PENALIZAÇÕES — "+d+"/"+m+"/"+y,folha:"Penalizações",cab:["Data","Volta","Motorista","Motivo","Observações"],linhas,larguras:[13,12,28,30,48]}),nome:`penalizacoes-${y}-${m}-${d}.xlsx`};
 }
 $("excel").onclick=()=>{
   try{
