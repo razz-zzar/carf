@@ -1,0 +1,320 @@
+<!doctype html>
+<html lang="pt-PT">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0c0f0d">
+<meta name="application-name" content="OPS SJT">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Frota</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="carf-icon-192.png">
+<link rel="apple-touch-icon" href="carf-icon-192.png">
+<style>
+/* Layout: formulário da viatura em cima (serve para registar e para editar), lista de viaturas por baixo; Intervenção e Revisão abrem uma janela com o texto do email */
+:root{
+  --bg:#0c0f0d; --panel:#151a17; --line:#26302a; --fg:#eef3ef; --muted:#93a39a;
+  --green:#B9D406; --green-dk:#94aa05; --green-ink:#0a0a0a; --danger:#e0574f; --amber:#f0b429;
+  --display:"Roboto Condensed","sans-serif-condensed","Arial Narrow",Arial,sans-serif;
+  --body:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --mono:"Roboto Mono",ui-monospace,Menlo,Consolas,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+button{-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--fg)}
+body{font-family:var(--body);font-size:16px;line-height:1.4;padding-inline:16px;padding-block:0 40px}
+.wrap{max-width:560px;margin:0 auto;display:flex;flex-direction:column;gap:20px}
+header{padding-block:calc(14px + env(safe-area-inset-top,0px)) 12px;border-bottom:2px solid var(--green);display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:10px;min-width:0}
+.logo{height:40px;width:auto;max-width:42%;background:#fff;border-radius:8px;padding:5px 8px;flex:none}
+h1{font-family:var(--display);font-weight:700;font-size:24px;letter-spacing:.02em;text-transform:uppercase;margin:0;line-height:1}
+.voltar{display:inline-flex;align-items:center;min-height:36px;color:var(--green);font:600 15px var(--body);text-decoration:none;letter-spacing:.02em}
+:focus-visible{outline:2px solid var(--green);outline-offset:2px}
+section.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:14px}
+section.card.editar{border-color:var(--amber)}
+h2{font-family:var(--display);font-size:20px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;margin:0;color:var(--green);display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.editar h2{color:var(--amber)}
+h2 span{font:600 15px var(--mono);color:var(--muted)}
+.campo{display:flex;flex-direction:column;gap:6px}
+.campo label{font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.campo label i{font-style:normal;text-transform:none;letter-spacing:0;font-weight:400}
+.campo input{width:100%;background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:12px;font:500 18px var(--body);min-height:50px}
+.campo textarea{width:100%;background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:12px;font:500 17px var(--body);min-height:84px;resize:vertical}
+.campo input:focus,.campo textarea:focus{border-color:var(--green);outline:none}
+.campo input.mono{font-family:var(--mono);font-weight:600;letter-spacing:.04em}
+.campo.erro input,.campo.erro textarea{border-color:var(--danger)}
+.duas{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.registar{border:0;border-radius:10px;padding:16px;font:700 21px var(--display);letter-spacing:.06em;text-transform:uppercase;cursor:pointer;background:var(--green);color:var(--green-ink);width:100%}
+.registar:active{background:var(--green-dk)}
+.editar .registar{background:var(--amber)}
+.cancelar{background:none;border:1px solid var(--line);color:var(--muted);border-radius:10px;padding:12px;font:600 15px var(--body);cursor:pointer}
+.procura input{width:100%;background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:10px 12px;font:500 16px var(--body)}
+.procura input:focus{border-color:var(--green);outline:none}
+#lista{display:flex;flex-direction:column;gap:10px}
+.v{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:12px 12px 12px 14px;display:flex;flex-direction:column;gap:10px}
+.v.ativa{border-color:var(--amber)}
+.v .top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.mat{display:inline-block;font:700 19px/1 var(--mono);letter-spacing:.06em;background:#f4f4f0;color:#111;border-radius:5px;padding:6px 8px;border-left:10px solid #1f4aa8;white-space:nowrap}
+.v .marca{font:700 19px/1.15 var(--display);letter-spacing:.02em;text-transform:uppercase;overflow-wrap:anywhere;margin-top:8px}
+.v .km{font:600 15px var(--mono);color:var(--green)}
+.v .km small{font:400 12px var(--body);color:var(--muted);margin-left:6px;white-space:nowrap}
+.v .obs{font-size:14px;border-left:2px solid var(--line);padding-left:8px;white-space:pre-wrap;overflow-wrap:anywhere}
+.acoes{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.acoes button{border-radius:8px;padding:12px 8px;font:700 16px var(--display);letter-spacing:.05em;text-transform:uppercase;cursor:pointer;min-height:46px}
+.b-int{background:var(--green);color:var(--green-ink);border:0}
+.b-rev{background:transparent;color:var(--green);border:2px solid var(--green)}
+.pequenos{display:flex;gap:8px;flex:none}
+.pequenos button{background:none;border:1px solid var(--line);color:var(--muted);border-radius:8px;padding:9px 11px;font:600 13px var(--body);cursor:pointer}
+.pequenos button.confirm{border-color:var(--danger);color:var(--danger)}
+.vazio{font-size:14px;color:var(--muted)}
+.msg{font-size:14px;min-height:20px}
+.msg.ok{color:var(--green)} .msg.err{color:var(--danger)}
+.hint{font-size:13px;color:var(--muted)}
+/* Janela do email */
+dialog{width:min(560px,calc(100vw - 24px));max-height:calc(100dvh - 24px);background:var(--panel);color:var(--fg);border:1px solid var(--line);border-radius:14px;padding:0}
+dialog::backdrop{background:rgba(0,0,0,.7)}
+.dl{display:flex;flex-direction:column;gap:14px;padding:16px}
+.dl .cab{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.fechar{background:none;border:1px solid var(--line);color:var(--muted);border-radius:8px;width:40px;height:40px;font-size:22px;line-height:1;cursor:pointer;flex:none}
+.dl .alvo{font-size:14px;color:var(--muted)}
+#eCorpo{min-height:260px;font:400 15px/1.45 var(--body)}
+.lado{display:flex;gap:8px}
+.lado input{flex:1;min-width:0}
+.mini{background:none;border:1px solid var(--line);color:var(--green);border-radius:8px;padding:0 12px;font:600 13px var(--body);cursor:pointer;flex:none}
+.botoes{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.botoes .registar{font-size:18px;padding:14px}
+.botoes .sec{border-radius:10px;padding:14px;font:700 18px var(--display);letter-spacing:.06em;text-transform:uppercase;cursor:pointer;background:transparent;color:var(--green);border:2px solid var(--green);text-align:center;text-decoration:none}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brand">
+      <img class="logo" alt="Logotipo" src="data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0idXRmLTgiPz4KPCEtLSBHZW5lcmF0b3I6IEFkb2JlIElsbHVzdHJhdG9yIDI3LjAuMCwgU1ZHIEV4cG9ydCBQbHVnLUluIC4gU1ZHIFZlcnNpb246IDYuMDAgQnVpbGQgMCkgIC0tPgo8c3ZnIHZlcnNpb249IjEuMSIgaWQ9IkxheWVyXzEiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgeG1sbnM6eGxpbms9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkveGxpbmsiIHg9IjBweCIgeT0iMHB4IgoJIHZpZXdCb3g9IjAgMCA0NTYgMTg0LjMiIHN0eWxlPSJlbmFibGUtYmFja2dyb3VuZDpuZXcgMCAwIDQ1NiAxODQuMzsiIHhtbDpzcGFjZT0icHJlc2VydmUiPgo8c3R5bGUgdHlwZT0idGV4dC9jc3MiPgoJLnN0MHtmaWxsOiNCOUQ0MDY7fQoJLnN0MXtmaWxsOiMwMDdCN0Y7fQoJLnN0MntmaWxsOiMzRjlCOUU7fQo8L3N0eWxlPgo8Zz4KCTxwYXRoIGNsYXNzPSJzdDAiIGQ9Ik00NDQuMiw3Mi43Yy0yMy40LDcuNi00Ni41LDE1LjEtNjkuNywyMi43Yy0zLTMuNC00LjItNy40LTUuNi0xMS4yYy0zLjQtOS4xLTQuOS0xOC42LTUuMS0yOC4zCgkJYy0wLjMtMTcuOCwxMC4zLTI5LjksMjMuOC0zNC4yYzIyLjMtNy4xLDQ0LjUtMTQuMyw2Ni43LTIxLjVjMC41LTAuMSwxLTAuMSwxLjUtMC4yQzQ1Ni41LDMuNiw0NDguNSw1My41LDQ0NC4yLDcyLjd6Ii8+Cgk8cGF0aCBjbGFzcz0ic3QxIiBkPSJNNDU1LDE0Ny4xYy04LjcsNi43LTE4LjEsMTIuMy0yNy4xLDE4LjZjLTguMyw1LjgtMTYuOSwxMS4zLTI1LjMsMTdjLTEuNiwxLjEtMywxLjktNSwxLjQKCQljLTE2LjItNC4xLTMwLjYtMTEuMS00MS0yNC43Yy01LjEtNi43LTguMy0xNC40LTkuNy0yMi43Yy0wLjQtMi4xLTAuNC00LjQtMC4xLTYuNWMyLTE0LDQuMi0yNy45LDYuMy00MS45CgkJYzEuMy04LjYsMi42LTE3LjMsNC4xLTI1LjljMS40LDcuNCwxLjksMTQuOCw0LjMsMjJjMTEuMiwzMi43LDMzLjIsNTMuMyw2Ny4yLDYwLjhjNi45LDEuNSwxMy44LDEuOCwyMC44LDEuOAoJCUM0NTEuMywxNDYuNSw0NTMuMiwxNDYuMiw0NTUsMTQ3LjF6Ii8+Cgk8cGF0aCBjbGFzcz0ic3QyIiBkPSJNNDU1LDE0Ny4xYy0xLjgtMC4xLTMuNy0wLjEtNS41LTAuMmMyLTEuNCw0LjMtMC43LDYuNS0wLjljMCwwLjQsMCwwLjgtMC4xLDAuOQoJCUM0NTUuNywxNDcuMSw0NTUuMywxNDcuMSw0NTUsMTQ3LjF6Ii8+Cgk8cGF0aCBkPSJNMzMzLjIsNTMuNmMtMTUuMywwLTMwLjctMC40LTQ2LDAuMWMtMTQuMywwLjQtMjUuOSwxMC43LTI4LjQsMjQuM2MtMS41LDgtMi44LDE2LjEtNC4zLDI0LjFjLTEuNyw5LjItMy41LDE4LjQtNS4zLDI4LjIKCQljLTYuNS00LjctMTIuNi05LjEtMTkuMS0xMy44YzEuOS0xLjMsMy4zLTIuMiw0LjYtMy4xYzguMi01LjgsMTMuOC0xMy40LDE2LjMtMjMuMWM1LTE5LjItNy4xLTM1LjYtMjQuOS0zNi4zCgkJYy05LjMtMC40LTE4LjcsMC0yOC0wLjNjLTE2LjMtMC41LTI5LDExLTMxLjUsMjYuMmMtMi4yLDEzLjEtNC45LDI2LjEtNy4zLDM5LjFjLTAuMywwLTAuNiwwLjEtMC45LDAuMQoJCWMtMy44LTIxLjYtNy42LTQzLjMtMTEuNS02NC45Yy04LjMsMC0xNi4xLDAtMjQuMywwYy03LjksMTEuMS0xNiwyMi4zLTI0LDMzLjZjLTgsMTEuMi0xNiwyMi40LTI0LDMzLjZjLTExLjUsMC0yMi42LDAuMS0zMy44LDAKCQljLTE0LjEtMC4xLTIyLjUtMTEuNS0xOC44LTI1LjFjMy4yLTExLjgsMTUuNC0yMS44LDI4LjEtMjEuNWMxMi4zLDAuMiwyNC43LDAuMSwzNywwYzEuNiwwLDMuMywwLjQsNC42LTEuMgoJCWM1LjEtNi4zLDEwLjMtMTIuNiwxNS43LTE5LjJjLTEuNC0wLjEtMi4yLTAuMi0zLTAuMmMtMTksMC0zOCwwLTU3LDBjLTIuMiwwLTQuMywwLjEtNi40LDAuNmMtMTUuMywzLjQtMjYuMywxMi4zLTM0LDI1LjYKCQljLTYsMTAuNC04LjcsMjEuNi02LjIsMzMuNmMzLjQsMTYuOSwxNy43LDI4LjIsMzUuNiwyOC41YzEwLjMsMC4yLDIwLjcsMCwzMSwwYzYuMiwwLDEyLjMsMCwxOC40LDBjNS4yLTcuMiwxMC4yLTE0LjIsMTUuMi0yMS4yCgkJYzUuOC0wLjEsMTEuMSwxLjQsMTYuMiwzLjRjOS4zLDMuOCwxNi44LDkuOSwyMi44LDE3LjRjMTIuNCwwLDI0LjMsMCwzNi4yLDBjMi40LTEyLjgsNC44LTI1LjMsNy4zLTM4LjNjMS45LDEuNCwzLjIsMi40LDQuNSwzLjQKCQljMTMuOSwxMC45LDI3LjgsMjEuOCw0MS42LDMyLjhjMi4yLDEuOCw0LjQsMi42LDcuMiwyLjZjOS4yLTAuMiwxOC4zLDAsMjcuNS0wLjFjMS4zLDAsMi43LDAuNCwzLjktMC44CgkJYzIuMi0xMS42LDQuNC0yMy4zLDYuNy0zNS41YzE0LDAsMjcuNywwLDQxLjYsMGMxLjYtNi44LDMuMS0xMy4yLDQuNy0yMC4yYy0xNC41LDAtMjguNCwwLTQyLjYsMGMwLjMtMS41LDAuNi0yLjUsMC43LTMuNAoJCWMxLjMtNy41LDIuMy04LjQsOS42LTguNGMxMi43LDAsMjUuMywwLDM4LDBjMS40LDAsMywwLjUsNC40LTAuOGMwLjktNi4yLDIuOC0xMi41LDMuMy0xOC45QzMzNC4xLDUzLjksMzMzLjcsNTMuNiwzMzMuMiw1My42egoJCSBNMTA4LjIsMTExLjJjNy05LjksMTMuNy0xOS4yLDIxLTI5LjVjMi4xLDExLjcsMy45LDIyLjQsNS45LDMzLjVDMTI2LjMsMTEyLjEsMTE3LjcsMTExLjIsMTA4LjIsMTExLjJ6IE0yMTcuMiwxMDAuMgoJCWMtMi44LDAuNC01LjYsMC4zLTguNSwwLjNjLTcuOCwwLTE1LjYsMC0yMy43LDBjLTEtMi43LDAuMi00LjcsMC41LTYuOGMwLjgtNC42LDEuNi05LjIsMi42LTEzLjdjMS00LjgsMi42LTYuMSw3LjUtNi4xCgkJYzguMywwLDE2LjcsMCwyNSwwYzguNCwwLDEzLjMsNi41LDEwLjYsMTQuNEMyMjksOTUsMjI0LjMsOTkuMiwyMTcuMiwxMDAuMnoiLz4KPC9nPgo8L3N2Zz4K">
+      <div style="min-width:0"><h1>Frota</h1><a class="voltar" href="./">‹ Início</a></div>
+    </div>
+  </header>
+
+  <section class="card" id="cartao" aria-labelledby="t-form">
+    <h2 id="t-form">Nova viatura</h2>
+    <div class="campo" id="c-marca">
+      <label for="marca">Marca e modelo</label>
+      <input type="text" id="marca" autocomplete="off" autocapitalize="words" placeholder="ex. Mercedes Actros">
+    </div>
+    <div class="duas">
+      <div class="campo" id="c-matricula">
+        <label for="matricula">Matrícula</label>
+        <input type="text" id="matricula" class="mono" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="12" placeholder="AA-00-AA">
+      </div>
+      <div class="campo" id="c-km">
+        <label for="km">Km atuais</label>
+        <input type="text" id="km" class="mono" inputmode="numeric" autocomplete="off" placeholder="ex. 245 300">
+      </div>
+    </div>
+    <div class="campo">
+      <label for="obs">Observações <i>(opcional)</i></label>
+      <textarea id="obs" rows="3" placeholder="Notas sobre a viatura"></textarea>
+    </div>
+    <button class="registar" id="guardar" type="button">Registar viatura</button>
+    <button class="cancelar" id="cancelar" type="button" hidden>Cancelar edição</button>
+    <div class="msg" id="msg" role="status"></div>
+  </section>
+
+  <section class="card" aria-labelledby="t-lista">
+    <h2 id="t-lista">Viaturas <span id="total">0</span></h2>
+    <div class="procura" id="procura" hidden><input type="search" id="filtro" placeholder="Procurar matrícula ou modelo" aria-label="Procurar viatura"></div>
+    <div id="lista"></div>
+    <div class="hint">As viaturas ficam guardadas neste telemóvel, mesmo sem internet.</div>
+  </section>
+</div>
+
+<dialog id="janela" aria-labelledby="eTitulo">
+  <div class="dl">
+    <div class="cab"><h2 id="eTitulo">Pedido</h2><button class="fechar" id="fechar" type="button" aria-label="Fechar">×</button></div>
+    <div class="alvo" id="eAlvo"></div>
+    <div class="campo" id="c-motivo">
+      <label for="eMotivo" id="eMotivoLbl">Motivo</label>
+      <textarea id="eMotivo" rows="2"></textarea>
+    </div>
+    <div class="campo">
+      <label for="eAssunto">Assunto</label>
+      <div class="lado"><input type="text" id="eAssunto"><button class="mini" id="cAssunto" type="button">Copiar</button></div>
+    </div>
+    <div class="campo">
+      <label for="eCorpo">Texto do email <i>(pode alterar antes de copiar)</i></label>
+      <textarea id="eCorpo"></textarea>
+    </div>
+    <div class="botoes">
+      <button class="registar" id="copiar" type="button">Copiar texto</button>
+      <a class="sec" id="abrirEmail" href="#">Abrir email</a>
+    </div>
+    <div class="msg" id="eMsg" role="status"></div>
+  </div>
+</dialog>
+
+<script>
+const $=id=>document.getElementById(id);
+const pad=n=>String(n).padStart(2,"0");
+const dataPT=iso=>{const d=new Date(iso);return pad(d.getDate())+"/"+pad(d.getMonth()+1)+"/"+d.getFullYear();};
+const fmtKm=n=>String(n).replace(/\B(?=(\d{3})+(?!\d))/g," ");
+const soDigitos=s=>String(s).replace(/\D/g,"");
+/* Matrícula: maiúsculas; 6 letras/números seguidos ficam AA-00-AA */
+function normMat(s){
+  const t=String(s).toUpperCase().replace(/[^A-Z0-9]/g,"");
+  return t.length===6?t.slice(0,2)+"-"+t.slice(2,4)+"-"+t.slice(4):String(s).toUpperCase().trim().replace(/\s+/g," ");
+}
+const chaveMat=s=>String(s).toUpperCase().replace(/[^A-Z0-9]/g,"");
+
+/* BD: [ {id, marca, matricula, km, kmData (ISO), obs, criado, alterado} ] */
+let BD=[],aEditar=null,aConfirmar=null,pedido=null;
+try{BD=JSON.parse(localStorage.getItem("frota")||"[]");if(!Array.isArray(BD))BD=[];}catch(e){BD=[];}
+function gravar(){try{localStorage.setItem("frota",JSON.stringify(BD));return true}catch(e){return false}}
+function msg(id,t,ok){const m=$(id);m.textContent=t||"";m.className="msg "+(ok?"ok":"err");}
+
+["marca","matricula","km"].forEach(k=>$(k).addEventListener("input",()=>$("c-"+k).classList.remove("erro")));
+$("matricula").addEventListener("blur",()=>{if($("matricula").value.trim())$("matricula").value=normMat($("matricula").value);});
+$("km").addEventListener("input",()=>{const d=soDigitos($("km").value).slice(0,7);$("km").value=d?fmtKm(+d):"";});
+$("filtro").addEventListener("input",render);
+
+function render(){
+  const f=$("filtro").value.trim().toLowerCase(),fk=chaveMat(f);
+  const l=BD.slice().sort((a,b)=>a.matricula.localeCompare(b.matricula,"pt"))
+    .filter(v=>!f||v.marca.toLowerCase().includes(f)||(fk&&chaveMat(v.matricula).includes(fk)));
+  $("total").textContent=BD.length;
+  $("procura").hidden=BD.length<6;
+  const el=$("lista");el.textContent="";
+  if(!l.length){const p=document.createElement("div");p.className="vazio";p.textContent=BD.length?"Nenhuma viatura corresponde à procura.":"Ainda não há viaturas registadas.";el.appendChild(p);return;}
+  l.forEach(v=>{
+    const c=document.createElement("article");c.className="v"+(aEditar===v.id?" ativa":"");
+    const top=document.createElement("div");top.className="top";
+    const info=document.createElement("div");info.style.minWidth="0";
+    const m=document.createElement("span");m.className="mat";m.textContent=v.matricula;
+    const mc=document.createElement("div");mc.className="marca";mc.textContent=v.marca;
+    const km=document.createElement("div");km.className="km";km.textContent=fmtKm(v.km)+" km";
+    if(v.kmData){const s=document.createElement("small");s.textContent="a "+dataPT(v.kmData);km.appendChild(s);}
+    info.append(m,mc,km);
+    const peq=document.createElement("div");peq.className="pequenos";
+    const be=document.createElement("button");be.type="button";be.textContent="Editar";be.onclick=()=>editar(v.id);
+    be.setAttribute("aria-label","Editar viatura "+v.matricula);
+    const ba=document.createElement("button");ba.type="button";ba.className=aConfirmar===v.id?"confirm":"";
+    ba.textContent=aConfirmar===v.id?"Confirmar":"Apagar";ba.onclick=()=>apagar(v.id);
+    ba.setAttribute("aria-label",(aConfirmar===v.id?"Confirmar apagar":"Apagar")+" viatura "+v.matricula);
+    peq.append(be,ba);top.append(info,peq);c.appendChild(top);
+    if(v.obs){const o=document.createElement("div");o.className="obs";o.textContent=v.obs;c.appendChild(o);}
+    const ac=document.createElement("div");ac.className="acoes";
+    const bi=document.createElement("button");bi.type="button";bi.className="b-int";bi.textContent="Intervenção";bi.onclick=()=>abrirPedido(v.id,"int");
+    const br=document.createElement("button");br.type="button";br.className="b-rev";br.textContent="Revisão";br.onclick=()=>abrirPedido(v.id,"rev");
+    ac.append(bi,br);c.appendChild(ac);
+    el.appendChild(c);
+  });
+}
+
+function limparForm(){
+  aEditar=null;["marca","matricula","km","obs"].forEach(k=>$(k).value="");
+  ["marca","matricula","km"].forEach(k=>$("c-"+k).classList.remove("erro"));
+  $("cartao").classList.remove("editar");$("t-form").textContent="Nova viatura";
+  $("guardar").textContent="Registar viatura";$("cancelar").hidden=true;
+}
+function editar(id){
+  const v=BD.find(x=>x.id===id);if(!v)return;
+  aEditar=id;aConfirmar=null;
+  $("marca").value=v.marca;$("matricula").value=v.matricula;$("km").value=fmtKm(v.km);$("obs").value=v.obs||"";
+  $("cartao").classList.add("editar");$("t-form").textContent="Editar "+v.matricula;
+  $("guardar").textContent="Guardar alterações";$("cancelar").hidden=false;msg("msg","");
+  render();$("cartao").scrollIntoView({behavior:"smooth",block:"start"});setTimeout(()=>$("km").focus({preventScroll:true}),350);
+}
+$("cancelar").onclick=()=>{limparForm();msg("msg","");render();};
+
+$("guardar").onclick=()=>{
+  const marca=$("marca").value.trim().replace(/\s+/g," "),mat=$("matricula").value.trim()?normMat($("matricula").value):"",kmS=soDigitos($("km").value),obs=$("obs").value.trim();
+  const falta=[];
+  if(!marca){falta.push("a marca e modelo");$("c-marca").classList.add("erro");}
+  if(!mat){falta.push("a matrícula");$("c-matricula").classList.add("erro");}
+  if(!kmS){falta.push("os km");$("c-km").classList.add("erro");}
+  if(falta.length){msg("msg","Falta indicar "+falta.join(", ").replace(/, ([^,]*)$/," e $1")+".",false);return;}
+  const dup=BD.find(v=>v.id!==aEditar&&chaveMat(v.matricula)===chaveMat(mat));
+  if(dup){$("c-matricula").classList.add("erro");msg("msg","A matrícula "+dup.matricula+" já está registada. Use Editar nessa viatura.",false);return;}
+  const km=+kmS,agora=new Date().toISOString(),copia=JSON.stringify(BD);
+  let texto;
+  if(aEditar){
+    const v=BD.find(x=>x.id===aEditar);if(!v){limparForm();render();return;}
+    if(v.km!==km)v.kmData=agora;
+    Object.assign(v,{marca,matricula:mat,km,obs,alterado:agora});texto="Alterações guardadas: "+mat+".";
+  }else{
+    BD.push({id:Date.now().toString(36)+Math.random().toString(36).slice(2,6),marca,matricula:mat,km,kmData:agora,obs,criado:agora,alterado:agora});
+    texto="Viatura registada: "+mat+", "+marca+".";
+  }
+  if(!gravar()){BD=JSON.parse(copia);msg("msg","O telemóvel não deixou guardar (sem espaço ou armazenamento bloqueado).",false);return;}
+  limparForm();aConfirmar=null;msg("msg",texto,true);render();
+};
+
+function apagar(id){
+  if(aConfirmar!==id){aConfirmar=id;render();setTimeout(()=>{if(aConfirmar===id){aConfirmar=null;render();}},4000);return;}
+  aConfirmar=null;const v=BD.find(x=>x.id===id);BD=BD.filter(x=>x.id!==id);
+  if(aEditar===id)limparForm();
+  gravar();msg("msg","Viatura "+(v?v.matricula+" ":"")+"apagada.",true);render();
+}
+
+/* ---- Pedidos por email (Intervenção / Revisão) ---- */
+function saudacao(){const h=new Date().getHours();return h<13?"Bom dia":h<20?"Boa tarde":"Boa noite";}
+function dadosViatura(v){
+  const l=["Marca e modelo: "+v.marca,"Matrícula: "+v.matricula,"Km atuais: "+fmtKm(v.km)+" km"+(v.kmData?" (registados a "+dataPT(v.kmData)+")":"")];
+  if(v.obs)l.push("Observações: "+v.obs.replace(/\s*\n\s*/g," "));
+  return l.map(x=>"• "+x).join("\n");
+}
+function textoPedido(){
+  const v=BD.find(x=>x.id===pedido.id);if(!v)return;
+  const motivo=$("eMotivo").value.trim();
+  let corpo;
+  if(pedido.tipo==="int"){
+    $("eAssunto").value="Pedido de intervenção — "+v.matricula+" ("+v.marca+")";
+    corpo=saudacao()+",\n\nVenho por este meio informar que a viatura abaixo indicada necessita de intervenção"+(motivo?", pelo seguinte motivo:\n\n"+motivo:".")+"\n\nDados da viatura:\n"+dadosViatura(v)+"\n\nAgradeço indicação da disponibilidade para a intervenção.\n\nCom os melhores cumprimentos,";
+  }else{
+    $("eAssunto").value="Pedido de marcação de revisão — "+v.matricula+" ("+v.marca+")";
+    corpo=saudacao()+",\n\nVenho por este meio solicitar a marcação de revisão para a viatura abaixo indicada"+(motivo?", pelo seguinte motivo:\n\n"+motivo:".")+"\n\nDados da viatura:\n"+dadosViatura(v)+"\n\nAgradeço indicação de data e hora disponíveis para a revisão.\n\nCom os melhores cumprimentos,";
+  }
+  $("eCorpo").value=corpo;atualizarMailto();
+}
+function atualizarMailto(){$("abrirEmail").href="mailto:?subject="+encodeURIComponent($("eAssunto").value)+"&body="+encodeURIComponent($("eCorpo").value);}
+function abrirPedido(id,tipo){
+  const v=BD.find(x=>x.id===id);if(!v)return;
+  pedido={id,tipo};
+  $("eTitulo").textContent=tipo==="int"?"Pedido de intervenção":"Pedido de revisão";
+  $("eAlvo").textContent=v.matricula+" · "+v.marca+" · "+fmtKm(v.km)+" km";
+  $("eMotivoLbl").innerHTML=tipo==="int"?"Motivo da intervenção":"Motivo / nota <i>(opcional)</i>";
+  $("eMotivo").placeholder=tipo==="int"?"ex. Ruído nos travões dianteiros":"ex. Revisão dos 250 000 km";
+  $("eMotivo").value="";$("c-motivo").classList.remove("erro");msg("eMsg","");
+  textoPedido();
+  if(typeof $("janela").showModal==="function")$("janela").showModal();else $("janela").setAttribute("open","");
+  setTimeout(()=>$("eMotivo").focus(),50);
+}
+$("eMotivo").addEventListener("input",()=>{$("c-motivo").classList.remove("erro");textoPedido();});
+$("eAssunto").addEventListener("input",atualizarMailto);
+$("eCorpo").addEventListener("input",atualizarMailto);
+$("fechar").onclick=()=>{if($("janela").close)$("janela").close();else $("janela").removeAttribute("open");};
+$("janela").addEventListener("click",e=>{if(e.target===$("janela"))$("fechar").click();});
+
+async function copiarTexto(t){
+  try{if(navigator.clipboard&&window.isSecureContext){await navigator.clipboard.writeText(t);return true;}}catch(e){}
+  try{const ta=document.createElement("textarea");ta.value=t;ta.setAttribute("readonly","");ta.style.position="fixed";ta.style.opacity="0";$("janela").appendChild(ta);ta.select();ta.setSelectionRange(0,t.length);const ok=document.execCommand("copy");ta.remove();return ok;}catch(e){return false;}
+}
+function precisaMotivo(){
+  if(pedido&&pedido.tipo==="int"&&!$("eMotivo").value.trim()){$("c-motivo").classList.add("erro");msg("eMsg","Escreva o motivo da intervenção.",false);$("eMotivo").focus();return true;}
+  return false;
+}
+$("copiar").onclick=async()=>{
+  if(precisaMotivo())return;
+  const ok=await copiarTexto($("eCorpo").value);msg("eMsg",ok?"Texto copiado. Cole-o no email.":"Não foi possível copiar. Selecione o texto e copie à mão.",ok);
+};
+$("cAssunto").onclick=async()=>{const ok=await copiarTexto($("eAssunto").value);msg("eMsg",ok?"Assunto copiado.":"Não foi possível copiar o assunto.",ok);};
+$("abrirEmail").addEventListener("click",e=>{if(precisaMotivo())e.preventDefault();});
+
+render();
+try{navigator.storage&&navigator.storage.persist&&navigator.storage.persist();}catch(e){}
+if("serviceWorker" in navigator&&location.protocol!=="file:"){navigator.serviceWorker.register("sw.js").catch(()=>{});}
+</script>
+</body>
+</html>
