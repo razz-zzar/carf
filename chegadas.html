@@ -73,6 +73,16 @@ h2{font-family:var(--display);font-size:20px;font-weight:700;text-transform:uppe
 .abas{display:grid;grid-template-columns:1fr 1fr;gap:6px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:6px}
 .abas button{border:0;border-radius:8px;padding:14px 8px;background:transparent;color:var(--muted);font:700 19px var(--display);letter-spacing:.06em;text-transform:uppercase;cursor:pointer}
 .abas button[aria-selected=true]{background:var(--green);color:var(--green-ink)}
+.sw{display:flex;flex-direction:column;align-items:center;gap:4px;background:none;border:0;padding:6px;cursor:pointer;min-width:100px}
+.sw:disabled{cursor:default;opacity:.5}
+.trilho{position:relative;display:block;width:68px;height:38px;border-radius:19px;background:var(--line);border:2px solid var(--muted);transition:background .2s,border-color .2s}
+.bola{position:absolute;top:3px;left:3px;width:28px;height:28px;border-radius:50%;background:var(--fg);transition:transform .2s}
+.sw[aria-checked=true] .trilho{background:var(--green);border-color:var(--green)}
+.sw[aria-checked=true] .bola{transform:translateX(30px);background:var(--green-ink)}
+.sw.confirm .trilho{border-color:var(--danger)}
+.sw small{font:600 11px var(--body);color:var(--danger)}
+@media (prefers-reduced-motion:reduce){.trilho,.bola{transition:none}}
+.v.extra{border-style:dashed}
 .btn{border-radius:10px;padding:16px;font:700 20px var(--display);letter-spacing:.06em;text-transform:uppercase;cursor:pointer;background:transparent;color:var(--green);border:2px solid var(--green)}
 .msg{font-size:14px;min-height:20px}
 .msg.ok{color:var(--green)} .msg.err{color:var(--danger)}
@@ -120,7 +130,9 @@ h2{font-family:var(--display);font-size:20px;font-weight:700;text-transform:uppe
 
 <script>
 /* Listas das voltas, pela ordem indicada */
-const VOLTAS_C=["1123","1633","1636","1419","1420","1639","1627","1638","1205","1235","1603","1201","1602","1204","1113","1112","1311","1330","1337","1340","1445","1315","1318","1624","1316","1334","1314","1317","1641","Arrasto Norte","Carro Leiria","Recolha Santogal","AS Parts Seixal"];
+const VOLTAS_C=["1123","1633","1636","1419","1420","1639","1627","1638","1205","1235","1603","1201","1602","1204","1113","1112","1311","1330","1337","1340","1445","1315","1318","1624","1316","1334","1314","1317","1641","Arrasto Norte","Carro Leiria","Recolha Santogal","AS Parts Seixal","Carro extra Leiria"];
+/* Entradas com interruptor em vez de botão: ao ligar regista a hora como as outras voltas */
+const INTERRUPTOR=new Set(["Carro extra Leiria"]);
 const VOLTAS_S=["1123","1633","1636","1419","1420","1639","1627","1638","1205","1235","1603","1201","1602","1204","1113","1112","1311","1330","1337","1340","1445","1315","1318","1624","1316","1334","1314","1317","1641","PSAR"];
 /* Para o Excel: todas as voltas, chegadas primeiro e depois as que só têm saída */
 const VOLTAS_TODAS=[...VOLTAS_C,...VOLTAS_S.filter(v=>!VOLTAS_C.includes(v))];
@@ -136,7 +148,7 @@ const horaSeg=iso=>{const d=new Date(iso);return hora(iso)+":"+pad(d.getSeconds(
 const MODOS={
   c:{chave:"chegadas",btn:"Chegou",feito:"Chegou",falta:"Por chegar",ok:"Chegaram",lfalta:"Por chegar",campo:"Hora de chegada",tit:"Voltas — chegadas",
      dica:"Carregue em “Chegou” quando a volta chegar: fica registada a hora desse momento. Se não viu a chegada, use “Indicar hora”, ou toque na hora já registada para a corrigir. Os registos ficam guardados neste telemóvel, mesmo sem internet.",
-     fez:(v,h)=>"Volta "+v+" chegou às "+h+".",nome:"chegada"},
+     fez:(v,h)=>(INTERRUPTOR.has(v)?v:"Volta "+v)+" chegou às "+h+".",nome:"chegada"},
   s:{chave:"saidas",btn:"Saiu",feito:"Saiu",falta:"Por sair",ok:"Saíram",lfalta:"Por sair",campo:"Hora de saída",tit:"Voltas — saídas",
      dica:"Carregue em “Saiu” quando a volta sair: fica registada a hora desse momento. Se não viu a saída, use “Indicar hora”, ou toque na hora já registada para a corrigir. Os registos ficam guardados neste telemóvel, mesmo sem internet.",
      fez:(v,h)=>"Volta "+v+" saiu às "+h+".",nome:"saída"}
@@ -161,15 +173,16 @@ function render(){
   $("abaC").setAttribute("aria-selected",modo==="c");$("abaS").setAttribute("aria-selected",modo==="s");
   $("lOk").textContent=t.ok;$("lFalta").textContent=t.lfalta;$("t-voltas").textContent=t.tit;$("dica").textContent=t.dica;
   $("exportar").hidden=modo!=="s";
-  const ok=V().filter(v=>doDia[v]).length;
-  $("sOk").textContent=ok;$("sFalta").textContent=V().length-ok;
-  $("barra").style.width=(V().length?ok/V().length*100:0)+"%";
+  /* O carro extra é opcional: não conta para o resumo */
+  const fixas=V().filter(v=>!INTERRUPTOR.has(v)),ok=fixas.filter(v=>doDia[v]).length;
+  $("sOk").textContent=ok;$("sFalta").textContent=fixas.length-ok;
+  $("barra").style.width=(fixas.length?ok/fixas.length*100:0)+"%";
   $("aviso").hidden=eHoje;
   if(!eHoje)aEditar=null;
   const l=$("lista");l.textContent="";
   V().forEach(v=>{
     const r=reg(doDia[v]),row=document.createElement("div");row.className="v"+(r?" ok":"");
-    const n=document.createElement("div");n.className="num"+(/^\d+$/.test(v)?"":" txt");n.innerHTML="<small>Volta</small>";n.append(v);
+    const n=document.createElement("div");n.className="num"+(/^\d+$/.test(v)?"":" txt");n.innerHTML=INTERRUPTOR.has(v)?"<small>Extra</small>":"<small>Volta</small>";n.append(v);
     if(aEditar===v){row.classList.add("ed");row.append(n,editor(v,r));l.appendChild(row);return;}
     const e=document.createElement("div");e.className="est";
     if(r){
@@ -183,7 +196,14 @@ function render(){
       if(eHoje){const i=document.createElement("button");i.type="button";i.className="indicar";i.textContent="Indicar hora";i.onclick=()=>abrirEditor(v);e.appendChild(i);}
     }
     let btn;
-    if(r){btn=document.createElement("button");btn.type="button";btn.className="anular"+(aConfirmar===v?" confirm":"");
+    if(INTERRUPTOR.has(v)){
+      btn=document.createElement("button");btn.type="button";btn.className="sw"+(aConfirmar===v?" confirm":"");
+      btn.setAttribute("role","switch");btn.setAttribute("aria-checked",r?"true":"false");btn.setAttribute("aria-label",v);btn.disabled=!eHoje;
+      btn.innerHTML='<span class="trilho"><span class="bola"></span></span>';
+      if(aConfirmar===v){const c=document.createElement("small");c.textContent="Toque para desligar";btn.appendChild(c);}
+      btn.onclick=()=>r?anular(v):chegou(v);
+      row.classList.add("extra");
+    }else if(r){btn=document.createElement("button");btn.type="button";btn.className="anular"+(aConfirmar===v?" confirm":"");
       btn.textContent=aConfirmar===v?"Confirmar":"Anular";btn.onclick=()=>anular(v);btn.hidden=!eHoje;}
     else{btn=document.createElement("button");btn.type="button";btn.className="chegou";btn.textContent=t.btn;
       btn.disabled=!eHoje;btn.onclick=()=>chegou(v);btn.setAttribute("aria-label","Volta "+v+" "+t.btn.toLowerCase());}
