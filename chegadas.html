@@ -119,8 +119,11 @@ h2{font-family:var(--display);font-size:20px;font-weight:700;text-transform:uppe
 </div>
 
 <script>
-/* Lista das voltas, pela ordem indicada */
-const VOLTAS=["1123","1633","1636","1419","1420","1639","1627","1638","1205","1235","1603","1201","1602","1204","1113","1112","1311","1330","1337","1340","1445","1315","1318","1624","1316","1334","1314","1317","1641","Arrasto Norte","Carro Leiria","Recolha Santogal","AS Parts Seixal"];
+/* Listas das voltas, pela ordem indicada */
+const VOLTAS_C=["1123","1633","1636","1419","1420","1639","1627","1638","1205","1235","1603","1201","1602","1204","1113","1112","1311","1330","1337","1340","1445","1315","1318","1624","1316","1334","1314","1317","1641","Arrasto Norte","Carro Leiria","Recolha Santogal","AS Parts Seixal"];
+const VOLTAS_S=["1123","1633","1636","1419","1420","1639","1627","1638","1205","1235","1603","1201","1602","1204","1113","1112","1311","1330","1337","1340","1445","1315","1318","1624","1316","1334","1314","1317","1641","PSAR"];
+/* Para o Excel: todas as voltas, chegadas primeiro e depois as que só têm saída */
+const VOLTAS_TODAS=[...VOLTAS_C,...VOLTAS_S.filter(v=>!VOLTAS_C.includes(v))];
 
 const $=id=>document.getElementById(id);
 const pad=n=>String(n).padStart(2,"0");
@@ -141,7 +144,7 @@ const MODOS={
 let modo="c",BD={c:{},s:{}},aConfirmar=null,diaAberto=hoje();
 for(const k of ["c","s"]){try{BD[k]=JSON.parse(localStorage.getItem(MODOS[k].chave)||"{}")||{};}catch(e){BD[k]={};}}
 try{const m=localStorage.getItem("chegadas_aba");if(m==="s")modo="s";}catch(e){}
-const D=()=>BD[modo],T=()=>MODOS[modo];
+const D=()=>BD[modo],T=()=>MODOS[modo],V=()=>modo==="c"?VOLTAS_C:VOLTAS_S;
 function gravar(){try{localStorage.setItem(T().chave,JSON.stringify(D()));return true}catch(e){return false}}
 function mudarAba(m){modo=m;aConfirmar=null;aEditar=null;msg("msg","");msg("msgX","");try{localStorage.setItem("chegadas_aba",m);}catch(e){}render();}
 function msg(id,t,ok){const m=$(id);m.textContent=t||"";m.className="msg "+(ok?"ok":"err");}
@@ -158,13 +161,13 @@ function render(){
   $("abaC").setAttribute("aria-selected",modo==="c");$("abaS").setAttribute("aria-selected",modo==="s");
   $("lOk").textContent=t.ok;$("lFalta").textContent=t.lfalta;$("t-voltas").textContent=t.tit;$("dica").textContent=t.dica;
   $("exportar").hidden=modo!=="s";
-  const ok=VOLTAS.filter(v=>doDia[v]).length;
-  $("sOk").textContent=ok;$("sFalta").textContent=VOLTAS.length-ok;
-  $("barra").style.width=(VOLTAS.length?ok/VOLTAS.length*100:0)+"%";
+  const ok=V().filter(v=>doDia[v]).length;
+  $("sOk").textContent=ok;$("sFalta").textContent=V().length-ok;
+  $("barra").style.width=(V().length?ok/V().length*100:0)+"%";
   $("aviso").hidden=eHoje;
   if(!eHoje)aEditar=null;
   const l=$("lista");l.textContent="";
-  VOLTAS.forEach(v=>{
+  V().forEach(v=>{
     const r=reg(doDia[v]),row=document.createElement("div");row.className="v"+(r?" ok":"");
     const n=document.createElement("div");n.className="num"+(/^\d+$/.test(v)?"":" txt");n.innerHTML="<small>Volta</small>";n.append(v);
     if(aEditar===v){row.classList.add("ed");row.append(n,editor(v,r));l.appendChild(row);return;}
@@ -277,7 +280,7 @@ function gerarExcel(dia){
   if(!Object.keys(ch).length&&!Object.keys(sa).length)return null;
   const [y,m,d]=dia.split("-");
   const h=x=>{const r=reg(x);return r?hora(r.t):"";};
-  const linhas=VOLTAS.map(v=>[/^\d+$/.test(v)?+v:v,h(ch[v]),h(sa[v])]);
+  const linhas=VOLTAS_TODAS.map(v=>[/^\d+$/.test(v)?+v:v,h(ch[v]),h(sa[v])]);
   return {bytes:criarXlsx({titulo:"CHEGADAS E SAÍDAS — "+d+"/"+m+"/"+y,folha:"Chegadas e saídas",cab:["Volta","Hora de chegada","Hora de saída"],linhas,larguras:[12,20,20]}),nome:`chegadas-saidas-${y}-${m}-${d}.xlsx`};
 }
 $("excel").onclick=()=>{
