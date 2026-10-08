@@ -126,7 +126,7 @@ function msg(id,t,ok){const m=$(id);m.textContent=t||"";m.className="msg "+(ok?"
 $("dia").value=diaAberto;
 $("dia").addEventListener("change",()=>{aConfirmar=null;msg("msg","");msg("msgX","");render();});
 
-/* Cada chegada: {t: hora ISO, c: true se a hora foi corrigida à mão}. Registos antigos podem ser só a hora ISO. */
+/* Cada chegada: {t: hora ISO}. Registos antigos podem ser só a hora ISO. */
 const reg=x=>!x?null:typeof x==="string"?{t:x}:x;
 let aEditar=null;
 function render(){
@@ -147,7 +147,7 @@ function render(){
       b.setAttribute("aria-label","Corrigir hora da volta "+v);b.textContent=hora(r.t);
       if(eHoje){const p=document.createElement("span");p.className="lapis";p.textContent="Editar";b.appendChild(p);}
       b.onclick=()=>abrirEditor(v);
-      e.append(b,r.c?"Hora corrigida":"Chegou");
+      e.append(b,"Chegou");
     }else{
       e.append("Por chegar");
       if(eHoje){const i=document.createElement("button");i.type="button";i.className="indicar";i.textContent="Indicar hora";i.onclick=()=>abrirEditor(v);e.appendChild(i);}
@@ -181,7 +181,7 @@ function guardarHora(v,val){
   const dt=new Date(y,mo-1,d,+m[1],+m[2],0);
   if(dt.getTime()>Date.now()+60000){msg("msg","A hora "+val+" ainda não chegou. Indique uma hora até agora.",false);return;}
   const antes=(dados[dia]||{})[v];
-  (dados[dia]=dados[dia]||{})[v]={t:dt.toISOString(),c:true};
+  (dados[dia]=dados[dia]||{})[v]={t:dt.toISOString()};
   if(!gravar()){if(antes)dados[dia][v]=antes;else delete dados[dia][v];msg("msg","O telemóvel não deixou guardar (sem espaço ou armazenamento bloqueado).",false);return;}
   aEditar=null;msg("msg","Volta "+v+": chegada registada às "+hora(dt.toISOString())+".",true);render();
 }
@@ -249,8 +249,8 @@ function gerarExcel(dia){
   const doDia=dados[dia]||{};
   if(!Object.keys(doDia).length)return null;
   const [y,m,d]=dia.split("-");
-  const linhas=VOLTAS.map(v=>{const r=reg(doDia[v]);return [/^\d+$/.test(v)?+v:v,r?(r.c?hora(r.t):horaSeg(r.t)):"",r?(r.c?"Chegou (hora indicada)":"Chegou"):"Em falta"];});
-  return {bytes:criarXlsx({titulo:"REGISTO DE CHEGADAS — "+d+"/"+m+"/"+y,folha:"Chegadas",cab:["Volta","Hora de chegada","Estado"],linhas,larguras:[12,20,24]}),nome:`chegadas-${y}-${m}-${d}.xlsx`};
+  const linhas=VOLTAS.map(v=>{const r=reg(doDia[v]);return [/^\d+$/.test(v)?+v:v,r?hora(r.t):"",r?"Chegou":"Em falta"];});
+  return {bytes:criarXlsx({titulo:"REGISTO DE CHEGADAS — "+d+"/"+m+"/"+y,folha:"Chegadas",cab:["Volta","Hora de chegada","Estado"],linhas,larguras:[12,20,14]}),nome:`chegadas-${y}-${m}-${d}.xlsx`};
 }
 $("excel").onclick=()=>{
   try{
