@@ -52,6 +52,7 @@ input.mono{font-family:var(--mono);letter-spacing:.02em}
 .chip{background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:999px;padding:10px 14px;font:600 15px var(--body);cursor:pointer}
 .chip[aria-pressed=true]{background:var(--green);border-color:var(--green);color:var(--green-ink)}
 .hint{font-size:13px;color:var(--muted)}
+.field{scroll-margin-top:12px}
 .pneu{border:1px dashed var(--line);border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:16px}
 .pneu-h{display:flex;justify-content:space-between;align-items:baseline;font:700 17px var(--display);text-transform:uppercase;letter-spacing:.05em}
 .pneu-h span{font:500 12px var(--body);color:var(--muted);text-transform:none;letter-spacing:0}
@@ -275,14 +276,14 @@ function mostrarIndices(m){
   const gc=$("cargas");gc.innerHTML="";$("carga").value="";
   const sug=CARGA[m]||[];
   sug.forEach((v,i)=>{const xl=sug.length===2&&i===1;const b=chip(String(v),sug.length===2?(xl?"XL":"normal"):"comercial");
-    b.onclick=()=>{carga=String(v);marcar(gc,b);$("carga").hidden=true;if(sug.length===2&&xl)escolherRef("XL");};gc.appendChild(b);});
+    b.onclick=()=>{carga=String(v);marcar(gc,b);$("carga").hidden=true;if(sug.length===2&&xl)escolherRef("XL");irPara("f-vel");};gc.appendChild(b);});
   const o=chip(sug.length?"Outro":"Escrever",null,true);o.onclick=()=>{carga=OUTRO;marcar(gc,o);$("carga").hidden=false;$("carga").focus();};gc.appendChild(o);
   $("carga").hidden=true;
   if(!sug.length){carga=OUTRO;marcar(gc,o);$("carga").hidden=false;}
   const gv=$("vels");gv.innerHTML="";
   const prim=[...new Set(tiposAtuais.flatMap(t=>VEL[t]||[]))];
   const lista=prim.length?[...VEL_TODAS.filter(v=>prim.includes(v)),...VEL_TODAS.filter(v=>!prim.includes(v))]:VEL_TODAS;
-  lista.forEach(v=>{const b=chip(v,prim.includes(v)?"comum":null,!prim.includes(v)&&prim.length>0);b.onclick=()=>{vel=v;marcar(gv,b);};gv.appendChild(b);});
+  lista.forEach(v=>{const b=chip(v,prim.includes(v)?"comum":null,!prim.includes(v)&&prim.length>0);b.onclick=()=>{vel=v;marcar(gv,b);irPara("f-ref");};gv.appendChild(b);});
   const gr=$("refs");gr.innerHTML="";
   [["TL","sem câmara"],["XL","reforçado"]].forEach(([v,t])=>{const b=chip(v,t);b.dataset.v=v;b.onclick=()=>escolherRef(ref===v?"":v);gr.appendChild(b);});
   ["f-carga","f-vel","f-ref"].forEach(i=>$(i).hidden=false);
@@ -299,12 +300,13 @@ try{registos=JSON.parse(localStorage.getItem("pneus")||"[]")}catch(e){registos=[
 $("dia").value=hoje();
 function chip(txt,tag,alt){const b=document.createElement("button");b.type="button";b.className="chip"+(alt?" alt":"");b.setAttribute("aria-pressed","false");
   b.textContent=txt;if(tag){const s=document.createElement("span");s.className="tag";s.textContent=tag;b.appendChild(s);}return b;}
+function irPara(id){requestAnimationFrame(()=>{const e=$(id);if(e&&!e.hidden)e.scrollIntoView({behavior:matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth",block:"start"});});}
 function marcar(grupo,b){grupo.querySelectorAll(".chip").forEach(c=>c.setAttribute("aria-pressed",c===b?"true":"false"));}
 
 function mostrarMedidas(lista,tipos){
   tiposAtuais=tipos||[];esconderIndices();
   const g=$("medidas");g.innerHTML="";medida="";$("medida").hidden=true;$("medida").value="";
-  lista.forEach(m=>{const b=chip(m);b.onclick=()=>{medida=m;marcar(g,b);$("medida").hidden=true;mostrarIndices(m);};g.appendChild(b);});
+  lista.forEach(m=>{const b=chip(m);b.onclick=()=>{medida=m;marcar(g,b);$("medida").hidden=true;mostrarIndices(m);irPara("f-carga");};g.appendChild(b);});
   const o=chip("Outra medida",null,true);o.onclick=()=>{medida=OUTRO;marcar(g,o);$("medida").hidden=false;$("medida").focus();mostrarIndices("");};g.appendChild(o);
   $("f-medida").hidden=false;
 }
@@ -316,7 +318,7 @@ function escolherMarca(m){
   const g=$("modelos");g.innerHTML="";$("modelo").value="";
   if(m==="Outra"){$("modelo").hidden=false;modelo=OUTRO;$("f-modelo").hidden=false;mostrarMedidas(todasMedidas(["C","S","V"]),[]);return;}
   $("modelo").hidden=true;
-  CATALOGO[m].forEach(([nome,t])=>{const b=chip(nome,TIPO[t]);b.onclick=()=>{modelo=nome;marcar(g,b);$("modelo").hidden=true;mostrarMedidas(MED[t],[t]);};g.appendChild(b);});
+  CATALOGO[m].forEach(([nome,t])=>{const b=chip(nome,TIPO[t]);b.onclick=()=>{modelo=nome;marcar(g,b);$("modelo").hidden=true;mostrarMedidas(MED[t],[t]);irPara("f-medida");};g.appendChild(b);});
   const o=chip("Outro modelo",null,true);
   o.onclick=()=>{modelo=OUTRO;marcar(g,o);$("modelo").hidden=false;$("modelo").focus();{const ts=[...new Set(CATALOGO[m].map(x=>x[1]))];mostrarMedidas(todasMedidas(ts),ts);}};
   g.appendChild(o);
@@ -327,7 +329,7 @@ function limparPneu(){
   ["marcaOutra","modelo","medida"].forEach(i=>{$(i).value="";$(i).hidden=true;});
   $("f-modelo").hidden=true;$("f-medida").hidden=true;marcar($("marcas"),null);esconderIndices();
 }
-MARCAS.forEach(m=>{const b=chip(m,null,m==="Outra");b.onclick=()=>{marcar($("marcas"),b);escolherMarca(m);};$("marcas").appendChild(b);});
+MARCAS.forEach(m=>{const b=chip(m,null,m==="Outra");b.onclick=()=>{marcar($("marcas"),b);escolherMarca(m);if(m!=="Outra")irPara("f-modelo");};$("marcas").appendChild(b);});
 const total=()=>Math.max(1,parseInt($("qtd").value,10)||1);
 const atribuidos=()=>pendentes.reduce((a,p)=>a+p.qtd,0);
 const restam=()=>total()-atribuidos();
