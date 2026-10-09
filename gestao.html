@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="pt-PT">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0c0f0d">
+<meta name="robots" content="noindex">
+<title>Gestão OPS SJT</title>
+<link rel="icon" href="carf-icon-192.png">
+<style>
+/* Página só do administrador: armazéns, códigos e listas de cada armazém */
+:root{--bg:#0c0f0d;--panel:#151a17;--line:#26302a;--fg:#eef3ef;--muted:#93a39a;--green:#B9D406;--danger:#e0574f;
+  --display:"Roboto Condensed","sans-serif-condensed","Arial Narrow",Arial,sans-serif;--body:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;--mono:"Roboto Mono",ui-monospace,Menlo,Consolas,monospace;color-scheme:dark}
+*{box-sizing:border-box}[hidden]{display:none!important}
+html,body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.4 var(--body)}
+main{max-width:720px;margin:0 auto;padding:calc(18px + env(safe-area-inset-top,0px)) 16px 40px;display:flex;flex-direction:column;gap:18px}
+header{display:flex;justify-content:space-between;align-items:baseline;gap:12px;border-bottom:2px solid var(--green);padding-bottom:10px}
+h1{margin:0;font:700 26px var(--display);text-transform:uppercase;letter-spacing:.04em}
+h2{margin:0;font:700 19px var(--display);text-transform:uppercase;letter-spacing:.04em;color:var(--green)}
+a{color:var(--green)}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:14px}
+label{display:flex;flex-direction:column;gap:6px;font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+label small{text-transform:none;letter-spacing:0;font-weight:400}
+input,textarea{width:100%;background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:11px;font:500 16px var(--body)}
+textarea{font:14px/1.45 var(--mono);min-height:120px;resize:vertical}
+input:focus-visible,textarea:focus-visible,button:focus-visible{outline:2px solid var(--green);outline-offset:2px}
+.linha{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media (max-width:520px){.linha{grid-template-columns:1fr}}
+.btn{border:0;border-radius:10px;padding:13px 16px;font:700 17px var(--display);letter-spacing:.06em;text-transform:uppercase;cursor:pointer;background:var(--green);color:#0a0a0a}
+.btn.sec{background:transparent;color:var(--green);border:2px solid var(--green)}
+.btns{display:flex;gap:10px;flex-wrap:wrap}.btns .btn{flex:1}
+.lista{display:flex;flex-direction:column;gap:8px}
+.polo{display:flex;justify-content:space-between;align-items:center;gap:10px;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:12px}
+.polo b{font-size:17px}.polo small{display:block;color:var(--muted);font-size:13px}
+.polo button{background:none;border:1px solid var(--line);color:var(--green);border-radius:8px;padding:9px 14px;font:600 14px var(--body);cursor:pointer}
+.msg{min-height:20px;font-size:14px}.msg.ok{color:var(--green)}.msg.err{color:var(--danger)}
+.dica{font-size:13px;color:var(--muted);margin:0}
+.chk{flex-direction:row;align-items:center;gap:10px;text-transform:none;letter-spacing:0;font-size:15px;color:var(--fg)}
+.chk input{width:22px;height:22px}
+</style>
+</head>
+<body>
+<main>
+  <header><h1>Gestão</h1><a href="./">‹ Hub</a></header>
+
+  <form class="card" id="fAdmin" novalidate>
+    <h2>Código de administrador</h2>
+    <p class="dica">É o código ADMIN que definiste na Cloudflare. Fica guardado só até fechares este separador.</p>
+    <label for="admin">Código<input id="admin" type="password" autocomplete="off"></label>
+    <button class="btn" type="submit">Entrar na gestão</button>
+    <div class="msg" id="msgA" role="status"></div>
+  </form>
+
+  <section class="card" id="sPolos" hidden>
+    <h2>Armazéns</h2>
+    <div class="lista" id="polos"></div>
+    <button class="btn sec" type="button" id="novo">+ Novo armazém</button>
+  </section>
+
+  <form class="card" id="fPolo" hidden novalidate>
+    <h2 id="tPolo">Novo armazém</h2>
+    <div class="linha">
+      <label for="pNome">Nome<input id="pNome" maxlength="40" placeholder="ex. SJT"></label>
+      <label for="pId">Identificador <small>(letras minúsculas, sem espaços; não muda depois)</small><input id="pId" maxlength="30" autocapitalize="off" placeholder="ex. sjt"></label>
+    </div>
+    <div class="linha">
+      <label for="pCodigo">Código de acesso <small id="cDica">(o que os supervisores escrevem; mín. 4)</small><input id="pCodigo" autocomplete="off" autocapitalize="off"></label>
+      <label for="pOrdem">Ordem na lista<input id="pOrdem" type="number" inputmode="numeric" value="0"></label>
+    </div>
+    <label class="chk"><input type="checkbox" id="pAtivo" checked> Armazém ativo (aparece na entrada)</label>
+    <p class="dica">Listas: uma por linha. Ficam como os supervisores as veem nas apps.</p>
+    <label for="lVoltasC">Voltas — chegadas<textarea id="lVoltasC" spellcheck="false"></textarea></label>
+    <label for="lVoltasS">Voltas — saídas<textarea id="lVoltasS" spellcheck="false"></textarea></label>
+    <div class="linha">
+      <label for="lPneus">Voltas que trazem pneus<textarea id="lPneus" spellcheck="false"></textarea></label>
+      <label for="lInter">Carros extra <small>(interruptor nas chegadas)</small><textarea id="lInter" spellcheck="false"></textarea></label>
+    </div>
+    <label for="lMatriz">Subcontratados por volta <small>— uma linha por volta: volta = subcontratado (ex. 1201 = LG)</small><textarea id="lMatriz" spellcheck="false" style="min-height:180px"></textarea></label>
+    <label for="lMotivos">Motivos de penalização <small>— motivo = valor em € (ou nao_pago, ou reembolso). Vazio = lista comum.</small><textarea id="lMotivos" spellcheck="false" style="min-height:160px"></textarea></label>
+    <div class="btns">
+      <button class="btn sec" type="button" id="usarSJT">Preencher com as listas do SJT</button>
+      <button class="btn" type="submit" id="gravar">Guardar armazém</button>
+    </div>
+    <button class="btn sec" type="button" id="cancelar">Cancelar</button>
+    <div class="msg" id="msgP" role="status"></div>
+  </form>
+</main>
+<script src="sjt-listas.js"></script>
+<script src="sjt-online.js"></script>
+<script>
+const $=id=>document.getElementById(id);
+let ADMIN="",POLOS=[],editar=null;
+try{ADMIN=sessionStorage.getItem("sjt_admin")||"";}catch(e){}
+function msg(id,t,ok){$(id).textContent=t||"";$(id).className="msg "+(ok?"ok":"err");}
+const linhas=t=>[...new Set(String(t).split(/\r?\n/).map(x=>x.replace(/\s+/g," ").trim()).filter(Boolean))];
+
+async function carregar(){
+  try{
+    const j=await SJT.pedido("/gestao/polos",{admin:ADMIN});
+    POLOS=j.polos;try{sessionStorage.setItem("sjt_admin",ADMIN);}catch(e){}
+    $("fAdmin").hidden=true;$("sPolos").hidden=false;desenhar();
+  }catch(e){ADMIN="";try{sessionStorage.removeItem("sjt_admin");}catch(x){}$("fAdmin").hidden=false;$("sPolos").hidden=true;$("fPolo").hidden=true;msg("msgA",e.message,false);}
+}
+function desenhar(){
+  const el=$("polos");el.textContent="";
+  if(!POLOS.length){const p=document.createElement("p");p.className="dica";p.textContent="Ainda não há armazéns. Crie o primeiro.";el.appendChild(p);return;}
+  POLOS.forEach(p=>{
+    const d=document.createElement("div");d.className="polo";
+    const i=document.createElement("div");const b=document.createElement("b");b.textContent=p.nome;
+    const c=p.config||{},n=k=>Array.isArray(c[k])?c[k].length:(c[k]?Object.keys(c[k]).length:0);
+    const s=document.createElement("small");s.textContent=p.id+(p.ativo?"":" · inativo")+" · "+n("voltasC")+" voltas de chegada · "+n("matriz")+" subcontratados por volta";
+    i.append(b,s);const e=document.createElement("button");e.type="button";e.textContent="Editar";e.onclick=()=>abrir(p);
+    d.append(i,e);el.appendChild(d);
+  });
+}
+function preencher(c){
+  c=c||{};
+  $("lVoltasC").value=(c.voltasC||[]).join("\n");$("lVoltasS").value=(c.voltasS||[]).join("\n");
+  $("lPneus").value=(c.voltasPneus||[]).join("\n");$("lInter").value=(c.interruptor||[]).join("\n");
+  $("lMatriz").value=Object.entries(c.matriz||{}).map(([v,s])=>v+" = "+s).join("\n");
+  $("lMotivos").value=(c.motivos||[]).map(([m,v])=>m+" = "+v).join("\n");
+}
+function abrir(p){
+  editar=p||null;$("fPolo").hidden=false;msg("msgP","");
+  $("tPolo").textContent=p?"Editar "+p.nome:"Novo armazém";
+  $("pNome").value=p?p.nome:"";$("pId").value=p?p.id:"";$("pId").disabled=!!p;
+  $("pCodigo").value="";$("pCodigo").placeholder=p?"deixe vazio para manter o atual":"";
+  $("cDica").textContent=p?"(só se o quiser mudar — quem já entrou terá de entrar de novo)":"(o que os supervisores escrevem; mín. 4)";
+  $("pOrdem").value=p?p.ordem:POLOS.length;$("pAtivo").checked=p?p.ativo:true;
+  preencher(p?p.config:{});
+  $("fPolo").scrollIntoView({behavior:"smooth",block:"start"});
+}
+function lerConfig(){
+  const erros=[],matriz={},motivos=[];
+  linhas($("lMatriz").value).forEach(l=>{const m=l.match(/^(.+?)\s*[=;:\t]\s*(.+)$/);if(m)matriz[m[1].trim()]=m[2].trim();else erros.push("Subcontratados: falta o “=” em “"+l+"”");});
+  linhas($("lMotivos").value).forEach(l=>{const m=l.match(/^(.+?)\s*=\s*(.+)$/);if(!m){erros.push("Motivos: falta o “=” em “"+l+"”");return;}
+    const v=m[2].trim().toLowerCase().replace(/\s*€$/,"").replace(",",".");
+    if(v==="nao_pago"||v==="reembolso")motivos.push([m[1].trim(),v]);else if(/^\d+(\.\d+)?$/.test(v))motivos.push([m[1].trim(),+v]);else erros.push("Motivos: valor inválido em “"+l+"”");});
+  const c={voltasC:linhas($("lVoltasC").value),voltasS:linhas($("lVoltasS").value),voltasPneus:linhas($("lPneus").value),interruptor:linhas($("lInter").value),matriz};
+  if(motivos.length)c.motivos=motivos;
+  return {c,erros};
+}
+$("fAdmin").addEventListener("submit",e=>{e.preventDefault();ADMIN=$("admin").value.trim();if(!ADMIN){msg("msgA","Escreva o código.",false);return;}msg("msgA","A verificar…",true);carregar();});
+$("novo").onclick=()=>abrir(null);
+$("cancelar").onclick=()=>{$("fPolo").hidden=true;editar=null;};
+$("usarSJT").onclick=()=>{preencher(window.SJT_LISTAS_SJT);msg("msgP","Listas do SJT copiadas. Ajuste o que for preciso e guarde.",true);};
+$("pNome").addEventListener("input",()=>{if(!editar&&!$("pId").dataset.mexido)$("pId").value=$("pNome").value.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"").slice(0,30);});
+$("pId").addEventListener("input",()=>$("pId").dataset.mexido="1");
+$("fPolo").addEventListener("submit",async e=>{
+  e.preventDefault();
+  const {c,erros}=lerConfig();
+  if(erros.length){msg("msgP",erros.slice(0,3).join(" · "),false);return;}
+  const corpo={id:(editar?editar.id:$("pId").value.trim()),nome:$("pNome").value.trim(),codigo:$("pCodigo").value.trim(),ordem:parseInt($("pOrdem").value,10)||0,ativo:$("pAtivo").checked,config:c};
+  $("gravar").disabled=true;msg("msgP","A guardar…",true);
+  try{
+    const j=await SJT.pedido("/gestao/polos",{metodo:"POST",corpo,admin:ADMIN});
+    msg("msgP",(j.novo?"Armazém criado.":"Armazém guardado.")+(j.codigoMudou?" O código mudou: os supervisores deste armazém têm de entrar de novo.":""),true);
+    await carregar();const p=POLOS.find(x=>x.id===j.id);if(p){editar=p;$("tPolo").textContent="Editar "+p.nome;$("pId").disabled=true;$("pCodigo").value="";}
+  }catch(err){msg("msgP",err.message,false);}
+  $("gravar").disabled=false;
+});
+if(ADMIN)carregar();
+</script>
+</body>
+</html>

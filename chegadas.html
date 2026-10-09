@@ -129,14 +129,17 @@ h2{font-family:var(--display);font-size:20px;font-weight:700;text-transform:uppe
   </section>
 </div>
 
+<script src="sjt-listas.js"></script>
+<script src="sjt-online.js"></script>
 <script>
-/* Listas das voltas, pela ordem indicada */
-const VOLTAS_C=["1201","1602","1603","1204","1205","1311","1112","1113","1314","1315","1316","1317","1318","1419","1420","1123","1624","1627","1330","1633","1334","1235","1636","1337","1638","1639","1641","1445","Recolha Santogal","AS Parts Seixal","Arrasto Norte","Carro Leiria","Carro extra Leiria"];
+/* Listas das voltas: vêm do armazém em que o supervisor entrou (página de gestão) */
+const S=SJT.exigirSessao();
+const VOLTAS_C=SJT.lista("voltasC",S);
 /* Entradas com interruptor em vez de botão: ao ligar regista a hora como as outras voltas */
-const INTERRUPTOR=new Set(["Carro extra Leiria"]);
+const INTERRUPTOR=new Set(SJT.lista("interruptor",S));
 /* Rotas que trazem pneus (assinaladas com X na folha) — só nas chegadas */
-const PNEUS=new Set(["1205","1311","1112","1314","1318","1633","1639","Arrasto Norte"]);
-const VOLTAS_S=["1201","1602","1603","1204","1205","1311","1112","1113","1314","1315","1316","1317","1318","1419","1420","1123","1624","1627","1330","1633","1334","1235","1636","1337","1638","1639","1641","1445","PSAR"];
+const PNEUS=new Set(SJT.lista("voltasPneus",S));
+const VOLTAS_S=SJT.lista("voltasS",S);
 /* Para o Excel: todas as voltas, chegadas primeiro e depois as que só têm saída */
 const VOLTAS_TODAS=[...VOLTAS_C,...VOLTAS_S.filter(v=>!VOLTAS_C.includes(v))];
 
@@ -151,17 +154,25 @@ const horaSeg=iso=>{const d=new Date(iso);return hora(iso)+":"+pad(d.getSeconds(
 /* Dois registos separados, com a mesma lista de voltas: c = chegadas, s = saídas */
 const MODOS={
   c:{chave:"chegadas",btn:"Chegou",feito:"Chegou",falta:"Por chegar",ok:"Chegaram",lfalta:"Por chegar",campo:"Hora de chegada",tit:"Voltas — chegadas",
-     dica:"Carregue em “Chegou” quando a volta chegar: fica registada a hora desse momento. Se não viu a chegada, use “Indicar hora”, ou toque na hora já registada para a corrigir. Os registos ficam guardados neste telemóvel, mesmo sem internet.",
+     dica:"Carregue em “Chegou” quando a volta chegar: fica registada a hora desse momento. Se não viu a chegada, use “Indicar hora”, ou toque na hora já registada para a corrigir. Os registos são partilhados com todo o armazém; sem internet ficam no telemóvel e são enviados quando a rede voltar.",
      fez:(v,h)=>(INTERRUPTOR.has(v)?v:"Volta "+v)+" chegou às "+h+".",nome:"chegada"},
   s:{chave:"saidas",btn:"Saiu",feito:"Saiu",falta:"Por sair",ok:"Saíram",lfalta:"Por sair",campo:"Hora de saída",tit:"Voltas — saídas",
-     dica:"Carregue em “Saiu” quando a volta sair: fica registada a hora desse momento. Se não viu a saída, use “Indicar hora”, ou toque na hora já registada para a corrigir. Os registos ficam guardados neste telemóvel, mesmo sem internet.",
+     dica:"Carregue em “Saiu” quando a volta sair: fica registada a hora desse momento. Se não viu a saída, use “Indicar hora”, ou toque na hora já registada para a corrigir. Os registos são partilhados com todo o armazém; sem internet ficam no telemóvel e são enviados quando a rede voltar.",
      fez:(v,h)=>"Volta "+v+" saiu às "+h+".",nome:"saída"}
 };
 let modo="c",BD={c:{},s:{}},aConfirmar=null,diaAberto=hoje();
-for(const k of ["c","s"]){try{BD[k]=JSON.parse(localStorage.getItem(MODOS[k].chave)||"{}")||{};}catch(e){BD[k]={};}}
+/* Cada hora registada é um registo partilhado: id = modo|dia|volta */
+const LIG=SJT.ligar("chegadas",{aoMudar:()=>{carregar();if(!aEditar)render();}});
+function carregar(){
+  BD={c:{},s:{}};
+  LIG.registos().forEach(r=>{const d=r.dados||{};if(!BD[d.modo]||!d.volta)return;
+    (BD[d.modo][r.dia]=BD[d.modo][r.dia]||{})[d.volta]={t:d.t,autor:r.autor,meu:r.meu,alteradoPor:r.alteradoPor,pendente:!!r.pendente};});
+}
+carregar();
+const idDe=(m,dia,v)=>m+"|"+dia+"|"+v;
+function registar(m,dia,v,t){return LIG.gravar(idDe(m,dia,v),dia,{modo:m,volta:v,t});}
 try{const m=localStorage.getItem("chegadas_aba");if(m==="s")modo="s";}catch(e){}
 const D=()=>BD[modo],T=()=>MODOS[modo],V=()=>modo==="c"?VOLTAS_C:VOLTAS_S;
-function gravar(){try{localStorage.setItem(T().chave,JSON.stringify(D()));return true}catch(e){return false}}
 function mudarAba(m){modo=m;aConfirmar=null;aEditar=null;msg("msg","");msg("msgX","");try{localStorage.setItem("chegadas_aba",m);}catch(e){}render();}
 function msg(id,t,ok){const m=$(id);m.textContent=t||"";m.className="msg "+(ok?"ok":"err");}
 
@@ -196,6 +207,7 @@ function render(){
       if(eHoje){const p=document.createElement("span");p.className="lapis";p.textContent="Editar";b.appendChild(p);}
       b.onclick=()=>abrirEditor(v);
       e.append(b,t.feito);
+      const au=document.createElement("span");au.className="sjt-autor";au.textContent=SJT.autorTxt(r)+(r.pendente?" · a enviar":"");e.appendChild(au);
     }else{
       e.append(t.falta);
       if(eHoje){const i=document.createElement("button");i.type="button";i.className="indicar";i.textContent="Indicar hora";i.onclick=()=>abrirEditor(v);e.appendChild(i);}
@@ -206,10 +218,10 @@ function render(){
       btn.setAttribute("role","switch");btn.setAttribute("aria-checked",r?"true":"false");btn.setAttribute("aria-label",v);btn.disabled=!eHoje;
       btn.innerHTML='<span class="trilho"><span class="bola"></span></span>';
       if(aConfirmar===v){const c=document.createElement("small");c.textContent="Toque para desligar";btn.appendChild(c);}
-      btn.onclick=()=>r?anular(v):chegou(v);
+      btn.onclick=()=>r?anular(v):chegou(v);if(r&&!r.meu)btn.disabled=true;
       row.classList.add("extra");
     }else if(r){btn=document.createElement("button");btn.type="button";btn.className="anular"+(aConfirmar===v?" confirm":"");
-      btn.textContent=aConfirmar===v?"Confirmar":"Anular";btn.onclick=()=>anular(v);btn.hidden=!eHoje;}
+      btn.textContent=aConfirmar===v?"Confirmar":"Anular";btn.onclick=()=>anular(v);btn.hidden=!eHoje||!r.meu;}
     else{btn=document.createElement("button");btn.type="button";btn.className="chegou";btn.textContent=t.btn;
       btn.disabled=!eHoje;btn.onclick=()=>chegou(v);btn.setAttribute("aria-label","Volta "+v+" "+t.btn.toLowerCase());}
     row.append(n,e,btn);l.appendChild(row);
@@ -235,25 +247,23 @@ function guardarHora(v,val){
   const dia=$("dia").value,[y,mo,d]=dia.split("-").map(Number);
   const dt=new Date(y,mo-1,d,+m[1],+m[2],0);
   if(dt.getTime()>Date.now()+60000){msg("msg","A hora "+val+" ainda não chegou. Indique uma hora até agora.",false);return;}
-  const dados=D(),antes=(dados[dia]||{})[v];
-  (dados[dia]=dados[dia]||{})[v]={t:dt.toISOString()};
-  if(!gravar()){if(antes)dados[dia][v]=antes;else delete dados[dia][v];msg("msg","O telemóvel não deixou guardar (sem espaço ou armazenamento bloqueado).",false);return;}
+  if(!registar(modo,dia,v,dt.toISOString())){msg("msg","O telemóvel não deixou guardar (sem espaço ou armazenamento bloqueado).",false);return;}
+  carregar();
   aEditar=null;msg("msg","Volta "+v+": "+T().nome+" registada às "+hora(dt.toISOString())+".",true);render();
 }
 function chegou(v){
   const agora=new Date(),dia=diaDe(agora),dados=D();
   if($("dia").value!==dia){$("dia").value=dia;}
-  (dados[dia]=dados[dia]||{});
-  if(dados[dia][v]){render();return;}
-  dados[dia][v]={t:agora.toISOString()};
-  if(!gravar()){delete dados[dia][v];msg("msg","O telemóvel não deixou guardar (sem espaço ou armazenamento bloqueado).",false);render();return;}
+  if((dados[dia]||{})[v]){render();return;}
+  if(!registar(modo,dia,v,agora.toISOString())){msg("msg","O telemóvel não deixou guardar (sem espaço ou armazenamento bloqueado).",false);render();return;}
+  carregar();
   aConfirmar=null;aEditar=null;msg("msg",T().fez(v,hora(agora.toISOString())),true);render();
 }
 function anular(v){
   if(aConfirmar!==v){aConfirmar=v;render();setTimeout(()=>{if(aConfirmar===v){aConfirmar=null;render();}},4000);return;}
-  aConfirmar=null;const dia=$("dia").value,dados=D();
-  if(dados[dia]){delete dados[dia][v];if(!Object.keys(dados[dia]).length)delete dados[dia];}
-  gravar();msg("msg",(modo==="c"?"Chegada":"Saída")+" da volta "+v+" anulada.",true);render();
+  aConfirmar=null;const dia=$("dia").value;
+  if(!LIG.apagar(idDe(modo,dia,v))){msg("msg","Só quem registou esta hora a pode anular.",false);render();return;}
+  carregar();msg("msg",(modo==="c"?"Chegada":"Saída")+" da volta "+v+" anulada.",true);render();
 }
 /* Se a app ficar aberta e passar a meia-noite, muda para o novo dia */
 document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible"&&$("dia").value===diaAberto&&hoje()!==diaAberto){diaAberto=hoje();$("dia").value=diaAberto;render();}});
@@ -305,8 +315,9 @@ function gerarExcel(dia){
   if(!Object.keys(ch).length&&!Object.keys(sa).length)return null;
   const [y,m,d]=dia.split("-");
   const h=x=>{const r=reg(x);return r?hora(r.t):"";};
-  const linhas=VOLTAS_TODAS.map(v=>[/^\d+$/.test(v)?+v:v,h(ch[v]),h(sa[v])]);
-  return {bytes:criarXlsx({titulo:"CHEGADAS E SAÍDAS — "+d+"/"+m+"/"+y,folha:"Chegadas e saídas",cab:["Volta","Hora de chegada","Hora de saída"],linhas,larguras:[12,20,20]}),nome:`chegadas-saidas-${y}-${m}-${d}.xlsx`};
+  const quem=x=>{const r=reg(x);return r&&r.autor||"";};
+  const linhas=VOLTAS_TODAS.map(v=>[/^\d+$/.test(v)?+v:v,h(ch[v]),h(sa[v]),quem(ch[v]),quem(sa[v])]);
+  return {bytes:criarXlsx({titulo:"CHEGADAS E SAÍDAS — "+d+"/"+m+"/"+y,folha:"Chegadas e saídas",cab:["Volta","Hora de chegada","Hora de saída","Chegada registada por","Saída registada por"],linhas,larguras:[12,18,18,22,22]}),nome:`chegadas-saidas-${y}-${m}-${d}.xlsx`};
 }
 $("excel").onclick=()=>{
   try{
@@ -319,6 +330,12 @@ $("excel").onclick=()=>{
   }catch(err){msg("msgX","Não foi possível gerar o Excel.",false);}
 };
 
+/* Registos de antes do online, que ficaram neste telemóvel */
+(()=>{const antigos=[];
+  for(const k of ["c","s"]){let o={};try{o=JSON.parse(localStorage.getItem(MODOS[k].chave)||"{}")||{};}catch(e){}
+    for(const [dia,vs] of Object.entries(o))for(const [v,x] of Object.entries(vs||{})){const r=reg(x);if(r&&r.t)antigos.push([k,dia,v,r.t]);}}
+  SJT.oferecerMigracao("chegadas",antigos.length,()=>{antigos.forEach(([k,dia,v,t])=>{if(!(BD[k][dia]||{})[v])registar(k,dia,v,t);});carregar();render();},$("lista").closest("section")||document.querySelector("main"));})();
+SJT.barra(LIG,document.querySelector("header"));
 render();
 try{navigator.storage&&navigator.storage.persist&&navigator.storage.persist();}catch(e){}
 if("serviceWorker" in navigator&&location.protocol!=="file:"){navigator.serviceWorker.register("sw.js").catch(()=>{});}

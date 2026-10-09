@@ -127,7 +127,7 @@ dialog::backdrop{background:rgba(0,0,0,.7)}
     <h2 id="t-lista">Viaturas <span id="total">0</span></h2>
     <div class="procura" id="procura" hidden><input type="search" id="filtro" placeholder="Procurar matrícula ou modelo" aria-label="Procurar viatura"></div>
     <div id="lista"></div>
-    <div class="hint">As viaturas ficam guardadas neste telemóvel, mesmo sem internet.</div>
+    <div class="hint">As viaturas são partilhadas com todo o armazém: qualquer supervisor pode atualizar os km; só quem registou a viatura a pode apagar. Sem internet, as alterações ficam no telemóvel e são enviadas quando a rede voltar.</div>
   </section>
 </div>
 
@@ -155,7 +155,10 @@ dialog::backdrop{background:rgba(0,0,0,.7)}
   </div>
 </dialog>
 
+<script src="sjt-listas.js"></script>
+<script src="sjt-online.js"></script>
 <script>
+const S=SJT.exigirSessao();
 const $=id=>document.getElementById(id);
 const pad=n=>String(n).padStart(2,"0");
 const dataPT=iso=>{const d=new Date(iso);return pad(d.getDate())+"/"+pad(d.getMonth()+1)+"/"+d.getFullYear();};
@@ -170,8 +173,11 @@ const chaveMat=s=>String(s).toUpperCase().replace(/[^A-Z0-9]/g,"");
 
 /* BD: [ {id, marca, matricula, km, kmData (ISO), obs, criado, alterado} ] */
 let BD=[],aEditar=null,aConfirmar=null,pedido=null;
-try{BD=JSON.parse(localStorage.getItem("frota")||"[]");if(!Array.isArray(BD))BD=[];}catch(e){BD=[];}
-function gravar(){try{localStorage.setItem("frota",JSON.stringify(BD));return true}catch(e){return false}}
+/* Viaturas partilhadas pelo armazém (ver sjt-online.js); a frota não tem dia, fica toda no telemóvel */
+const LIG=SJT.ligar("frota",{diasLocais:0,aoMudar:()=>{carregar();render();}});
+function carregar(){BD=LIG.registos().map(r=>({...r.dados,id:r.id,autor:r.autor,meu:r.meu,alteradoPor:r.alteradoPor,pendente:!!r.pendente}));}
+carregar();
+const limpar=v=>{const {autor,meu,alteradoPor,pendente,...d}=v;return d;};
 function msg(id,t,ok){const m=$(id);m.textContent=t||"";m.className="msg "+(ok?"ok":"err");}
 
 ["marca","matricula","km"].forEach(k=>$(k).addEventListener("input",()=>$("c-"+k).classList.remove("erro")));
@@ -195,13 +201,15 @@ function render(){
     const mc=document.createElement("div");mc.className="marca";mc.textContent=v.marca;
     const km=document.createElement("div");km.className="km";km.textContent=fmtKm(v.km)+" km";
     if(v.kmData){const s=document.createElement("small");s.textContent="a "+dataPT(v.kmData);km.appendChild(s);}
-    info.append(m,mc,km);
+    const au=document.createElement("div");au.className="sjt-autor";au.textContent="Registada por "+SJT.autorTxt(v)+(v.pendente?" · a enviar":"");
+    info.append(m,mc,km,au);
     const peq=document.createElement("div");peq.className="pequenos";
     const be=document.createElement("button");be.type="button";be.textContent="Editar";be.onclick=()=>editar(v.id);
     be.setAttribute("aria-label","Editar viatura "+v.matricula);
     const ba=document.createElement("button");ba.type="button";ba.className=aConfirmar===v.id?"confirm":"";
     ba.textContent=aConfirmar===v.id?"Confirmar":"Apagar";ba.onclick=()=>apagar(v.id);
     ba.setAttribute("aria-label",(aConfirmar===v.id?"Confirmar apagar":"Apagar")+" viatura "+v.matricula);
+    if(!v.meu)ba.hidden=true;
     peq.append(be,ba);top.append(info,peq);c.appendChild(top);
     if(v.obs){const o=document.createElement("div");o.className="obs";o.textContent=v.obs;c.appendChild(o);}
     const ac=document.createElement("div");ac.className="acoes";
@@ -237,25 +245,27 @@ $("guardar").onclick=()=>{
   if(falta.length){msg("msg","Falta indicar "+falta.join(", ").replace(/, ([^,]*)$/," e $1")+".",false);return;}
   const dup=BD.find(v=>v.id!==aEditar&&chaveMat(v.matricula)===chaveMat(mat));
   if(dup){$("c-matricula").classList.add("erro");msg("msg","A matrícula "+dup.matricula+" já está registada. Use Editar nessa viatura.",false);return;}
-  const km=+kmS,agora=new Date().toISOString(),copia=JSON.stringify(BD);
-  let texto;
+  const km=+kmS,agora=new Date().toISOString();
+  let texto,reg;
   if(aEditar){
     const v=BD.find(x=>x.id===aEditar);if(!v){limparForm();render();return;}
-    if(v.km!==km)v.kmData=agora;
-    Object.assign(v,{marca,matricula:mat,km,obs,alterado:agora});texto="Alterações guardadas: "+mat+".";
+    reg={...limpar(v),marca,matricula:mat,km,obs,alterado:agora};if(v.km!==km)reg.kmData=agora;
+    texto="Alterações guardadas: "+mat+".";
   }else{
-    BD.push({id:Date.now().toString(36)+Math.random().toString(36).slice(2,6),marca,matricula:mat,km,kmData:agora,obs,criado:agora,alterado:agora});
+    reg={id:Date.now().toString(36)+Math.random().toString(36).slice(2,6)+SJT.dispositivo().replace(/[^a-z0-9]/gi,"").slice(0,4),marca,matricula:mat,km,kmData:agora,obs,criado:agora,alterado:agora};
     texto="Viatura registada: "+mat+", "+marca+".";
   }
-  if(!gravar()){BD=JSON.parse(copia);msg("msg","O telemóvel não deixou guardar (sem espaço ou armazenamento bloqueado).",false);return;}
+  if(!LIG.gravar(reg.id,"",reg)){msg("msg","O telemóvel não deixou guardar (sem espaço ou armazenamento bloqueado).",false);return;}
+  carregar();
   limparForm();aConfirmar=null;msg("msg",texto,true);render();
 };
 
 function apagar(id){
   if(aConfirmar!==id){aConfirmar=id;render();setTimeout(()=>{if(aConfirmar===id){aConfirmar=null;render();}},4000);return;}
-  aConfirmar=null;const v=BD.find(x=>x.id===id);BD=BD.filter(x=>x.id!==id);
+  aConfirmar=null;const v=BD.find(x=>x.id===id);
+  if(!LIG.apagar(id)){msg("msg","Só quem registou a viatura a pode apagar.",false);render();return;}
   if(aEditar===id)limparForm();
-  gravar();msg("msg","Viatura "+(v?v.matricula+" ":"")+"apagada.",true);render();
+  carregar();msg("msg","Viatura "+(v?v.matricula+" ":"")+"apagada.",true);render();
 }
 
 /* ---- Pedidos por email (Intervenção / Revisão) ---- */
@@ -312,6 +322,10 @@ $("copiar").onclick=async()=>{
 $("cAssunto").onclick=async()=>{const ok=await copiarTexto($("eAssunto").value);msg("eMsg",ok?"Assunto copiado.":"Não foi possível copiar o assunto.",ok);};
 $("abrirEmail").addEventListener("click",e=>{if(precisaMotivo())e.preventDefault();});
 
+/* Viaturas de antes do online, que ficaram neste telemóvel */
+(()=>{let antigos=[];try{antigos=(JSON.parse(localStorage.getItem("frota")||"[]")||[]).filter(v=>v&&v.id&&v.matricula);}catch(e){}
+  SJT.oferecerMigracao("frota",antigos.length,()=>{antigos.forEach(v=>{if(!BD.some(x=>chaveMat(x.matricula)===chaveMat(v.matricula)))LIG.gravar(v.id,"",v);});carregar();render();},$("lista").closest("section")||document.querySelector("main"));})();
+SJT.barra(LIG,document.querySelector("header"));
 render();
 try{navigator.storage&&navigator.storage.persist&&navigator.storage.persist();}catch(e){}
 if("serviceWorker" in navigator&&location.protocol!=="file:"){navigator.serviceWorker.register("sw.js").catch(()=>{});}

@@ -143,7 +143,7 @@ select{appearance:none;-webkit-appearance:none;background-image:linear-gradient(
   <section class="card" aria-labelledby="t-lista">
     <h2 id="t-lista">Penalizações do dia <span id="total">0</span></h2>
     <div id="lista"></div>
-    <div class="hint">Os registos ficam guardados neste telemóvel, mesmo sem internet.</div>
+    <div class="hint">Os registos são partilhados com todo o armazém. Sem internet ficam no telemóvel e são enviados quando a rede voltar.</div>
   </section>
 
   <section class="card">
@@ -163,38 +163,15 @@ select{appearance:none;-webkit-appearance:none;background-image:linear-gradient(
   </div>
 </div>
 
+<script src="sjt-listas.js"></script>
+<script src="sjt-online.js"></script>
 <script>
+const S=SJT.exigirSessao();
 /* Tabela de penalizações. valor: número em € | "nao_pago" (serviço não pago) | "reembolso" (reembolso + 25%) */
-const MOTIVOS=[
-  ["Chegada tardia no início do dia",25],
-  ["Estafeta sem farda",25],
-  ["Saída tardia para distribuição",25],
-  ["Estafeta não presente no fecho do dia","nao_pago"],
-  ["Mercadoria sem scan de carga",25],
-  ["Mercadoria sem scan de entrega",25],
-  ["Mercadoria sem scan de não entrega",25],
-  ["Falha de scan de recolha",25],
-  ["Falha de entrega inaceitável",30],
-  ["Entrega sem recolha de assinatura",30],
-  ["Guia manual mal preenchida",15],
-  ["Entrega de mercadoria sem receber reembolso","reembolso"],
-  ["Manuseamento incorreto das mercadorias",25],
-  ["Recolha não efetuada",50],
-  ["Estafeta incontactável",15],
-  ["Viatura não limpa",25],
-  ["Viatura não padronizada",30],
-  ["Fumar no armazém",30]
-];
+const MOTIVOS=SJT.lista("motivos",S);
 const NAO_PAGO="Serviço não pago";
 /* Matriz volta → subcontratado (prestador) */
-const MATRIZ={
-  "1201":"Exoticspring","1602":"LG","1603":"Exoticspring","1204":"Exoticspring","1205":"LG",
-  "1311":"TA","1112":"TA","1113":"TA","1315":"TA","1318":"TA",
-  "1419":"LG","1420":"LG","1222":"SantanaRace","1123":"LG","1624":"TA",
-  "1627":"LG","1330":"TA","1633":"LG","1334":"CARF","1235":"Exoticspring",
-  "1636":"LG","1337":"TA","1638":"Km Forasteiros","1639":"LG","1340":"TA",
-  "1641":"LG","1145":"TA","1445":"TA"
-};
+const MATRIZ=SJT.lista("matriz",S);
 
 const $=id=>document.getElementById(id);
 const pad=n=>String(n).padStart(2,"0");
@@ -207,8 +184,10 @@ const motivoDe=m=>MOTIVOS.find(x=>x[0]===m);
 
 /* BD: { "AAAA-MM-DD": [ {id, t, volta, sub, motorista, motivo, valor (número ou texto), reemb, obs} ] } */
 let BD={},aConfirmar=null,diaAberto=hoje(),pendente=null;
-try{BD=JSON.parse(localStorage.getItem("penalizacoes")||"{}")||{};}catch(e){BD={};}
-function gravarBD(){try{localStorage.setItem("penalizacoes",JSON.stringify(BD));return true}catch(e){return false}}
+/* Penalizações partilhadas pelo armazém (ver sjt-online.js) */
+const LIG=SJT.ligar("penalizacoes",{aoMudar:()=>{carregar();sugerirMotoristas();render();}});
+function carregar(){BD={};LIG.registos().forEach(r=>{(BD[r.dia]=BD[r.dia]||[]).push({...r.dados,id:r.id,autor:r.autor,meu:r.meu,alteradoPor:r.alteradoPor,pendente:!!r.pendente});});}
+carregar();
 function msg(id,t,ok){const m=$(id);m.textContent=t||"";m.className="msg "+(ok?"ok":"err");}
 const opt=(dl,v,txt)=>{const o=document.createElement("option");o.value=v;if(txt)o.textContent=txt;dl.appendChild(o);};
 
@@ -268,10 +247,11 @@ function render(){
     if(r.valor!==undefined&&r.valor!==""){const s=document.createElement("span");s.className="val";s.textContent=typeof r.valor==="number"?eur(r.valor):r.valor;top.appendChild(s);}
     const m=document.createElement("div");m.className="mot";m.textContent=r.motivo;
     const mt=document.createElement("div");mt.className="mtr";mt.textContent=r.motorista+" · "+hora(r.t);
-    info.append(top,m,mt);
+    const au=document.createElement("div");au.className="sjt-autor";au.textContent="Registado por "+SJT.autorTxt(r)+(r.pendente?" · a enviar":"");
+    info.append(top,m,mt,au);
     if(r.obs){const o=document.createElement("div");o.className="obs";o.textContent=r.obs;info.appendChild(o);}
     const b=document.createElement("button");b.type="button";b.className="anular"+(aConfirmar===r.id?" confirm":"");
-    b.textContent=aConfirmar===r.id?"Confirmar":"Apagar";b.hidden=!eHoje;b.onclick=()=>apagar(r.id);
+    b.textContent=aConfirmar===r.id?"Confirmar":"Apagar";b.hidden=!eHoje||!r.meu;b.onclick=()=>apagar(r.id);
     b.setAttribute("aria-label",(aConfirmar===r.id?"Confirmar apagar":"Apagar")+" penalização da volta "+r.volta);
     row.append(info,b);el.appendChild(row);
   });
@@ -315,9 +295,9 @@ $("gravar").onclick=()=>{
   if(!pendente)return;
   const agora=new Date(),dia=diaDe(agora);
   if($("dia").value!==dia)$("dia").value=dia;
-  const r={id:agora.getTime().toString(36)+Math.random().toString(36).slice(2,6),t:agora.toISOString(),...pendente};
-  (BD[dia]=BD[dia]||[]).push(r);
-  if(!gravarBD()){BD[dia].pop();if(!BD[dia].length)delete BD[dia];fecharResumo();msg("msg","O telemóvel não deixou guardar (sem espaço ou armazenamento bloqueado).",false);return;}
+  const r={id:agora.getTime().toString(36)+Math.random().toString(36).slice(2,6)+SJT.dispositivo().replace(/[^a-z0-9]/gi,"").slice(0,4),t:agora.toISOString(),...pendente};
+  if(!LIG.gravar(r.id,dia,r)){fecharResumo();msg("msg","O telemóvel não deixou guardar (sem espaço ou armazenamento bloqueado).",false);return;}
+  carregar();
   fecharResumo();pendente=null;
   CAMPOS.forEach(k=>$(k).value="");AUTO.sub="";AUTO.valor="";marcarAuto("sub");marcarAuto("valor");
   $("c-reemb").hidden=true;$("eur-valor").classList.remove("txt");
@@ -327,9 +307,9 @@ $("gravar").onclick=()=>{
 
 function apagar(id){
   if(aConfirmar!==id){aConfirmar=id;render();setTimeout(()=>{if(aConfirmar===id){aConfirmar=null;render();}},4000);return;}
-  aConfirmar=null;const dia=$("dia").value;
-  if(BD[dia]){BD[dia]=BD[dia].filter(r=>r.id!==id);if(!BD[dia].length)delete BD[dia];}
-  gravarBD();sugerirMotoristas();msg("msg","Penalização apagada.",true);render();
+  aConfirmar=null;
+  if(!LIG.apagar(id)){msg("msg","Só quem registou a penalização a pode apagar.",false);render();return;}
+  carregar();sugerirMotoristas();msg("msg","Penalização apagada.",true);render();
 }
 
 /* Se a app ficar aberta e passar a meia-noite, muda para o novo dia */
@@ -386,9 +366,9 @@ function gerarExcel(dia){
     let obs=(r.obs||"").replace(/\s*\n\s*/g," ");
     if(typeof r.reemb==="number")obs=("Reembolso: "+eur(r.reemb)+" + 25%"+(obs?". "+obs:""));
     const val=r.valor===undefined?"":r.valor;
-    return [d+"/"+m+"/"+y,/^\d+$/.test(r.volta)?+r.volta:r.volta,r.sub||"",r.motorista,r.motivo,val,obs];
+    return [d+"/"+m+"/"+y,/^\d+$/.test(r.volta)?+r.volta:r.volta,r.sub||"",r.motorista,r.motivo,val,obs,r.autor||""];
   });
-  return {bytes:criarXlsx({titulo:"PENALIZAÇÕES — "+d+"/"+m+"/"+y,folha:"Penalizações",cab:["Data","Volta","Subcontratado","Motorista","Motivo","Valor (€)","Observações"],linhas,larguras:[13,10,18,26,40,16,44]}),nome:`penalizacoes-${y}-${m}-${d}.xlsx`};
+  return {bytes:criarXlsx({titulo:"PENALIZAÇÕES — "+d+"/"+m+"/"+y,folha:"Penalizações",cab:["Data","Volta","Subcontratado","Motorista","Motivo","Valor (€)","Observações","Registado por"],linhas,larguras:[13,10,18,26,40,16,44,20]}),nome:`penalizacoes-${y}-${m}-${d}.xlsx`};
 }
 $("excel").onclick=()=>{
   try{
@@ -401,6 +381,11 @@ $("excel").onclick=()=>{
   }catch(err){msg("msgX","Não foi possível gerar o Excel.",false);}
 };
 
+/* Registos de antes do online, que ficaram neste telemóvel */
+(()=>{const antigos=[];let o={};try{o=JSON.parse(localStorage.getItem("penalizacoes")||"{}")||{};}catch(e){}
+  for(const [dia,l] of Object.entries(o))(l||[]).forEach(r=>{if(r&&r.id)antigos.push([dia,r]);});
+  SJT.oferecerMigracao("penalizacoes",antigos.length,()=>{antigos.forEach(([dia,r])=>{const id="antigo-"+r.id+"-"+SJT.dispositivo().slice(0,6);if(!LIG.obter(id))LIG.gravar(id,dia,{...r,id});});carregar();sugerirMotoristas();render();},$("lista").closest("section")||document.querySelector("main"));})();
+SJT.barra(LIG,document.querySelector("header"));
 sugerirMotoristas();render();
 try{navigator.storage&&navigator.storage.persist&&navigator.storage.persist();}catch(e){}
 if("serviceWorker" in navigator&&location.protocol!=="file:"){navigator.serviceWorker.register("sw.js").catch(()=>{});}

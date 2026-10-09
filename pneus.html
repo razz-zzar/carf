@@ -90,6 +90,7 @@ input.mono{font-family:var(--mono);letter-spacing:.02em}
 .item .t{min-width:0}
 .item .t b{display:block;font-weight:600;overflow-wrap:anywhere}
 .item .t small{color:var(--muted);font-size:13px;overflow-wrap:anywhere}
+.item .t small.sjt-autor{display:block;font-size:12px}
 .del{background:none;border:1px solid var(--line);color:var(--muted);border-radius:8px;padding:8px 10px;font:600 13px var(--body);cursor:pointer}
 .del.confirm{border-color:var(--danger);color:var(--danger)}
 .empty{color:var(--muted);text-align:center;padding:12px;font-size:15px}
@@ -205,10 +206,12 @@ input.mono{font-family:var(--mono);letter-spacing:.02em}
     <div id="lista"></div>
     <button class="btn btn-ghost" id="excel" type="button">Exportar Excel do dia</button>
     <div class="msg" id="msgX" role="status"></div>
-    <div class="hint">Os registos ficam guardados neste telemóvel, mesmo sem internet. Exporte o Excel no fim do dia.</div>
+    <div class="hint">Os registos são partilhados com todo o armazém. Sem internet ficam no telemóvel e são enviados quando a rede voltar.</div>
   </section>
 </div>
 
+<script src="sjt-listas.js"></script>
+<script src="sjt-online.js"></script>
 <script>/* Gerador mínimo de .xlsx (sem bibliotecas, funciona offline) */
 const MIME_XLSX="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
 const CRC_T=(()=>{const t=new Uint32Array(256);for(let n=0;n<256;n++){let c=n;for(let k=0;k<8;k++)c=c&1?0xEDB88320^(c>>>1):c>>>1;t[n]=c>>>0;}return t;})();
@@ -230,16 +233,16 @@ function zipStore(files){
 }
 function criarXlsx({titulo,cab,linhas,total}){
   const X=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])).replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g,"");
-  const L="ABCDEF";
+  const L="ABCDEFGHIJ",nc=cab.length;
   const cel=(r,c,v,s)=>v===""||v==null?`<c r="${L[c]}${r}" s="${s}"/>`:typeof v==="number"?`<c r="${L[c]}${r}" s="${s}"><v>${v}</v></c>`:`<c r="${L[c]}${r}" s="${s}" t="inlineStr"><is><t xml:space="preserve">${X(v)}</t></is></c>`;
-  let rows=`<row r="1" ht="26" customHeight="1">`+[titulo,"","","","",""].map((v,c)=>cel(1,c,v,1)).join("")+`</row><row r="2"/>`;
+  let rows=`<row r="1" ht="26" customHeight="1">`+[titulo,...Array(nc-1).fill("")].map((v,c)=>cel(1,c,v,1)).join("")+`</row><row r="2"/>`;
   rows+=`<row r="3" ht="30" customHeight="1">`+cab.map((v,c)=>cel(3,c,v,2)).join("")+`</row>`;
   linhas.forEach((l,i)=>{const r=4+i;rows+=`<row r="${r}">`+l.map((v,c)=>cel(r,c,v,(i%2?5:3)+(c===2?1:0))).join("")+`</row>`;});
   const rt=4+linhas.length+1,ult=3+linhas.length;
-  rows+=`<row r="${rt}">`+["","TOTAL",total,"","",""].map((v,c)=>cel(rt,c,v,c===1||c===2?7:0)).join("")+`</row>`;
+  rows+=`<row r="${rt}">`+["","TOTAL",total,...Array(nc-3).fill("")].map((v,c)=>cel(rt,c,v,c===1||c===2?7:0)).join("")+`</row>`;
   const NS='xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"',H='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>';
-  const W=[10,22,12,16,24,24].map((w,i)=>`<col min="${i+1}" max="${i+1}" width="${w}" customWidth="1"/>`).join("");
-  const sheet=`${H}<worksheet ${NS}><sheetViews><sheetView workbookViewId="0" showGridLines="0"><pane ySplit="3" topLeftCell="A4" activePane="bottomLeft" state="frozen"/><selection pane="bottomLeft"/></sheetView></sheetViews><sheetFormatPr defaultRowHeight="15"/><cols>${W}</cols><sheetData>${rows}</sheetData><autoFilter ref="A3:F${ult}"/><mergeCells count="1"><mergeCell ref="A1:F1"/></mergeCells></worksheet>`;
+  const W=[10,22,12,16,24,24,18].slice(0,nc).map((w,i)=>`<col min="${i+1}" max="${i+1}" width="${w}" customWidth="1"/>`).join("");
+  const sheet=`${H}<worksheet ${NS}><sheetViews><sheetView workbookViewId="0" showGridLines="0"><pane ySplit="3" topLeftCell="A4" activePane="bottomLeft" state="frozen"/><selection pane="bottomLeft"/></sheetView></sheetViews><sheetFormatPr defaultRowHeight="15"/><cols>${W}</cols><sheetData>${rows}</sheetData><autoFilter ref="A3:${L[nc-1]}${ult}"/><mergeCells count="1"><mergeCell ref="A1:${L[nc-1]}1"/></mergeCells></worksheet>`;
   const fill=c=>`<fill><patternFill patternType="solid"><fgColor rgb="FF${c}"/><bgColor indexed="64"/></patternFill></fill>`;
   const bd=`<border><left style="thin"><color rgb="FF000000"/></left><right style="thin"><color rgb="FF000000"/></right><top style="thin"><color rgb="FF000000"/></top><bottom style="thin"><color rgb="FF000000"/></bottom><diagonal/></border>`;
   const xf=(f,fi,b,h,wrap)=>`<xf numFmtId="0" fontId="${f}" fillId="${fi}" borderId="${b}" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="${h}" vertical="center"${wrap?' wrapText="1"':''}/></xf>`;
@@ -355,9 +358,14 @@ function esconderIndices(){carga="";vel="";ref="";["f-carga","f-vel","f-ref"].fo
 let modelo="", medida="";
 const $=id=>document.getElementById(id);
 const hoje=()=>{const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")};
-let marca="", registos=[], db=null, local=true, aConfirmar=null;
+let marca="", registos=[], aConfirmar=null;
 
-try{registos=JSON.parse(localStorage.getItem("pneus")||"[]")}catch(e){registos=[]}
+/* Registos partilhados pelo armazém (ver sjt-online.js) */
+const S=SJT.exigirSessao();
+const LIG=SJT.ligar("pneus",{aoMudar:()=>{carregarRegistos();render();}});
+function carregarRegistos(){registos=LIG.registos().map(r=>({...r.dados,id:r.id,dia:r.dia||r.dados.dia,autor:r.autor,meu:r.meu,alteradoPor:r.alteradoPor,pendente:!!r.pendente}));}
+carregarRegistos();
+const novoId=i=>"p"+(Date.now()+i).toString(36)+SJT.dispositivo().replace(/[^a-z0-9]/gi,"").slice(0,6);
 
 $("dia").value=hoje();
 function chip(txt,tag,alt){const b=document.createElement("button");b.type="button";b.className="chip"+(alt?" alt":"");b.setAttribute("aria-pressed","false");
@@ -437,8 +445,8 @@ function render(){
     return `<div class="volta"><div class="volta-h"><strong>Volta ${esc(v)}</strong><span>${tot} pneu${tot===1?"":"s"}</span></div>`+
       Object.keys(porGuia).map(gk=>{const gl=porGuia[gk],gt=gl.reduce((a,r)=>a+(+r.qtd||0),0);
         return `<div class="guia-h"><span>Guia <b>${esc(gk)}</b></span><span>${gt} pneu${gt===1?"":"s"}</span></div>`+
-        gl.map(r=>`<div class="item"><div class="qty">${esc(r.qtd)}</div><div class="t"><b>${esc(r.marca)} ${esc(r.modelo)}</b><small>${esc(medTxt(r))}</small></div>`+
-        (r.exemplo?"":`<button class="del${aConfirmar===r.id?" confirm":""}" data-id="${esc(r.id)}">${aConfirmar===r.id?"Confirmar":"Apagar"}</button>`)+`</div>`).join("");}).join("")+`</div>`;
+        gl.map(r=>`<div class="item"><div class="qty">${esc(r.qtd)}</div><div class="t"><b>${esc(r.marca)} ${esc(r.modelo)}</b><small>${esc(medTxt(r))}</small><small class="sjt-autor">${esc(SJT.autorTxt(r))}${r.pendente?" · a enviar":""}</small></div>`+
+        (r.exemplo||!r.meu?"<span></span>":`<button class="del${aConfirmar===r.id?" confirm":""}" data-id="${esc(r.id)}">${aConfirmar===r.id?"Confirmar":"Apagar"}</button>`)+`</div>`).join("");}).join("")+`</div>`;
   }).join("");
 }
 
@@ -446,8 +454,8 @@ $("lista").addEventListener("click",async e=>{
   const b=e.target.closest(".del");if(!b)return;const id=b.dataset.id;
   if(aConfirmar!==id){aConfirmar=id;render();setTimeout(()=>{if(aConfirmar===id){aConfirmar=null;render();}},4000);return;}
   aConfirmar=null;
-  if(local){registos=registos.filter(r=>r.id!==id);guardarLocal();render();return;}
-  try{await db.collection("registos").doc(id).delete();}catch(err){msg("msgX","Não foi possível apagar. Tente de novo.",false);}
+  if(!LIG.apagar(id))msg("msgX","Só quem fez o registo o pode apagar.",false);
+  carregarRegistos();render();
 });
 
 let pendentes=[];
@@ -496,10 +504,10 @@ $("guardar").onclick=async()=>{
   try{
     for(const [i,p] of linhas.entries()){
       const r={dia,volta,guia,...p,criado:new Date(agora+i).toISOString()};
-      r.id="l"+(agora+i);registos=[r,...registos];if(!guardarLocal()){registos.shift();throw new Error("storage");}
+      r.id=novoId(i);if(!LIG.gravar(r.id,r.dia,r))throw new Error("storage");
       feitos++;
     }
-    if(local)render();
+    carregarRegistos();render();
     if(linhas.includes(atual))memorizar(atual,flAtual);
     const tot=linhas.reduce((a,p)=>a+p.qtd,0);
     msg("msg",`Guia ${guia} guardada: ${tot} pneu${tot===1?"":"s"} em ${linhas.length} linha${linhas.length===1?"":"s"} (volta ${volta}).`,true);
@@ -513,14 +521,17 @@ $("guardar").onclick=async()=>{
   $("guardar").disabled=false;
 };
 
-function guardarLocal(){try{localStorage.setItem("pneus",JSON.stringify(registos));return true}catch(e){return false}}
+/* Registos de antes do online, que ficaram neste telemóvel */
+(()=>{let antigos=[];try{antigos=(JSON.parse(localStorage.getItem("pneus")||"[]")||[]).filter(r=>r&&r.id&&!r.exemplo&&r.dia);}catch(e){}
+  SJT.oferecerMigracao("pneus",antigos.length,()=>{antigos.forEach(r=>LIG.gravar("antigo-"+r.id+"-"+SJT.dispositivo().slice(0,6),r.dia,r));carregarRegistos();render();},$("t-lista").parentElement);})();
+SJT.barra(LIG,document.querySelector("header"));
 
 async function gerarExcel(){
   const lista=doDia().sort((a,b)=>a.volta.localeCompare(b.volta,"pt",{numeric:true})||a.guia.localeCompare(b.guia)||(a.criado||"").localeCompare(b.criado||""));
   if(!lista.length){msg("msgX","Não há registos neste dia para exportar.",false);return null;}
-  const cab=["Volta","Guia de transporte","Nº pneus em falta","Marca","Modelo","Medida"];
+  const cab=["Volta","Guia de transporte","Nº pneus em falta","Marca","Modelo","Medida","Registado por"];
   const medidaTxt=medTxt;
-  const linhas=lista.map(r=>[/^\d+$/.test(r.volta)?+r.volta:r.volta,r.guia,+r.qtd,r.marca,r.modelo,medidaTxt(r)]);
+  const linhas=lista.map(r=>[/^\d+$/.test(r.volta)?+r.volta:r.volta,r.guia,+r.qtd,r.marca,r.modelo,medidaTxt(r),r.autor||""]);
   const total=lista.reduce((a,r)=>a+(+r.qtd||0),0);
   const [y,m,d]=$("dia").value.split("-");
   return {bytes:criarXlsx({titulo:"PNEUS EM FALTA — "+d+"/"+m+"/"+y,cab,linhas,total}),nome:`pneus-em-falta-${y}-${m}-${d}.xlsx`};
