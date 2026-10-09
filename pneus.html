@@ -100,6 +100,10 @@ input.mono{font-family:var(--mono);letter-spacing:.02em}
 .lido{display:flex;justify-content:space-between;align-items:center;gap:10px;background:var(--bg);border-left:3px solid var(--green);border-radius:8px;padding:8px 10px;font-size:13px;color:var(--muted)}
 .lido b{display:block;color:var(--fg);font:500 13px var(--mono);overflow-wrap:anywhere}
 .lido a{color:var(--green)}
+.com-scan{display:grid;grid-template-columns:1fr 48px;gap:6px}
+.com-scan input{min-width:0}
+.scan-mini{display:grid;place-items:center;border:2px dashed var(--green);background:transparent;color:var(--green);border-radius:8px;cursor:pointer;padding:0}
+.scan-mini:active{background:rgba(185,212,6,.12)}
 .scan{position:fixed;inset:0;z-index:50;background:#000;display:flex;flex-direction:column;gap:12px;padding:calc(12px + env(safe-area-inset-top,0px)) 16px calc(16px + env(safe-area-inset-bottom,0px))}
 .scan-top{display:flex;justify-content:space-between;align-items:center;gap:12px}
 .scan-top b{font:700 22px var(--display);text-transform:uppercase;letter-spacing:.05em;color:var(--green)}
@@ -128,7 +132,7 @@ input.mono{font-family:var(--mono);letter-spacing:.02em}
     <h2 id="t-novo">Novo registo</h2>
     <div class="row">
       <div class="field"><label for="volta">Volta</label><input type="text" id="volta" inputmode="numeric" autocomplete="off" placeholder="ex. 12"></div>
-      <div class="field"><label for="guia">Nº da guia</label><input type="text" id="guia" class="mono" inputmode="numeric" pattern="[0-9]*" autocomplete="off" placeholder="ex. 48113"></div>
+      <div class="field"><label for="guia">Nº da guia</label><div class="com-scan"><input type="text" id="guia" class="mono" inputmode="numeric" pattern="[0-9]*" autocomplete="off" placeholder="ex. 48113"><button type="button" class="scan-mini" id="lerGuia" aria-label="Ler código da guia com a câmara"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 8V5a1 1 0 0 1 1-1h3M16 4h3a1 1 0 0 1 1 1v3M20 16v3a1 1 0 0 1-1 1h-3M8 20H5a1 1 0 0 1-1-1v-3M7 9v6M10 9v6M13 9v6M17 9v6"/></svg></button></div></div>
     </div>
     <div class="field">
       <span class="lbl" id="l-qtd">Nº total de pneus em falta nesta guia</span>
@@ -188,6 +192,7 @@ input.mono{font-family:var(--mono);letter-spacing:.02em}
     </div>
     <div class="msg" id="msg" role="status"></div>
     <details class="guardados" id="guardados" hidden><summary id="guardadosTit">Opções guardadas neste telemóvel</summary><div id="guardadosLista"></div></details>
+    <div class="hint">Versão de teste · leitura da guia.</div>
     <div class="hint">Com mais de 1 pneu em falta, se não forem todos iguais, carregue em “Adicionar outro pneu diferente” e escolha o seguinte. No fim, “Guardar guia”.</div>
   </section>
 
@@ -578,7 +583,7 @@ if("serviceWorker" in navigator&&location.protocol!=="file:"){navigator.serviceW
 const LIB_LEITOR="https://cdn.jsdelivr.net/npm/barcode-detector@2.3.1/pure/+esm";
 const FORMATOS=["qr_code","ean_13","ean_8","code_128","code_39","upc_a","upc_e","itf","data_matrix"];
 let CODIGOS={};try{CODIGOS=JSON.parse(localStorage.getItem("pneus_codigos")||"{}")||{};}catch(e){}
-let codigoAtual="",stream=null,detetor=null,aLer=false,luz=false,lido=false;
+let codigoAtual="",stream=null,detetor=null,aLer=false,luz=false,lido=false,modoLeitor="pneu";
 
 function gravarCodigos(){try{localStorage.setItem("pneus_codigos",JSON.stringify(CODIGOS));}catch(e){}}
 function chaveCodigo(c){c=String(c||"").trim();const ep=idEprel(c);return ep?"EPREL:"+ep:c;}
@@ -699,7 +704,9 @@ async function obterDetetor(){
   estado("A preparar o leitor (só da primeira vez)…");
   const mod=await import(LIB_LEITOR);detetor=new mod.BarcodeDetector({formats:FORMATOS});return detetor;
 }
-async function abrirLeitor(){
+const TEXTO_MODO={pneu:["Ler etiqueta","Aponte para o código QR ou de barras da etiqueta."],guia:["Ler guia","Aponte para o código de barras ou QR da guia de transporte."]};
+async function abrirLeitor(modo){
+  modoLeitor=modo==="guia"?"guia":"pneu";$("scanTit").textContent=TEXTO_MODO[modoLeitor][0];
   $("scan").hidden=false;document.body.style.overflow="hidden";lido=false;luz=false;$("scanLuz").hidden=true;$("scanTexto").value="";
   estado("A abrir a câmara…");
   if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){estado("Este navegador não dá acesso à câmara. Escreva o código em baixo.",true);return;}
@@ -711,7 +718,7 @@ async function abrirLeitor(){
   try{const tr=stream.getVideoTracks()[0],cap=tr.getCapabilities?tr.getCapabilities():{};if(cap.torch)$("scanLuz").hidden=false;
     if(cap.focusMode&&cap.focusMode.includes("continuous"))tr.applyConstraints({advanced:[{focusMode:"continuous"}]}).catch(()=>{});}catch(e){}
   try{await obterDetetor();}catch(e){estado("Não foi possível carregar o leitor (precisa de internet da primeira vez). Escreva o código em baixo.",true);return;}
-  estado("Aponte para o código QR ou de barras da etiqueta.");
+  estado(TEXTO_MODO[modoLeitor][1]);
   aLer=true;ciclo();
 }
 async function ciclo(){
@@ -719,7 +726,7 @@ async function ciclo(){
   while(aLer&&!lido){
     if(v.readyState>=2){
       try{const r=await detetor.detect(v);
-        if(r&&r.length){const pref=r.find(x=>x.format==="qr_code")||r[0];lido=true;if(navigator.vibrate)navigator.vibrate(80);fecharLeitor();tratarCodigo(pref.rawValue);return;}
+        if(r&&r.length){const pref=r.find(x=>x.format==="qr_code")||r[0];lido=true;if(navigator.vibrate)navigator.vibrate(80);fecharLeitor();entregar(pref.rawValue);return;}
       }catch(e){}
     }
     await new Promise(ok=>setTimeout(ok,180));
@@ -727,11 +734,36 @@ async function ciclo(){
 }
 function pararCamara(){aLer=false;if(stream){stream.getTracks().forEach(t=>t.stop());stream=null;}$("scanVideo").srcObject=null;}
 function fecharLeitor(){pararCamara();$("scan").hidden=true;document.body.style.overflow="";}
-$("ler").onclick=abrirLeitor;
-$("scanFechar").onclick=()=>{fecharLeitor();$("ler").focus();};
-document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("scan").hidden){fecharLeitor();$("ler").focus();}});
+$("ler").onclick=()=>abrirLeitor("pneu");
+$("lerGuia").onclick=()=>abrirLeitor("guia");
+let ultimoBotao="ler";$("ler").addEventListener("click",()=>ultimoBotao="ler");$("lerGuia").addEventListener("click",()=>ultimoBotao="lerGuia");
+function entregar(c){if(modoLeitor==="guia")tratarGuia(c);else tratarCodigo(c);}
+
+/* ---- Guia de transporte: tirar o número do código lido ----
+   QR da AT (documentos certificados): campos "X:valor" separados por "*"; o G é o documento, ex. "GT GTA/48113".
+   Código de barras: normalmente só o número. Noutros casos usa-se o último grupo de algarismos. */
+function numeroGuia(raw){
+  raw=String(raw||"").trim();
+  const g=raw.match(/(?:^|\*)G:([^*]+)/);
+  if(g){const n=g[1].match(/(\d+)\s*$/);if(n)return {num:String(+n[1]),doc:g[1].trim(),origem:"QR da AT"};}
+  if(/^\d+$/.test(raw))return {num:raw,origem:"código de barras"};
+  const grupos=raw.match(/\d{3,}/g);
+  if(grupos)return {num:grupos[grupos.length-1],origem:"código lido",incerto:true};
+  return null;
+}
+function tratarGuia(raw){
+  const r=numeroGuia(raw);
+  if(!r){msg("msg","A guia foi lida mas o código não tem um número de guia: "+(raw.length>60?raw.slice(0,57)+"…":raw)+". Escreva o número à mão.",false);$("guia").focus();return;}
+  $("guia").value=r.num;
+  const extra=r.doc?" (documento "+r.doc+")":"";
+  msg("msg",r.incerto?"Guia lida: "+r.num+". Confirme o número — o código trazia mais informação: "+(raw.length>60?raw.slice(0,57)+"…":raw):"Nº da guia preenchido pelo "+r.origem+": "+r.num+extra+".",!r.incerto);
+  if(!$("volta").value.trim())$("volta").focus({preventScroll:true});
+  $("guia").scrollIntoView({behavior:"smooth",block:"center"});
+}
+$("scanFechar").onclick=()=>{fecharLeitor();$(ultimoBotao).focus();};
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("scan").hidden){fecharLeitor();$(ultimoBotao).focus();}});
 $("scanLuz").onclick=async()=>{try{const tr=stream&&stream.getVideoTracks()[0];if(!tr)return;luz=!luz;await tr.applyConstraints({advanced:[{torch:luz}]});$("scanLuz").textContent=luz?"Desligar lanterna":"Ligar lanterna";}catch(e){$("scanLuz").hidden=true;}};
-$("scanManual").addEventListener("submit",e=>{e.preventDefault();const c=$("scanTexto").value.trim();if(!c){$("scanTexto").focus();return;}fecharLeitor();tratarCodigo(c);});
+$("scanManual").addEventListener("submit",e=>{e.preventDefault();const c=$("scanTexto").value.trim();if(!c){$("scanTexto").focus();return;}fecharLeitor();entregar(c);});
 document.addEventListener("visibilitychange",()=>{if(document.hidden&&!$("scan").hidden)fecharLeitor();});
 </script>
 </body>
