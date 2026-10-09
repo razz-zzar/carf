@@ -146,6 +146,7 @@
           while (mais && voltas++ < 50) {
             const antes = est.cursor;
             const j = await pedido("/registos?app=" + encodeURIComponent(app) + "&desde=" + est.cursor, { token: s.token });
+            if ((j.registos || []).length) ultimaNovidade = Date.now();
             for (const r of j.registos || []) {
               if (!est.fila[r.id]) { if (r.apagado) delete est.cache[r.id]; else est.cache[r.id] = r; }
               if (r.alterado > est.cursor) est.cursor = r.alterado;
@@ -166,13 +167,25 @@
     }
     const pendentes = () => Object.keys(est.fila).length;
 
-    /* Atualiza sozinho: ao abrir, ao voltar à app, quando a rede volta e a cada 20 s */
+    /* Atualiza sozinho: ao abrir, ao voltar à app, quando a rede volta e com um ritmo que se adapta:
+       - de 3 em 3 s enquanto alguém mexe na app (últimos 3 min) ou chegam registos novos (últimos 2 min);
+       - de 15 em 15 s quando a app está aberta mas parada;
+       - nada com a app em segundo plano (atualiza logo ao voltar).
+       Assim quem está a trabalhar vê as alterações dos outros em poucos segundos, sem gastar
+       os pedidos diários do plano gratuito da Cloudflare com telemóveis parados. */
+    let ultimoToque = Date.now(), ultimaNovidade = 0;
+    const RAPIDO = 3000, LENTO = 15000;
+    const ativo = () => Date.now() - ultimoToque < 180000 || Date.now() - ultimaNovidade < 120000;
     if (s.token) {
+      const toque = () => { const estavaParado = !ativo(); ultimoToque = Date.now(); if (estavaParado) agendar(0); };
+      ["pointerdown", "keydown", "touchstart"].forEach(ev => window.addEventListener(ev, toque, { passive: true, capture: true }));
       window.addEventListener("online", () => agendar(0));
       window.addEventListener("offline", () => { estado.rede = false; avisar({ estado: true }); });
-      document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") agendar(0); });
-      setInterval(() => { if (document.visibilityState === "visible") sincronizar(); }, 20000);
-      agendar(0);
+      document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") { ultimoToque = Date.now(); agendar(0); } });
+      (async function ciclo() {
+        if (document.visibilityState === "visible" && navigator.onLine !== false) { try { await sincronizar(); } catch (e) {} }
+        setTimeout(ciclo, ativo() && !estado.erro ? RAPIDO : LENTO);
+      })();
     }
     return { app, sessao: s, registos, obter, gravar, apagar, podeApagar, sincronizar, pendentes, estado: () => ({ ...estado, pendentes: pendentes() }),
              ouvir: f => ouvintes.add(f), primeiraVez: () => est.cursor === 0 };
