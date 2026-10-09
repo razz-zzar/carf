@@ -94,6 +94,23 @@ input.mono{font-family:var(--mono);letter-spacing:.02em}
 .del.confirm{border-color:var(--danger);color:var(--danger)}
 .empty{color:var(--muted);text-align:center;padding:12px;font-size:15px}
 .example{font-size:12px;color:var(--muted);font-style:italic}
+/* Leitor de etiquetas (QR / código de barras) */
+.btn-scan{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;min-height:52px;border-radius:10px;border:2px dashed var(--green);background:transparent;color:var(--green);font:700 17px var(--display);letter-spacing:.06em;text-transform:uppercase;cursor:pointer}
+.btn-scan:active{background:rgba(185,212,6,.12)}
+.lido{display:flex;justify-content:space-between;align-items:center;gap:10px;background:var(--bg);border-left:3px solid var(--green);border-radius:8px;padding:8px 10px;font-size:13px;color:var(--muted)}
+.lido b{display:block;color:var(--fg);font:500 13px var(--mono);overflow-wrap:anywhere}
+.lido a{color:var(--green)}
+.scan{position:fixed;inset:0;z-index:50;background:#000;display:flex;flex-direction:column;gap:12px;padding:calc(12px + env(safe-area-inset-top,0px)) 16px calc(16px + env(safe-area-inset-bottom,0px))}
+.scan-top{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.scan-top b{font:700 22px var(--display);text-transform:uppercase;letter-spacing:.05em;color:var(--green)}
+.scan-x{background:none;border:1px solid var(--line);color:var(--fg);border-radius:8px;padding:10px 14px;font:600 15px var(--body);cursor:pointer}
+.scan-vid{position:relative;flex:1;min-height:0;border-radius:12px;overflow:hidden;background:#111}
+.scan-vid video{width:100%;height:100%;object-fit:cover;display:block}
+.scan-mira{position:absolute;inset:32% 7%;border:3px solid var(--green);border-radius:14px;box-shadow:0 0 0 100vmax rgba(0,0,0,.35);pointer-events:none}
+.scan-est{margin:0;min-height:40px;font-size:15px;text-align:center;color:var(--fg)}
+.scan-est.err{color:var(--danger)}
+.scan-man{display:grid;grid-template-columns:1fr auto;gap:8px}
+.scan-man .btn{padding:12px 18px;font-size:17px}
 </style>
 </head>
 <body>
@@ -124,6 +141,8 @@ input.mono{font-family:var(--mono);letter-spacing:.02em}
     <div class="pend" id="pend" hidden><div class="pend-h">Pneus já adicionados a esta guia</div><div id="pendLista" class="pend"></div></div>
     <div class="pneu">
     <div class="pneu-h" id="pneuTit">Pneu 1<span id="pneuSub"></span></div>
+    <button type="button" class="btn-scan" id="ler"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 8V5a1 1 0 0 1 1-1h3M16 4h3a1 1 0 0 1 1 1v3M20 16v3a1 1 0 0 1-1 1h-3M8 20H5a1 1 0 0 1-1-1v-3M7 9v6M10 9v6M13 9v6M17 9v6"/></svg>Ler etiqueta do pneu</button>
+    <div class="lido" id="lido" hidden></div>
     <div class="field" id="f-qtdL" hidden>
       <span class="lbl" id="l-qtdL">Quantos são deste pneu</span>
       <div class="stepper" role="group" aria-labelledby="l-qtdL">
@@ -280,6 +299,7 @@ const tiposDe=m=>[...new Set((CATALOGO[m]||[]).map(x=>x[1]))];
 function normMedida(s){s=String(s||"").toUpperCase().replace(/\s+/g," ").trim();const m=s.match(/^(\d{3})\s*\/\s*(\d{2})\s*(Z?R)\s*(\d{2})\s*(C?)$/);return m?`${m[1]}/${m[2]} ${m[3]}${m[4]}${m[5]}`:s;}
 let novoFlags={};
 function memorizar(p,fl){
+  if(typeof aprenderCodigo==="function")aprenderCodigo(p);
   let mudou=false;
   if(fl.marca&&p.marca&&!todasMarcas().some(k=>igual(k,p.marca))){CUST.marcas.push(p.marca);mudou=true;}
   if(fl.modelo&&p.marca&&p.modelo){const ja=[...(CATALOGO[p.marca]||[]).map(x=>x[0]),...(CUST.modelos[p.marca]||[])];
@@ -366,6 +386,7 @@ function escolherMarca(m){
   $("f-modelo").hidden=false;$("f-medida").hidden=true;esconderIndices();
 }
 function limparPneu(){
+  if(typeof largarCodigo==="function")largarCodigo();
   marca="";modelo="";medida="";
   ["marcaOutra","modelo","medida"].forEach(i=>{$(i).value="";$(i).hidden=true;});
   $("f-modelo").hidden=true;$("f-medida").hidden=true;marcar($("marcas"),null);esconderIndices();
@@ -538,6 +559,160 @@ render();atualizarQtd();renderGuardados();
 
 try{navigator.storage&&navigator.storage.persist&&navigator.storage.persist();}catch(e){}
 if("serviceWorker" in navigator&&location.protocol!=="file:"){navigator.serviceWorker.register("sw.js").catch(()=>{});}
+</script>
+
+<div class="scan" id="scan" hidden role="dialog" aria-modal="true" aria-labelledby="scanTit">
+  <div class="scan-top"><b id="scanTit">Ler etiqueta</b><button type="button" class="scan-x" id="scanFechar">Fechar</button></div>
+  <div class="scan-vid"><video id="scanVideo" playsinline muted></video><div class="scan-mira"></div></div>
+  <p class="scan-est" id="scanEstado" role="status">A abrir a câmara…</p>
+  <button type="button" class="btn btn-ghost" id="scanLuz" hidden>Ligar lanterna</button>
+  <form class="scan-man" id="scanManual"><input type="text" id="scanTexto" class="mono" placeholder="Ou escreva o código" autocomplete="off" aria-label="Código da etiqueta"><button class="btn btn-main" type="submit">OK</button></form>
+</div>
+
+<script>
+/* ===== Leitor de etiquetas: câmara → QR / código de barras → preenche o pneu =====
+   1) Códigos já conhecidos neste telemóvel (aprendidos ao guardar) → preenche tudo.
+   2) QR da etiqueta europeia (EPREL) → tenta obter marca/modelo/medida da base de dados da UE.
+   3) Texto com medida (ex. 205/55 R16 91V XL) e marca → preenche o que encontrar.
+   4) Código novo → fica associado ao pneu quando a guia for guardada; da próxima vez preenche sozinho. */
+const LIB_LEITOR="https://cdn.jsdelivr.net/npm/barcode-detector@2.3.1/pure/+esm";
+const FORMATOS=["qr_code","ean_13","ean_8","code_128","code_39","upc_a","upc_e","itf","data_matrix"];
+let CODIGOS={};try{CODIGOS=JSON.parse(localStorage.getItem("pneus_codigos")||"{}")||{};}catch(e){}
+let codigoAtual="",stream=null,detetor=null,aLer=false,luz=false,lido=false;
+
+function gravarCodigos(){try{localStorage.setItem("pneus_codigos",JSON.stringify(CODIGOS));}catch(e){}}
+function chaveCodigo(c){c=String(c||"").trim();const ep=idEprel(c);return ep?"EPREL:"+ep:c;}
+function idEprel(c){const m=String(c).match(/eprel\.ec\.europa\.eu\/(?:qr|screen\/product\/tyres)\/(\d+)/i);return m?m[1]:"";}
+function aprenderCodigo(p){if(!codigoAtual||!p||!p.marca||!p.medida)return;CODIGOS[codigoAtual]={marca:p.marca,modelo:p.modelo,medida:p.medida,carga:p.carga,vel:p.vel,ref:p.ref};gravarCodigos();}
+function largarCodigo(){codigoAtual="";$("lido").hidden=true;}
+
+/* ---- Leitura de texto: medida, índices, XL e marca ---- */
+const reEsc=s=>s.replace(/[.*+?^${}()|[\]\\]/g,"\\$&");
+function doTexto(s){
+  s=String(s||"");const d={};
+  const m=s.toUpperCase().match(/(\d{3})\s*\/\s*(\d{2})\s*(Z?R)\s*(\d{2})\s*(C?)(?:\s*(\d{2,3}(?:\/\d{2,3})?)\s*([A-Z])(?![A-Z]))?/);
+  if(m){d.medida=normMedida(`${m[1]}/${m[2]} ${m[3]}${m[4]}${m[5]}`);if(m[6])d.carga=m[6];if(m[7])d.vel=m[7];}
+  if(/\b(XL|EXTRA\s*LOAD|REINF(ORCED)?)\b/i.test(s))d.ref="XL";
+  const tem=k=>new RegExp("(^|[^A-Z0-9])"+reEsc(k)+"($|[^A-Z0-9+])","i").test(s);
+  const mc=todasMarcas().find(tem);
+  if(mc){d.marca=mc;const ms=[...(CATALOGO[mc]||[]).map(x=>x[0]),...(CUST.modelos[mc]||[])].sort((a,b)=>b.length-a.length);const md=ms.find(tem);if(md)d.modelo=md;}
+  return d;
+}
+
+/* ---- EPREL (etiqueta europeia de pneus) ---- */
+function procurar(o,re,prof){if(!o||typeof o!=="object"||prof>4)return "";
+  for(const [k,v] of Object.entries(o)){if(re.test(k)&&v!=null&&typeof v!=="object"&&String(v).trim())return String(v).trim();}
+  for(const v of Object.values(o)){const r=procurar(v,re,(prof||0)+1);if(r)return r;}return "";}
+async function doEprel(id){
+  const ctl=new AbortController(),t=setTimeout(()=>ctl.abort(),7000);
+  try{
+    const r=await fetch("https://eprel.ec.europa.eu/api/products/tyres/"+id,{signal:ctl.signal,headers:{Accept:"application/json"}});
+    if(!r.ok)return null;const j=await r.json();
+    const desig=procurar(j,/tyre.*designation|size.*designation/i),d=doTexto(desig);
+    const mc=procurar(j,/^(supplierOrTrademark|trademark|brandName|supplierName)$/i);
+    if(mc)d.marca=todasMarcas().find(k=>igual(k,mc))||mc.replace(/\w\S*/g,w=>w[0].toUpperCase()+w.slice(1).toLowerCase());
+    const md=procurar(j,/^commercialName$/i)||procurar(j,/^modelIdentifier$/i);if(md)d.modelo=md;
+    const lc=procurar(j,/loadCapacityIndex|^loadIndex/i);if(lc)d.carga=lc.replace(/\s+/g,"");
+    const sc=procurar(j,/speedCategory/i);if(sc)d.vel=sc.replace(/[^A-Z]/gi,"").toUpperCase().slice(0,2);
+    if(/EXTRA|XL|REINF/i.test(procurar(j,/loadVersion/i)))d.ref="XL";
+    return d.marca||d.medida?d:null;
+  }catch(e){return null;}finally{clearTimeout(t);}
+}
+
+/* ---- Preencher o formulário carregando nos mesmos botões que o supervisor usaria ---- */
+const txtChip=b=>((b.firstChild&&b.firstChild.nodeType===3)?b.firstChild.nodeValue:b.textContent).trim();
+function clicar(gid,v){const b=[...$(gid).querySelectorAll(".chip")].find(c=>igual(txtChip(c),v));if(b){b.click();return true;}return false;}
+function outro(gid){const b=$(gid).lastElementChild;if(b)b.click();}
+function preencher(d){
+  limparPneu();construirMarcas();
+  const falta=[];
+  if(!d.marca&&!d.medida)return ["marca","modelo","medida"];
+  if(d.marca){const k=todasMarcas().find(x=>igual(x,d.marca));
+    if(k){clicar("marcas",k);}else{clicar("marcas","Outra");$("marcaOutra").value=d.marca;}}
+  else{clicar("marcas","Outra");falta.push("marca");}
+  if(d.modelo){if(marca==="Outra"){$("modelo").value=d.modelo;}else if(!clicar("modelos",d.modelo)){outro("modelos");$("modelo").value=d.modelo;}}
+  else{if(marca!=="Outra")outro("modelos");falta.push("modelo");}
+  if(!d.medida){falta.push("medida");return falta;}
+  const m=normMedida(d.medida);
+  if(!clicar("medidas",m)){outro("medidas");$("medida").value=m;medIdx=m;mostrarIndices(m);}
+  if(d.carga){if(!clicar("cargas",d.carga)){outro("cargas");$("carga").value=d.carga;}}else falta.push("índice de carga");
+  if(d.vel){if(!clicar("vels",d.vel)){outro("vels");$("velOutra").value=d.vel;}}else falta.push("índice de velocidade");
+  if(d.ref&&ref!==d.ref){if(!clicar("refs",d.ref)){escolherRef(OUTRO);$("refOutra").value=d.ref;}}
+  return falta;
+}
+
+/* ---- Tratar um código lido ---- */
+function mostrarLido(cod,origem,link){
+  const l=$("lido");l.hidden=false;l.innerHTML="";
+  const t=document.createElement("div");const b=document.createElement("b");b.textContent=cod.length>48?cod.slice(0,45)+"…":cod;
+  t.append(b,document.createTextNode(origem));
+  if(link){t.append(" · ");const a=document.createElement("a");a.href=link;a.target="_blank";a.rel="noopener";a.textContent="ver ficha UE";t.append(a);}
+  const x=document.createElement("button");x.type="button";x.className="del";x.textContent=CODIGOS[codigoAtual]?"Esquecer":"Limpar";
+  x.onclick=()=>{if(CODIGOS[codigoAtual]){delete CODIGOS[codigoAtual];gravarCodigos();}largarCodigo();};
+  l.append(t,x);
+}
+async function tratarCodigo(cod){
+  cod=String(cod||"").trim();if(!cod)return;
+  const chave=chaveCodigo(cod),ep=idEprel(cod),fichaUE=ep?"https://eprel.ec.europa.eu/screen/product/tyres/"+ep:"";
+  let d=CODIGOS[chave],origem="";
+  if(d){origem=" · conhecido neste telemóvel";}
+  else if(ep){msg("msg","Etiqueta europeia lida. A procurar os dados do pneu…",true);d=await doEprel(ep);origem=d?" · dados da etiqueta UE":" · etiqueta UE (sem dados)";}
+  if(!d){const t=doTexto(cod);if(t.marca||t.medida){d=t;origem=origem||" · lido do texto do código";}}
+  if(!d){
+    limparPneu();construirMarcas();codigoAtual=chave;mostrarLido(cod,ep?" · etiqueta UE":" · código novo",fichaUE);
+    msg("msg",ep?"Não foi possível obter os dados da etiqueta (sem internet ou a UE não deixou). Preencha à mão — fica memorizado para a próxima.":"Código novo. Preencha este pneu à mão uma vez: ao guardar fica memorizado e da próxima vez preenche sozinho.",false);
+    $("marcas").scrollIntoView({behavior:"smooth",block:"center"});return;
+  }
+  const falta=preencher(d);codigoAtual=chave;mostrarLido(cod,origem,fichaUE);
+  msg("msg",falta.length?"Preenchido pela etiqueta. Falta "+(falta.every(f=>f==="marca"||f==="modelo")?"escrever":"escolher")+": "+falta.join(", ")+".":"Pneu preenchido pela etiqueta. Confirme e guarde.",!falta.length);
+  if(falta.length){const foco={marca:"marcaOutra",modelo:"modelo"}[falta[0]];const alvo={marca:"marcas",modelo:"f-modelo",medida:"f-medida","índice de carga":"f-carga","índice de velocidade":"f-vel"}[falta[0]];
+    if(foco&&!$(foco).hidden){$(foco).focus({preventScroll:true});}if(alvo)irPara(alvo);}
+  else $("guardar").scrollIntoView({behavior:"smooth",block:"center"});
+}
+
+/* ---- Câmara ---- */
+function estado(t,err){const e=$("scanEstado");e.textContent=t;e.className="scan-est"+(err?" err":"");}
+async function obterDetetor(){
+  if(detetor)return detetor;
+  let BD=window.BarcodeDetector;
+  if(BD){try{const sup=await BD.getSupportedFormats();const f=FORMATOS.filter(x=>sup.includes(x));if(f.includes("qr_code")){detetor=new BD({formats:f});return detetor;}}catch(e){}}
+  estado("A preparar o leitor (só da primeira vez)…");
+  const mod=await import(LIB_LEITOR);detetor=new mod.BarcodeDetector({formats:FORMATOS});return detetor;
+}
+async function abrirLeitor(){
+  $("scan").hidden=false;document.body.style.overflow="hidden";lido=false;luz=false;$("scanLuz").hidden=true;$("scanTexto").value="";
+  estado("A abrir a câmara…");
+  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){estado("Este navegador não dá acesso à câmara. Escreva o código em baixo.",true);return;}
+  try{
+    stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:"environment"},width:{ideal:1920},height:{ideal:1080}},audio:false});
+  }catch(e){estado(e&&e.name==="NotAllowedError"?"Sem autorização para usar a câmara. Autorize nas definições do navegador, ou escreva o código em baixo.":"Não foi possível abrir a câmara. Escreva o código em baixo.",true);return;}
+  if($("scan").hidden){pararCamara();return;}
+  const v=$("scanVideo");v.srcObject=stream;try{await v.play();}catch(e){}
+  try{const tr=stream.getVideoTracks()[0],cap=tr.getCapabilities?tr.getCapabilities():{};if(cap.torch)$("scanLuz").hidden=false;
+    if(cap.focusMode&&cap.focusMode.includes("continuous"))tr.applyConstraints({advanced:[{focusMode:"continuous"}]}).catch(()=>{});}catch(e){}
+  try{await obterDetetor();}catch(e){estado("Não foi possível carregar o leitor (precisa de internet da primeira vez). Escreva o código em baixo.",true);return;}
+  estado("Aponte para o código QR ou de barras da etiqueta.");
+  aLer=true;ciclo();
+}
+async function ciclo(){
+  const v=$("scanVideo");
+  while(aLer&&!lido){
+    if(v.readyState>=2){
+      try{const r=await detetor.detect(v);
+        if(r&&r.length){const pref=r.find(x=>x.format==="qr_code")||r[0];lido=true;if(navigator.vibrate)navigator.vibrate(80);fecharLeitor();tratarCodigo(pref.rawValue);return;}
+      }catch(e){}
+    }
+    await new Promise(ok=>setTimeout(ok,180));
+  }
+}
+function pararCamara(){aLer=false;if(stream){stream.getTracks().forEach(t=>t.stop());stream=null;}$("scanVideo").srcObject=null;}
+function fecharLeitor(){pararCamara();$("scan").hidden=true;document.body.style.overflow="";}
+$("ler").onclick=abrirLeitor;
+$("scanFechar").onclick=()=>{fecharLeitor();$("ler").focus();};
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("scan").hidden){fecharLeitor();$("ler").focus();}});
+$("scanLuz").onclick=async()=>{try{const tr=stream&&stream.getVideoTracks()[0];if(!tr)return;luz=!luz;await tr.applyConstraints({advanced:[{torch:luz}]});$("scanLuz").textContent=luz?"Desligar lanterna":"Ligar lanterna";}catch(e){$("scanLuz").hidden=true;}};
+$("scanManual").addEventListener("submit",e=>{e.preventDefault();const c=$("scanTexto").value.trim();if(!c){$("scanTexto").focus();return;}fecharLeitor();tratarCodigo(c);});
+document.addEventListener("visibilitychange",()=>{if(document.hidden&&!$("scan").hidden)fecharLeitor();});
 </script>
 </body>
 </html>
