@@ -188,7 +188,7 @@ input.mono{font-family:var(--mono);letter-spacing:.02em}
     </div>
     <div class="msg" id="msg" role="status"></div>
     <details class="guardados" id="guardados" hidden><summary id="guardadosTit">Opções guardadas neste telemóvel</summary><div id="guardadosLista"></div></details>
-    <div class="hint">Versão de teste 3 · leitor de etiquetas.</div>
+    <div class="hint">Versão de teste 4 · leitor de etiquetas.</div>
     <div class="hint">Com mais de 1 pneu em falta, se não forem todos iguais, carregue em “Adicionar outro pneu diferente” e escolha o seguinte. No fim, “Guardar guia”.</div>
   </section>
 
@@ -604,30 +604,31 @@ function doTexto(s){
 function procurar(o,re,prof){if(!o||typeof o!=="object"||prof>4)return "";
   for(const [k,v] of Object.entries(o)){if(re.test(k)&&v!=null&&typeof v!=="object"&&String(v).trim())return String(v).trim();}
   for(const v of Object.values(o)){const r=procurar(v,re,(prof||0)+1);if(r)return r;}return "";}
-/* A UE não deixa páginas de outros sites lerem a ficha diretamente (CORS),
-   por isso tenta-se primeiro direto e depois através de intermediários públicos.
-   Só o número EPREL do pneu é enviado — são dados públicos de produto. */
+/* A UE não deixa páginas de outros sites lerem a ficha diretamente (CORS).
+   A ficha é pedida ao intermediário próprio do OPS SJT (cloudflare-worker.js no repositório),
+   que só recebe o número EPREL do pneu. */
+const INTERMEDIARIO="";  /* ex. "https://eprel-sjt.<conta>.workers.dev" — preencher depois de publicar o worker */
 const EPREL_API=id=>"https://eprel.ec.europa.eu/api/products/tyres/"+id;
-const VIAS=[["direto",u=>u],["allorigins",u=>"https://api.allorigins.win/raw?url="+encodeURIComponent(u)],["codetabs",u=>"https://api.codetabs.com/v1/proxy/?quest="+encodeURIComponent(u)],
-  ["corsproxy",u=>"https://corsproxy.io/?url="+encodeURIComponent(u)],["cors.lol",u=>"https://api.cors.lol/?url="+encodeURIComponent(u)]];
 let ultimoDiag="";
-async function obterJson(url){
+async function obterFicha(id){
+  const vias=[["direto",EPREL_API(id)]];
+  if(INTERMEDIARIO)vias.unshift(["intermediário",INTERMEDIARIO.replace(/\/+$/,"")+"/"+id]);
   const diag=[];
-  for(const [nome,via] of VIAS){
+  for(const [nome,url] of vias){
     const ctl=new AbortController(),t=setTimeout(()=>ctl.abort(),8000);
-    try{const r=await fetch(via(url),{signal:ctl.signal,cache:"no-store"});
+    try{const r=await fetch(url,{signal:ctl.signal});
       if(!r.ok){diag.push(nome+": erro "+r.status);continue;}
-      const txt=await r.text();let j=null;try{j=JSON.parse(txt);}catch(e){}
-      if(j&&typeof j==="object"&&!Array.isArray(j)){ultimoDiag="";return j;}
+      const j=JSON.parse(await r.text());if(j&&typeof j==="object"&&!Array.isArray(j)){ultimoDiag="";return j;}
       diag.push(nome+": resposta inválida");
     }catch(e){diag.push(nome+": "+(e&&e.name==="AbortError"?"sem resposta":"bloqueado"));}
     finally{clearTimeout(t);}
   }
+  if(!INTERMEDIARIO)diag.push("intermediário ainda não configurado");
   ultimoDiag=diag.join(" · ");return null;
 }
 const titulo=t=>String(t).toLowerCase().replace(/(^|[\s\-.])(\p{L})/gu,(a,b,c)=>b+c.toUpperCase());
 async function doEprel(id){
-  const j=await obterJson(EPREL_API(id));if(!j)return null;
+  const j=await obterFicha(id);if(!j)return null;
   const desig=procurar(j,/tyre.*designation|size.*designation/i),d=doTexto(desig);
   const mc=procurar(j,/^(supplierOrTrademark|trademark|brandName|supplierName)$/i);
   if(mc)d.marca=todasMarcas().find(k=>igual(k,mc))||titulo(mc);
