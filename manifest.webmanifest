@@ -1,7 +1,7 @@
 {
-  "name": "OPS SJT",
-  "short_name": "OPS SJT",
-  "description": "Operações SJT",
+  "name": "OPS CARF",
+  "short_name": "OPS CARF",
+  "description": "Operações CARF",
   "lang": "pt-PT",
   "start_url": "./",
   "scope": "./",

@@ -1,7 +1,7 @@
-// OPS SJT — intermediário para as fichas de pneus da UE (EPREL)
+// OPS CARF — intermediário para as fichas de pneus da UE (EPREL)
 // A UE não deixa a app ler a ficha diretamente a partir do telemóvel (CORS).
 // Este pequeno serviço vai buscar a ficha à UE e devolve-a à app.
-// Só aceita números de ficha de pneus e só responde às páginas do OPS SJT.
+// Só aceita números de ficha de pneus e só responde às páginas do OPS CARF.
 // Versão 4 — a resposta leva o cabeçalho "X-SJT-Versao: 4" para se confirmar que está publicada.
 // O "?sjt=4" no pedido à UE evita reaproveitar recusas guardadas em cache pelas versões anteriores.
 //
