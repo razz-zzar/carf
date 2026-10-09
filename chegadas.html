@@ -49,6 +49,12 @@ h2{font-family:var(--display);font-size:20px;font-weight:700;text-transform:uppe
 #lista{display:flex;flex-direction:column;gap:8px}
 .v{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"num btn" "est btn";column-gap:12px;row-gap:4px;align-items:center;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 10px 10px 14px;min-height:68px}
 .v.ok{border-color:#3a4a12}
+/* Duas listas: por chegar/sair (em cima, onde se trabalha) e já chegaram/saíram (em baixo) */
+.grupo-h{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin:18px 2px 8px;font:700 15px var(--display);letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.grupo-h:first-child{margin-top:0}
+.grupo-h b{font:600 15px var(--mono);color:var(--fg)}
+.grupo-h.feitos{border-top:1px solid var(--line);padding-top:16px;color:var(--green)}
+.grupo-vazio{color:var(--muted);font-size:14px;padding:6px 2px 2px}
 .num{font:700 26px/1 var(--display);letter-spacing:.03em;font-variant-numeric:tabular-nums;min-width:0}
 .num.txt{font-size:22px;line-height:1.1;overflow-wrap:break-word}
 .num small{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font:600 11px var(--body);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:3px}
@@ -195,7 +201,7 @@ function render(){
   $("aviso").hidden=eHoje;
   if(!eHoje)aEditar=null;
   const l=$("lista");l.textContent="";
-  V().forEach(v=>{
+  const linha=v=>{
     const r=reg(doDia[v]),row=document.createElement("div");row.className="v"+(r?" ok":"");
     const n=document.createElement("div");n.className="num"+(/^\d+$/.test(v)?"":" txt");n.innerHTML=INTERRUPTOR.has(v)?"<small>Extra</small>":"<small>Volta</small>";n.append(v);
     if(modo==="c"&&PNEUS.has(v)){const p=document.createElement("span");p.className="pneu";p.title="Traz pneus";p.innerHTML=ICONE_PNEU+"Pneus";n.querySelector("small").appendChild(p);}
@@ -225,7 +231,15 @@ function render(){
     else{btn=document.createElement("button");btn.type="button";btn.className="chegou";btn.textContent=t.btn;
       btn.disabled=!eHoje;btn.onclick=()=>chegou(v);btn.setAttribute("aria-label","Volta "+v+" "+t.btn.toLowerCase());}
     row.append(n,e,btn);l.appendChild(row);
-  });
+  };
+  /* Por chegar/sair: pela ordem da lista. Já chegaram/saíram: a mais recente em cima. */
+  const porFazer=V().filter(v=>!doDia[v]),feitas=V().filter(v=>!!doDia[v]).sort((a,b)=>String(reg(doDia[b]).t).localeCompare(String(reg(doDia[a]).t)));
+  const cab=(txt,n,cls)=>{const h=document.createElement("div");h.className="grupo-h"+(cls?" "+cls:"");h.append(txt);const b=document.createElement("b");b.textContent=n;h.appendChild(b);l.appendChild(h);};
+  const vazio=txt=>{const p=document.createElement("div");p.className="grupo-vazio";p.textContent=txt;l.appendChild(p);};
+  cab(t.lfalta,porFazer.length);
+  if(porFazer.length)porFazer.forEach(linha);else vazio(modo==="c"?"Já chegaram todas as voltas.":"Já saíram todas as voltas.");
+  cab(modo==="c"?"Já chegaram":"Já saíram",feitas.length,"feitos");
+  if(feitas.length)feitas.forEach(linha);else vazio(modo==="c"?"Ainda não chegou nenhuma volta.":"Ainda não saiu nenhuma volta.");
   if(aEditar){const i=$("hEd");if(i)i.focus();}
 }
 function abrirEditor(v){aEditar=v;aConfirmar=null;msg("msg","");render();}
