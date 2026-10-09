@@ -188,6 +188,7 @@ input.mono{font-family:var(--mono);letter-spacing:.02em}
     </div>
     <div class="msg" id="msg" role="status"></div>
     <details class="guardados" id="guardados" hidden><summary id="guardadosTit">Opções guardadas neste telemóvel</summary><div id="guardadosLista"></div></details>
+    <div class="hint">Versão de teste 3 · leitor de etiquetas.</div>
     <div class="hint">Com mais de 1 pneu em falta, se não forem todos iguais, carregue em “Adicionar outro pneu diferente” e escolha o seguinte. No fim, “Guardar guia”.</div>
   </section>
 
@@ -607,14 +608,22 @@ function procurar(o,re,prof){if(!o||typeof o!=="object"||prof>4)return "";
    por isso tenta-se primeiro direto e depois através de intermediários públicos.
    Só o número EPREL do pneu é enviado — são dados públicos de produto. */
 const EPREL_API=id=>"https://eprel.ec.europa.eu/api/products/tyres/"+id;
-const VIAS=[u=>u,u=>"https://api.allorigins.win/raw?url="+encodeURIComponent(u),u=>"https://corsproxy.io/?url="+encodeURIComponent(u),u=>"https://api.codetabs.com/v1/proxy/?quest="+encodeURIComponent(u)];
+const VIAS=[["direto",u=>u],["allorigins",u=>"https://api.allorigins.win/raw?url="+encodeURIComponent(u)],["codetabs",u=>"https://api.codetabs.com/v1/proxy/?quest="+encodeURIComponent(u)],
+  ["corsproxy",u=>"https://corsproxy.io/?url="+encodeURIComponent(u)],["cors.lol",u=>"https://api.cors.lol/?url="+encodeURIComponent(u)]];
+let ultimoDiag="";
 async function obterJson(url){
-  for(const via of VIAS){
-    const ctl=new AbortController(),t=setTimeout(()=>ctl.abort(),6000);
-    try{const r=await fetch(via(url),{signal:ctl.signal});if(!r.ok)continue;const j=JSON.parse(await r.text());if(j&&typeof j==="object")return j;}
-    catch(e){}finally{clearTimeout(t);}
+  const diag=[];
+  for(const [nome,via] of VIAS){
+    const ctl=new AbortController(),t=setTimeout(()=>ctl.abort(),8000);
+    try{const r=await fetch(via(url),{signal:ctl.signal,cache:"no-store"});
+      if(!r.ok){diag.push(nome+": erro "+r.status);continue;}
+      const txt=await r.text();let j=null;try{j=JSON.parse(txt);}catch(e){}
+      if(j&&typeof j==="object"&&!Array.isArray(j)){ultimoDiag="";return j;}
+      diag.push(nome+": resposta inválida");
+    }catch(e){diag.push(nome+": "+(e&&e.name==="AbortError"?"sem resposta":"bloqueado"));}
+    finally{clearTimeout(t);}
   }
-  return null;
+  ultimoDiag=diag.join(" · ");return null;
 }
 const titulo=t=>String(t).toLowerCase().replace(/(^|[\s\-.])(\p{L})/gu,(a,b,c)=>b+c.toUpperCase());
 async function doEprel(id){
@@ -671,7 +680,7 @@ async function tratarCodigo(cod){
   if(!d){const t=doTexto(cod);if(t.marca||t.medida){d=t;origem=origem||" · lido do texto do código";}}
   if(!d){
     limparPneu();construirMarcas();codigoAtual=chave;mostrarLido(cod,ep?" · etiqueta UE":" · código novo",fichaUE);
-    msg("msg",ep?"Não foi possível obter os dados da etiqueta (sem internet ou a UE não deixou). Preencha à mão — fica memorizado para a próxima.":"Código novo. Preencha este pneu à mão uma vez: ao guardar fica memorizado e da próxima vez preenche sozinho.",false);
+    msg("msg",ep?"Não foi possível obter os dados da etiqueta. Preencha à mão — fica memorizado para a próxima."+(ultimoDiag?" ["+ultimoDiag+"]":""):"Código novo. Preencha este pneu à mão uma vez: ao guardar fica memorizado e da próxima vez preenche sozinho.",false);
     $("marcas").scrollIntoView({behavior:"smooth",block:"center"});return;
   }
   const falta=preencher(d);codigoAtual=chave;mostrarLido(cod,origem,fichaUE);
