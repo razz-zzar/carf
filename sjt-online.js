@@ -1,4 +1,4 @@
-/* OPS SJT — ligação online partilhada pelas apps do hub.
+/* OPS CARF — ligação online partilhada pelas apps do hub.
    - Sessão: armazém (polo), nome do supervisor e código de acesso, guardados neste telemóvel.
    - Cada app guarda uma cópia local dos registos do armazém e uma fila do que falta enviar:
      funciona sem rede e envia sozinha quando a rede volta.

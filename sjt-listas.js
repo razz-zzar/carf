@@ -1,4 +1,4 @@
-/* OPS SJT — listas de origem do armazém SJT.
+/* OPS CARF — listas de origem do armazém SJT.
    Servem de valores iniciais: cada armazém tem as suas listas na página de gestão,
    e as apps usam as do armazém em que o supervisor entrou. */
 window.SJT_LISTAS_SJT = {

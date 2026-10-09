@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#0c0f0d">
-<meta name="application-name" content="OPS SJT">
+<meta name="application-name" content="OPS CARF">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <title>Pneus em Falta</title>
@@ -621,7 +621,7 @@ function procurar(o,re,prof){if(!o||typeof o!=="object"||prof>4)return "";
   for(const [k,v] of Object.entries(o)){if(re.test(k)&&v!=null&&typeof v!=="object"&&String(v).trim())return String(v).trim();}
   for(const v of Object.values(o)){const r=procurar(v,re,(prof||0)+1);if(r)return r;}return "";}
 /* A UE não deixa páginas de outros sites lerem a ficha diretamente (CORS).
-   A ficha é pedida ao intermediário próprio do OPS SJT (cloudflare-worker.js no repositório),
+   A ficha é pedida ao intermediário próprio do OPS CARF (cloudflare-worker.js no repositório),
    que só recebe o número EPREL do pneu. */
 const INTERMEDIARIO="https://eprel-sjt.frplopes91.workers.dev";
 const EPREL_API=id=>"https://eprel.ec.europa.eu/api/products/tyres/"+id;
