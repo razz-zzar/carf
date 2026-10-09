@@ -51,7 +51,7 @@ h2{font-family:var(--display);font-size:20px;font-weight:700;text-transform:uppe
 .v.ok{border-color:#3a4a12}
 .num{font:700 26px/1 var(--display);letter-spacing:.03em;font-variant-numeric:tabular-nums;min-width:0}
 .num.txt{font-size:22px;line-height:1.1;overflow-wrap:break-word}
-.num small{display:block;font:600 11px var(--body);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:3px}
+.num small{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font:600 11px var(--body);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:3px}
 .est{min-width:0;font-size:14px;color:var(--muted)}
 .chegou{border:0;border-radius:10px;padding:14px 14px;min-width:100px;font:700 19px var(--display);letter-spacing:.06em;text-transform:uppercase;cursor:pointer;background:var(--green);color:var(--green-ink)}
 .chegou:active{background:var(--green-dk)}
@@ -83,6 +83,7 @@ h2{font-family:var(--display);font-size:20px;font-weight:700;text-transform:uppe
 .sw small{font:600 11px var(--body);color:var(--danger)}
 @media (prefers-reduced-motion:reduce){.trilho,.bola{transition:none}}
 .v.extra{border-style:dashed}
+.pneu{display:inline-flex;align-items:center;gap:4px;padding:2px 7px 2px 4px;border-radius:999px;background:var(--green);color:var(--green-ink);font:700 10px var(--body);letter-spacing:.06em;text-transform:uppercase}
 .btn{border-radius:10px;padding:16px;font:700 20px var(--display);letter-spacing:.06em;text-transform:uppercase;cursor:pointer;background:transparent;color:var(--green);border:2px solid var(--green)}
 .msg{font-size:14px;min-height:20px}
 .msg.ok{color:var(--green)} .msg.err{color:var(--danger)}
@@ -130,14 +131,17 @@ h2{font-family:var(--display);font-size:20px;font-weight:700;text-transform:uppe
 
 <script>
 /* Listas das voltas, pela ordem indicada */
-const VOLTAS_C=["1123","1633","1636","1419","1420","1639","1627","1638","1205","1235","1603","1201","1602","1204","1113","1112","1311","1330","1337","1340","1445","1315","1318","1624","1316","1334","1314","1317","1641","Arrasto Norte","Carro Leiria","Recolha Santogal","AS Parts Seixal","Carro extra Leiria"];
+const VOLTAS_C=["1201","1602","1603","1204","1205","1311","1112","1113","1314","1315","1316","1317","1318","1419","1420","1123","1624","1627","1330","1633","1334","1235","1636","1337","1638","1639","1641","1445","1340","Recolha Santogal","AS Parts Seixal","Arrasto Norte","Carro Leiria","Carro extra Leiria"];
 /* Entradas com interruptor em vez de botão: ao ligar regista a hora como as outras voltas */
 const INTERRUPTOR=new Set(["Carro extra Leiria"]);
-const VOLTAS_S=["1123","1633","1636","1419","1420","1639","1627","1638","1205","1235","1603","1201","1602","1204","1113","1112","1311","1330","1337","1340","1445","1315","1318","1624","1316","1334","1314","1317","1641","PSAR"];
+/* Rotas que trazem pneus (assinaladas com X na folha) — só nas chegadas */
+const PNEUS=new Set(["1205","1311","1112","1314","1318","1633","1639","Arrasto Norte"]);
+const VOLTAS_S=["1201","1602","1603","1204","1205","1311","1112","1113","1314","1315","1316","1317","1318","1419","1420","1123","1624","1627","1330","1633","1334","1235","1636","1337","1638","1639","1641","1445","1340","PSAR"];
 /* Para o Excel: todas as voltas, chegadas primeiro e depois as que só têm saída */
 const VOLTAS_TODAS=[...VOLTAS_C,...VOLTAS_S.filter(v=>!VOLTAS_C.includes(v))];
 
 const $=id=>document.getElementById(id);
+const ICONE_PNEU='<svg width="14" height="14" viewBox="0 0 48 48" aria-hidden="true" fill="none" stroke="currentColor" stroke-linecap="round"><circle cx="24" cy="24" r="18" stroke-width="7"/><circle cx="24" cy="24" r="9.5" stroke-width="2.5"/><path stroke-width="2.2" d="M24 24V14.5M24 24l9-2.8M24 24l5.3 7.3M24 24l-5.3 7.3M24 24l-9-2.8"/></svg>';
 const pad=n=>String(n).padStart(2,"0");
 const diaDe=d=>d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate());
 const hoje=()=>diaDe(new Date());
@@ -183,6 +187,7 @@ function render(){
   V().forEach(v=>{
     const r=reg(doDia[v]),row=document.createElement("div");row.className="v"+(r?" ok":"");
     const n=document.createElement("div");n.className="num"+(/^\d+$/.test(v)?"":" txt");n.innerHTML=INTERRUPTOR.has(v)?"<small>Extra</small>":"<small>Volta</small>";n.append(v);
+    if(modo==="c"&&PNEUS.has(v)){const p=document.createElement("span");p.className="pneu";p.title="Traz pneus";p.innerHTML=ICONE_PNEU+"Pneus";n.querySelector("small").appendChild(p);}
     if(aEditar===v){row.classList.add("ed");row.append(n,editor(v,r));l.appendChild(row);return;}
     const e=document.createElement("div");e.className="est";
     if(r){
