@@ -5,7 +5,7 @@
    - Só quem criou um registo o pode apagar (a API confirma). */
 (function () {
   "use strict";
-  const API_PADRAO = "https://ops-sjt-api.frplopes91.workers.dev";
+  const API_PADRAO = "https://ops-carf-api.frplopes91.workers.dev";
   const api = () => { try { return localStorage.getItem("sjt_api_teste") || API_PADRAO; } catch (e) { return API_PADRAO; } };
   const ler = (k, d) => { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } };
   const escrever = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch (e) { return false; } };

@@ -1,16 +1,16 @@
-// OPS SJT — API online (Cloudflare Worker + base de dados D1)
+// OPS CARF — API online (Cloudflare Worker + base de dados D1)
 // Guarda os registos das apps por armazém (polo), para todos os supervisores
 // do mesmo armazém verem o que cada um regista.
 //
 // Como publicar (uma vez, na mesma conta da Cloudflare do eprel-sjt):
-// 1. Storage & Databases → D1 → Create database → nome "ops-sjt" → Create
-// 2. Workers & Pages → Create → Start with Hello World! → nome "ops-sjt-api" → Deploy
+// 1. Storage & Databases → D1 → Create database → nome "ops-carf" → Create
+// 2. Workers & Pages → Create → Start with Hello World! → nome "ops-carf-api" → Deploy
 // 3. Edit code → apagar tudo → colar este ficheiro → Deploy
-// 4. No worker: Settings → Bindings → Add → D1 database → nome da variável "DB" → base "ops-sjt" → Deploy
+// 4. No worker: Settings → Bindings → Add → D1 database → nome da variável "DB" → base "ops-carf" → Deploy
 // 5. No worker: Settings → Variables and Secrets → Add (tipo Secret):
 //      SEGREDO = um texto longo qualquer (ex. 40 letras e números ao calhas) — assina as sessões
 //      ADMIN   = o código de administrador da página de gestão (só o Fábio o sabe)
-// 6. Testar: https://ops-sjt-api.<conta>.workers.dev/ deve mostrar {"ok":true,...}
+// 6. Testar: https://ops-carf-api.<conta>.workers.dev/ deve mostrar {"ok":true,...}
 // As tabelas da base de dados criam-se sozinhas no primeiro pedido.
 
 const VERSAO = 1;
@@ -237,7 +237,7 @@ export default {
     }
     try {
       await prepararTabelas(env.DB);
-      if (caminho === "/" && request.method === "GET") return resposta(cors, { ok: true, servico: "ops-sjt-api", versao: VERSAO });
+      if (caminho === "/" && request.method === "GET") return resposta(cors, { ok: true, servico: "ops-carf-api", versao: VERSAO });
       if (caminho === "/polos" && request.method === "GET") {
         const r = await env.DB.prepare("SELECT id, nome FROM polos WHERE ativo = 1 ORDER BY ordem, nome").all();
         return resposta(cors, { polos: r.results || [] });
