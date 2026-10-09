@@ -726,7 +726,7 @@ async function ciclo(){
   while(aLer&&!lido){
     if(v.readyState>=2){
       try{const r=await detetor.detect(v);
-        if(r&&r.length){const pref=r.find(x=>x.format==="qr_code")||r[0];lido=true;if(navigator.vibrate)navigator.vibrate(80);fecharLeitor();entregar(pref.rawValue);return;}
+        if(r&&r.length){const pref=modoLeitor==="guia"?(r.find(x=>x.format!=="qr_code")||r[0]):(r.find(x=>x.format==="qr_code")||r[0]);lido=true;if(navigator.vibrate)navigator.vibrate(80);fecharLeitor();entregar(pref.rawValue);return;}
       }catch(e){}
     }
     await new Promise(ok=>setTimeout(ok,180));
@@ -739,24 +739,24 @@ $("lerGuia").onclick=()=>abrirLeitor("guia");
 let ultimoBotao="ler";$("ler").addEventListener("click",()=>ultimoBotao="ler");$("lerGuia").addEventListener("click",()=>ultimoBotao="lerGuia");
 function entregar(c){if(modoLeitor==="guia")tratarGuia(c);else tratarCodigo(c);}
 
-/* ---- Guia de transporte: tirar o número do código lido ----
-   QR da AT (documentos certificados): campos "X:valor" separados por "*"; o G é o documento, ex. "GT GTA/48113".
-   Código de barras: normalmente só o número. Noutros casos usa-se o último grupo de algarismos. */
+/* ---- Guia de transporte: o nº registado são os primeiros 19 algarismos do código de barras ----
+   QR da AT (se for esse o código lido): usa-se o nº do documento no campo G, ex. "GT GTA/48113". */
+const GUIA_ALGARISMOS=19;
 function numeroGuia(raw){
   raw=String(raw||"").trim();
   const g=raw.match(/(?:^|\*)G:([^*]+)/);
-  if(g){const n=g[1].match(/(\d+)\s*$/);if(n)return {num:String(+n[1]),doc:g[1].trim(),origem:"QR da AT"};}
-  if(/^\d+$/.test(raw))return {num:raw,origem:"código de barras"};
-  const grupos=raw.match(/\d{3,}/g);
-  if(grupos)return {num:grupos[grupos.length-1],origem:"código lido",incerto:true};
-  return null;
+  if(g){const n=g[1].match(/(\d+)\s*$/);if(n)return {num:n[1].slice(0,GUIA_ALGARISMOS),doc:g[1].trim(),origem:"QR da AT"};}
+  const alg=raw.replace(/\D/g,"");
+  if(!alg)return null;
+  return {num:alg.slice(0,GUIA_ALGARISMOS),origem:"código de barras",cortado:alg.length>GUIA_ALGARISMOS,curto:alg.length<GUIA_ALGARISMOS,todos:alg.length};
 }
 function tratarGuia(raw){
   const r=numeroGuia(raw);
   if(!r){msg("msg","A guia foi lida mas o código não tem um número de guia: "+(raw.length>60?raw.slice(0,57)+"…":raw)+". Escreva o número à mão.",false);$("guia").focus();return;}
   $("guia").value=r.num;
   const extra=r.doc?" (documento "+r.doc+")":"";
-  msg("msg",r.incerto?"Guia lida: "+r.num+". Confirme o número — o código trazia mais informação: "+(raw.length>60?raw.slice(0,57)+"…":raw):"Nº da guia preenchido pelo "+r.origem+": "+r.num+extra+".",!r.incerto);
+  const aviso=r.curto?" Atenção: o código só tinha "+r.todos+" algarismos — confirme se leu a guia certa.":"";
+  msg("msg","Nº da guia preenchido pelo "+r.origem+": "+r.num+extra+"."+aviso,!aviso);
   if(!$("volta").value.trim())$("volta").focus({preventScroll:true});
   $("guia").scrollIntoView({behavior:"smooth",block:"center"});
 }
