@@ -503,7 +503,9 @@ $("guardar").onclick=async()=>{
     if(linhas.includes(atual))memorizar(atual,flAtual);
     const tot=linhas.reduce((a,p)=>a+p.qtd,0);
     msg("msg",`Guia ${guia} guardada: ${tot} pneu${tot===1?"":"s"} em ${linhas.length} linha${linhas.length===1?"":"s"} (volta ${volta}).`,true);
-    pendentes=[];$("qtd").value=1;$("qtdL").value=1;limparPneu();construirMarcas();renderPend();renderGuardados();$("guia").value="";$("guia").focus();
+    pendentes=[];$("qtd").value=1;$("qtdL").value=1;limparPneu();construirMarcas();renderPend();renderGuardados();$("guia").value="";
+    /* sem pôr o cursor em nenhum campo: no telemóvel isso abria o teclado e fazia saltar o ecrã */
+    if(document.activeElement&&document.activeElement!==document.body)document.activeElement.blur();
   }catch(err){
     pendentes=linhas.slice(feitos);renderPend();
     msg("msg",(err&&err.message==="storage"?"O telemóvel não deixou guardar (sem espaço ou armazenamento bloqueado). Exporte o Excel e liberte espaço.":"Não foi possível guardar tudo. Carregue outra vez em Guardar guia.")+(feitos?` (${feitos} já ficaram guardados)`:""),false);
@@ -756,7 +758,6 @@ function tratarGuia(raw){
   const extra=r.doc?" (documento "+r.doc+")":"";
   const aviso=r.curto?" Atenção: o código só tinha "+r.todos+" algarismos — confirme se leu a guia certa.":"";
   msg("msg","Nº da guia preenchido pelo "+r.origem+": "+r.num+extra+"."+aviso,!aviso);
-  if(!$("volta").value.trim())$("volta").focus({preventScroll:true});
   $("guia").scrollIntoView({behavior:"smooth",block:"center"});
 }
 $("scanFechar").onclick=()=>{fecharLeitor();$(ultimoBotao).focus();};
