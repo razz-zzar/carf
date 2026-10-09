@@ -188,7 +188,7 @@ input.mono{font-family:var(--mono);letter-spacing:.02em}
     </div>
     <div class="msg" id="msg" role="status"></div>
     <details class="guardados" id="guardados" hidden><summary id="guardadosTit">Opções guardadas neste telemóvel</summary><div id="guardadosLista"></div></details>
-    <div class="hint">Versão de teste 5 · leitor de etiquetas.</div>
+    <div class="hint">Versão de teste 6 · leitor de etiquetas.</div>
     <div class="hint">Com mais de 1 pneu em falta, se não forem todos iguais, carregue em “Adicionar outro pneu diferente” e escolha o seguinte. No fim, “Guardar guia”.</div>
   </section>
 
@@ -617,7 +617,7 @@ async function obterFicha(id){
   for(const [nome,url] of vias){
     const ctl=new AbortController(),t=setTimeout(()=>ctl.abort(),8000);
     try{const r=await fetch(url,{signal:ctl.signal});
-      if(!r.ok){diag.push(nome+": erro "+r.status);continue;}
+      if(!r.ok){let det="";try{const e=JSON.parse(await r.text());det=e.erro?" ("+e.erro+(e.estadoUE?" "+e.estadoUE:"")+")":"";}catch(x){}diag.push(nome+": erro "+r.status+det);continue;}
       const j=JSON.parse(await r.text());if(j&&typeof j==="object"&&!Array.isArray(j)){ultimoDiag="";return j;}
       diag.push(nome+": resposta inválida");
     }catch(e){diag.push(nome+": "+(e&&e.name==="AbortError"?"sem resposta":"bloqueado"));}
