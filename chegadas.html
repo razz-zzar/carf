@@ -236,6 +236,7 @@ function render(){
   const porFazer=V().filter(v=>!doDia[v]),feitas=V().filter(v=>!!doDia[v]).sort((a,b)=>String(reg(doDia[b]).t).localeCompare(String(reg(doDia[a]).t)));
   const cab=(txt,n,cls)=>{const h=document.createElement("div");h.className="grupo-h"+(cls?" "+cls:"");h.append(txt);const b=document.createElement("b");b.textContent=n;h.appendChild(b);l.appendChild(h);};
   const vazio=txt=>{const p=document.createElement("div");p.className="grupo-vazio";p.textContent=txt;l.appendChild(p);};
+  if(!V().length){vazio(modo==="c"?"Este polo ainda não tem voltas de chegada. Peça ao administrador para as acrescentar na gestão.":"Este polo ainda não tem voltas de saída. Peça ao administrador para as acrescentar na gestão.");return;}
   cab(t.lfalta,porFazer.length);
   if(porFazer.length)porFazer.forEach(linha);else vazio(modo==="c"?"Já chegaram todas as voltas.":"Já saíram todas as voltas.");
   cab(modo==="c"?"Já chegaram":"Já saíram",feitas.length,"feitos");

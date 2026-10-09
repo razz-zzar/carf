@@ -145,7 +145,7 @@ function lerConfig(){
 $("fAdmin").addEventListener("submit",e=>{e.preventDefault();ADMIN=$("admin").value.trim();if(!ADMIN){msg("msgA","Escreva o código.",false);return;}msg("msgA","A verificar…",true);carregar();});
 $("novo").onclick=()=>abrir(null);
 $("cancelar").onclick=()=>{$("fPolo").hidden=true;editar=null;};
-$("usarSJT").onclick=()=>{preencher(window.SJT_LISTAS_SJT);msg("msgP","Dados base preenchidos. Ajuste o que for preciso e guarde.",true);};
+$("usarSJT").onclick=()=>{$("lMotivos").value=((window.SJT_DADOS_BASE||{}).motivos||[]).map(([m,v])=>m+" = "+v).join("\n");msg("msgP","Motivos de penalização preenchidos com os dados base. Ajuste o que for preciso e guarde.",true);};
 $("pNome").addEventListener("input",()=>{if(!editar&&!$("pId").dataset.mexido)$("pId").value=$("pNome").value.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"").slice(0,30);});
 $("pId").addEventListener("input",()=>$("pId").dataset.mexido="1");
 $("fPolo").addEventListener("submit",async e=>{

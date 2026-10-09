@@ -66,16 +66,16 @@
       return null;
     }
   }
-  /* Listas do armazém; o SJT usa as listas de origem enquanto não tiver as suas na gestão.
-     Os motivos das penalizações são comuns a todos, salvo se o armazém tiver os seus. */
+  /* Listas do polo, definidas na página de gestão.
+     Os motivos das penalizações vêm dos dados base quando o polo não tem os seus. */
   function lista(nome, s) {
     s = s || sessao() || { polo: {}, config: {} };
     const c = s.config || {}, v = c[nome];
     const temValor = Array.isArray(v) ? v.length > 0 : (v && typeof v === "object" ? Object.keys(v).length > 0 : false);
     if (temValor) return v;
-    const base = window.SJT_LISTAS_SJT || {};
-    if ((s.polo && s.polo.id === "sjt") || nome === "motivos") return base[nome] || (Array.isArray(v) ? [] : {});
-    return Array.isArray(base[nome]) ? [] : {};
+    const base = window.SJT_DADOS_BASE || {};
+    if (nome === "motivos") return base.motivos || [];
+    return nome === "matriz" ? {} : [];
   }
 
   /* ---------- ligação de uma app ---------- */
