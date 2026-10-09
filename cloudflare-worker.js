@@ -2,6 +2,7 @@
 // A UE não deixa a app ler a ficha diretamente a partir do telemóvel (CORS).
 // Este pequeno serviço vai buscar a ficha à UE e devolve-a à app.
 // Só aceita números de ficha de pneus e só responde às páginas do OPS SJT.
+// Versão 3 — a resposta leva o cabeçalho "X-SJT-Versao: 3" para se confirmar que está publicada.
 //
 // Como publicar (uma vez, conta gratuita da Cloudflare):
 // 1. dash.cloudflare.com → Workers & Pages → Create → Start with Hello World! → nome "eprel-sjt" → Deploy
@@ -33,7 +34,9 @@ export default {
     const cors = {
       "Access-Control-Allow-Origin": ORIGENS.includes(origem) ? origem : ORIGENS[0],
       "Access-Control-Allow-Methods": "GET, OPTIONS",
+      "Access-Control-Expose-Headers": "X-SJT-Versao",
       "Vary": "Origin",
+      "X-SJT-Versao": "3",
     };
     const json = (obj, status) => new Response(JSON.stringify(obj), {
       status, headers: { ...cors, "Content-Type": "application/json; charset=utf-8" },
@@ -49,7 +52,7 @@ export default {
     try {
       r = await fetch("https://eprel.ec.europa.eu/api/products/tyres/" + id, {
         headers: cabecalhosUE(id),
-        cf: { cacheTtl: 86400, cacheEverything: true }, // fichas guardadas 1 dia na Cloudflare
+        cf: { cacheEverything: true, cacheTtlByStatus: { "200-299": 86400, "300-599": 0 } }, // só fichas válidas ficam 1 dia em cache
       });
     } catch (e) {
       return json({ erro: "Sem ligação à UE" }, 502);
