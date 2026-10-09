@@ -79,7 +79,7 @@ input:focus-visible,textarea:focus-visible,button:focus-visible{outline:2px soli
     <label for="lMatriz">Subcontratados por volta <small>— uma linha por volta: volta = subcontratado (ex. 1201 = LG)</small><textarea id="lMatriz" spellcheck="false" style="min-height:180px"></textarea></label>
     <label for="lMotivos">Motivos de penalização <small>— motivo = valor em € (ou nao_pago, ou reembolso). Vazio = lista comum.</small><textarea id="lMotivos" spellcheck="false" style="min-height:160px"></textarea></label>
     <div class="btns">
-      <button class="btn sec" type="button" id="usarSJT">Preencher com as listas do SJT</button>
+      <button class="btn sec" type="button" id="usarSJT">Auto Preencher com dados Base</button>
       <button class="btn" type="submit" id="gravar">Guardar armazém</button>
     </div>
     <button class="btn sec" type="button" id="cancelar">Cancelar</button>
@@ -145,7 +145,7 @@ function lerConfig(){
 $("fAdmin").addEventListener("submit",e=>{e.preventDefault();ADMIN=$("admin").value.trim();if(!ADMIN){msg("msgA","Escreva o código.",false);return;}msg("msgA","A verificar…",true);carregar();});
 $("novo").onclick=()=>abrir(null);
 $("cancelar").onclick=()=>{$("fPolo").hidden=true;editar=null;};
-$("usarSJT").onclick=()=>{preencher(window.SJT_LISTAS_SJT);msg("msgP","Listas do SJT copiadas. Ajuste o que for preciso e guarde.",true);};
+$("usarSJT").onclick=()=>{preencher(window.SJT_LISTAS_SJT);msg("msgP","Dados base preenchidos. Ajuste o que for preciso e guarde.",true);};
 $("pNome").addEventListener("input",()=>{if(!editar&&!$("pId").dataset.mexido)$("pId").value=$("pNome").value.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"").slice(0,30);});
 $("pId").addEventListener("input",()=>$("pId").dataset.mexido="1");
 $("fPolo").addEventListener("submit",async e=>{
