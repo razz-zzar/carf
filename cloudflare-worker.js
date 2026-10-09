@@ -2,12 +2,13 @@
 // A UE não deixa a app ler a ficha diretamente a partir do telemóvel (CORS).
 // Este pequeno serviço vai buscar a ficha à UE e devolve-a à app.
 // Só aceita números de ficha de pneus e só responde às páginas do OPS SJT.
-// Versão 3 — a resposta leva o cabeçalho "X-SJT-Versao: 3" para se confirmar que está publicada.
+// Versão 4 — a resposta leva o cabeçalho "X-SJT-Versao: 4" para se confirmar que está publicada.
+// O "?sjt=4" no pedido à UE evita reaproveitar recusas guardadas em cache pelas versões anteriores.
 //
 // Como publicar (uma vez, conta gratuita da Cloudflare):
 // 1. dash.cloudflare.com → Workers & Pages → Create → Start with Hello World! → nome "eprel-sjt" → Deploy
 // 2. Edit code → apagar tudo → colar este ficheiro → Deploy
-// 3. Testar: https://eprel-sjt.<conta>.workers.dev/909522 deve mostrar os dados de um Michelin Pilot Sport 5
+// 3. Testar: https://eprel-sjt.<conta>.workers.dev/909522?v=4 deve mostrar os dados de um Michelin Pilot Sport 5
 
 const ORIGENS = [
   "https://razz-zzar.github.io",
@@ -36,10 +37,10 @@ export default {
       "Access-Control-Allow-Methods": "GET, OPTIONS",
       "Access-Control-Expose-Headers": "X-SJT-Versao",
       "Vary": "Origin",
-      "X-SJT-Versao": "3",
+      "X-SJT-Versao": "4",
     };
     const json = (obj, status) => new Response(JSON.stringify(obj), {
-      status, headers: { ...cors, "Content-Type": "application/json; charset=utf-8" },
+      status, headers: { ...cors, "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" },
     });
     if (request.method === "OPTIONS") return new Response(null, { headers: cors });
     if (request.method !== "GET") return json({ erro: "Método não permitido" }, 405);
@@ -50,7 +51,7 @@ export default {
 
     let r;
     try {
-      r = await fetch("https://eprel.ec.europa.eu/api/products/tyres/" + id, {
+      r = await fetch("https://eprel.ec.europa.eu/api/products/tyres/" + id + "?sjt=4", {
         headers: cabecalhosUE(id),
         cf: { cacheEverything: true, cacheTtlByStatus: { "200-299": 86400, "300-599": 0 } }, // só fichas válidas ficam 1 dia em cache
       });
@@ -59,7 +60,7 @@ export default {
     }
     const texto = await r.text();
     if (!r.ok || !texto.trim().startsWith("{")) {
-      return json({ erro: "A UE recusou o pedido", estadoUE: r.status }, 502);
+      return json({ erro: "A UE recusou o pedido", estadoUE: r.status, versao: 4 }, 502);
     }
     return new Response(texto, {
       status: 200,
