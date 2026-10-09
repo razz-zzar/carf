@@ -188,7 +188,7 @@ input.mono{font-family:var(--mono);letter-spacing:.02em}
     </div>
     <div class="msg" id="msg" role="status"></div>
     <details class="guardados" id="guardados" hidden><summary id="guardadosTit">Opções guardadas neste telemóvel</summary><div id="guardadosLista"></div></details>
-    <div class="hint">Versão de teste 4 · leitor de etiquetas.</div>
+    <div class="hint">Versão de teste 5 · leitor de etiquetas.</div>
     <div class="hint">Com mais de 1 pneu em falta, se não forem todos iguais, carregue em “Adicionar outro pneu diferente” e escolha o seguinte. No fim, “Guardar guia”.</div>
   </section>
 
@@ -607,7 +607,7 @@ function procurar(o,re,prof){if(!o||typeof o!=="object"||prof>4)return "";
 /* A UE não deixa páginas de outros sites lerem a ficha diretamente (CORS).
    A ficha é pedida ao intermediário próprio do OPS SJT (cloudflare-worker.js no repositório),
    que só recebe o número EPREL do pneu. */
-const INTERMEDIARIO="";  /* ex. "https://eprel-sjt.<conta>.workers.dev" — preencher depois de publicar o worker */
+const INTERMEDIARIO="https://eprel-sjt.frplopes91.workers.dev";
 const EPREL_API=id=>"https://eprel.ec.europa.eu/api/products/tyres/"+id;
 let ultimoDiag="";
 async function obterFicha(id){
