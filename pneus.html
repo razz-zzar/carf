@@ -590,7 +590,7 @@ function largarCodigo(){codigoAtual="";$("lido").hidden=true;}
 const reEsc=s=>s.replace(/[.*+?^${}()|[\]\\]/g,"\\$&");
 function doTexto(s){
   s=String(s||"");const d={};
-  const m=s.toUpperCase().match(/(\d{3})\s*\/\s*(\d{2})\s*(Z?R)\s*(\d{2})\s*(C?)(?:\s*(\d{2,3}(?:\/\d{2,3})?)\s*([A-Z])(?![A-Z]))?/);
+  const m=s.toUpperCase().match(/(\d{3})\s*\/\s*(\d{2})\s*(Z?R)\s*(\d{2})\s*(C?)(?:\s*\(?\s*(\d{2,3}(?:\/\d{2,3})?)\s*([A-Z])\s*\)?(?![A-Z]))?/);
   if(m){d.medida=normMedida(`${m[1]}/${m[2]} ${m[3]}${m[4]}${m[5]}`);if(m[6])d.carga=m[6];if(m[7])d.vel=m[7];}
   if(/\b(XL|EXTRA\s*LOAD|REINF(ORCED)?)\b/i.test(s))d.ref="XL";
   const tem=k=>new RegExp("(^|[^A-Z0-9])"+reEsc(k)+"($|[^A-Z0-9+])","i").test(s);
@@ -603,20 +603,31 @@ function doTexto(s){
 function procurar(o,re,prof){if(!o||typeof o!=="object"||prof>4)return "";
   for(const [k,v] of Object.entries(o)){if(re.test(k)&&v!=null&&typeof v!=="object"&&String(v).trim())return String(v).trim();}
   for(const v of Object.values(o)){const r=procurar(v,re,(prof||0)+1);if(r)return r;}return "";}
+/* A UE não deixa páginas de outros sites lerem a ficha diretamente (CORS),
+   por isso tenta-se primeiro direto e depois através de intermediários públicos.
+   Só o número EPREL do pneu é enviado — são dados públicos de produto. */
+const EPREL_API=id=>"https://eprel.ec.europa.eu/api/products/tyres/"+id;
+const VIAS=[u=>u,u=>"https://api.allorigins.win/raw?url="+encodeURIComponent(u),u=>"https://corsproxy.io/?url="+encodeURIComponent(u),u=>"https://api.codetabs.com/v1/proxy/?quest="+encodeURIComponent(u)];
+async function obterJson(url){
+  for(const via of VIAS){
+    const ctl=new AbortController(),t=setTimeout(()=>ctl.abort(),6000);
+    try{const r=await fetch(via(url),{signal:ctl.signal});if(!r.ok)continue;const j=JSON.parse(await r.text());if(j&&typeof j==="object")return j;}
+    catch(e){}finally{clearTimeout(t);}
+  }
+  return null;
+}
+const titulo=t=>String(t).toLowerCase().replace(/(^|[\s\-.])(\p{L})/gu,(a,b,c)=>b+c.toUpperCase());
 async function doEprel(id){
-  const ctl=new AbortController(),t=setTimeout(()=>ctl.abort(),7000);
-  try{
-    const r=await fetch("https://eprel.ec.europa.eu/api/products/tyres/"+id,{signal:ctl.signal,headers:{Accept:"application/json"}});
-    if(!r.ok)return null;const j=await r.json();
-    const desig=procurar(j,/tyre.*designation|size.*designation/i),d=doTexto(desig);
-    const mc=procurar(j,/^(supplierOrTrademark|trademark|brandName|supplierName)$/i);
-    if(mc)d.marca=todasMarcas().find(k=>igual(k,mc))||mc.replace(/\w\S*/g,w=>w[0].toUpperCase()+w.slice(1).toLowerCase());
-    const md=procurar(j,/^commercialName$/i)||procurar(j,/^modelIdentifier$/i);if(md)d.modelo=md;
-    const lc=procurar(j,/loadCapacityIndex|^loadIndex/i);if(lc)d.carga=lc.replace(/\s+/g,"");
-    const sc=procurar(j,/speedCategory/i);if(sc)d.vel=sc.replace(/[^A-Z]/gi,"").toUpperCase().slice(0,2);
-    if(/EXTRA|XL|REINF/i.test(procurar(j,/loadVersion/i)))d.ref="XL";
-    return d.marca||d.medida?d:null;
-  }catch(e){return null;}finally{clearTimeout(t);}
+  const j=await obterJson(EPREL_API(id));if(!j)return null;
+  const desig=procurar(j,/tyre.*designation|size.*designation/i),d=doTexto(desig);
+  const mc=procurar(j,/^(supplierOrTrademark|trademark|brandName|supplierName)$/i);
+  if(mc)d.marca=todasMarcas().find(k=>igual(k,mc))||titulo(mc);
+  const md=procurar(j,/^commercialName$/i)||procurar(j,/^modelIdentifier$/i);
+  if(md){const ms=d.marca?[...(CATALOGO[d.marca]||[]).map(x=>x[0]),...(CUST.modelos[d.marca]||[])]:[];d.modelo=ms.find(k=>igual(k,md))||titulo(md);}
+  const lc=procurar(j,/loadCapacityIndex|^loadIndex/i);if(lc&&!d.carga)d.carga=lc.replace(/\s+/g,"");
+  const sc=procurar(j,/speedCategory/i);if(sc&&!d.vel){const v=sc.toUpperCase().replace(/PAR/g,"").replace(/[^A-Z]/g,"");if(v)d.vel=v.slice(0,2);}
+  if(/EXTRA|XL|REINF/i.test(procurar(j,/loadVersion|loadCapacityIndicator/i)))d.ref="XL";
+  return d.marca||d.medida?d:null;
 }
 
 /* ---- Preencher o formulário carregando nos mesmos botões que o supervisor usaria ---- */
@@ -656,7 +667,7 @@ async function tratarCodigo(cod){
   const chave=chaveCodigo(cod),ep=idEprel(cod),fichaUE=ep?"https://eprel.ec.europa.eu/screen/product/tyres/"+ep:"";
   let d=CODIGOS[chave],origem="";
   if(d){origem=" · conhecido neste telemóvel";}
-  else if(ep){msg("msg","Etiqueta europeia lida. A procurar os dados do pneu…",true);d=await doEprel(ep);origem=d?" · dados da etiqueta UE":" · etiqueta UE (sem dados)";}
+  else if(ep){msg("msg","Etiqueta europeia lida. A procurar os dados do pneu…",true);d=await doEprel(ep);origem=d?" · dados da etiqueta UE":" · etiqueta UE (sem dados)";if(d&&d.marca&&d.medida){CODIGOS[chave]={marca:d.marca,modelo:d.modelo||"",medida:normMedida(d.medida),carga:d.carga||"",vel:d.vel||"",ref:d.ref||""};gravarCodigos();}}
   if(!d){const t=doTexto(cod);if(t.marca||t.medida){d=t;origem=origem||" · lido do texto do código";}}
   if(!d){
     limparPneu();construirMarcas();codigoAtual=chave;mostrarLido(cod,ep?" · etiqueta UE":" · código novo",fichaUE);
