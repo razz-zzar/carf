@@ -18,6 +18,7 @@ header{display:flex;justify-content:space-between;align-items:baseline;gap:12px;
 h1{margin:0;font:700 26px var(--display);text-transform:uppercase;letter-spacing:.04em}
 h2{margin:0;font:700 19px var(--display);text-transform:uppercase;letter-spacing:.04em;color:var(--green)}
 a{color:var(--green)}
+.sairG{background:none;border:0;color:var(--muted);font:600 15px var(--body);cursor:pointer;padding:6px 4px}
 .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:14px}
 label{display:flex;flex-direction:column;gap:6px;font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
 label small{text-transform:none;letter-spacing:0;font-weight:400}
@@ -41,7 +42,7 @@ input:focus-visible,textarea:focus-visible,button:focus-visible{outline:2px soli
 </head>
 <body>
 <main>
-  <header><h1>Gestão</h1><a href="./">‹ Hub</a></header>
+  <header><h1>Gestão</h1><span style="display:flex;gap:16px;align-items:baseline"><button type="button" id="sairG" class="sairG">Sair</button><a href="./">‹ Hub</a></span></header>
 
   <form class="card" id="fAdmin" novalidate>
     <h2>Código de administrador</h2>
@@ -90,16 +91,17 @@ input:focus-visible,textarea:focus-visible,button:focus-visible{outline:2px soli
 <script>
 const $=id=>document.getElementById(id);
 let ADMIN="",POLOS=[],editar=null;
-try{ADMIN=sessionStorage.getItem("sjt_admin")||"";}catch(e){}
+/* O código ADMIN nunca fica guardado: pede-se sempre que se abre a gestão (e apaga-se o de versões anteriores) */
+try{sessionStorage.removeItem("sjt_admin");}catch(e){}
 function msg(id,t,ok){$(id).textContent=t||"";$(id).className="msg "+(ok?"ok":"err");}
 const linhas=t=>[...new Set(String(t).split(/\r?\n/).map(x=>x.replace(/\s+/g," ").trim()).filter(Boolean))];
 
 async function carregar(){
   try{
     const j=await SJT.pedido("/gestao/polos",{admin:ADMIN});
-    POLOS=j.polos;try{sessionStorage.setItem("sjt_admin",ADMIN);}catch(e){}
+    POLOS=j.polos;$("admin").value="";
     $("fAdmin").hidden=true;$("sPolos").hidden=false;desenhar();
-  }catch(e){ADMIN="";try{sessionStorage.removeItem("sjt_admin");}catch(x){}$("fAdmin").hidden=false;$("sPolos").hidden=true;$("fPolo").hidden=true;msg("msgA",e.message,false);}
+  }catch(e){ADMIN="";$("fAdmin").hidden=false;$("sPolos").hidden=true;$("fPolo").hidden=true;msg("msgA",e.message,false);}
 }
 function desenhar(){
   const el=$("polos");el.textContent="";
@@ -159,7 +161,12 @@ $("fPolo").addEventListener("submit",async e=>{
   }catch(err){msg("msgP",err.message,false);}
   $("gravar").disabled=false;
 });
-if(ADMIN)carregar();
+/* Ao sair da página ou passar para segundo plano por mais de 5 min, esquece o código */
+let saiuEm=0;
+document.addEventListener("visibilitychange",()=>{if(document.hidden){saiuEm=Date.now();}else if(ADMIN&&Date.now()-saiuEm>300000){sairGestao();}});
+window.addEventListener("pagehide",()=>{ADMIN="";});
+function sairGestao(){ADMIN="";POLOS=[];editar=null;$("fPolo").hidden=true;$("sPolos").hidden=true;$("fAdmin").hidden=false;msg("msgA","");$("admin").focus();}
+$("sairG").onclick=sairGestao;
 </script>
 </body>
 </html>
