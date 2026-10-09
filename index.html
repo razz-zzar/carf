@@ -45,7 +45,12 @@ h1{font:700 34px/1.1 var(--display);letter-spacing:.06em;text-transform:uppercas
 .entrar .ok{border:0;border-radius:10px;padding:15px;font:700 19px var(--display);letter-spacing:.06em;text-transform:uppercase;background:var(--green);color:#0a0a0a;cursor:pointer}
 .entrar .ok:disabled{opacity:.6}
 .msgE{min-height:20px;font-size:14px;color:#e0574f}.msgE.info{color:var(--muted)}
-.rodape{max-width:560px;margin:0 auto;padding:18px 16px calc(24px + env(safe-area-inset-bottom,0px));border-top:1px solid var(--line);text-align:center;color:var(--muted);font-size:12px;line-height:1.5;white-space:nowrap;overflow:hidden}
+.rodape{max-width:560px;margin:0 auto;padding:10px 12px calc(16px + env(safe-area-inset-bottom,0px));border-top:1px solid var(--line);display:grid;grid-template-columns:44px minmax(0,1fr) 44px;align-items:center;color:var(--muted);font-size:12px;line-height:1.5}
+.rod-txt{text-align:center;white-space:nowrap;overflow:hidden}
+/* Acesso discreto à gestão (pede sempre o código de administrador) */
+.engr{grid-column:3;justify-self:end;display:grid;place-items:center;width:44px;height:44px;border-radius:10px;color:var(--muted);opacity:.7}
+.engr:hover,.engr:active{color:var(--green);opacity:1}
+.engr:focus-visible{outline:2px solid var(--green);outline-offset:2px;opacity:1}
 </style>
 </head>
 <body>
@@ -65,7 +70,7 @@ h1{font:700 34px/1.1 var(--display);letter-spacing:.06em;text-transform:uppercas
   </form>
   <nav class="apps" id="apps" aria-label="Aplicações"></nav>
 </main>
-<footer class="rodape">© <span id="ano">2026</span> OPS CARF · Aplicação em desenvolvimento</footer>
+<footer class="rodape"><span></span><span class="rod-txt">© <span id="ano">2026</span> OPS CARF · Aplicação em desenvolvimento</span><a class="engr" href="gestao.html" aria-label="Gestão" title="Gestão"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></a></footer>
 <script src="sjt-online.js"></script>
 <script>
 /* Para juntar uma nova aplicação ao hub, acrescentar uma linha a esta lista. */
@@ -80,7 +85,7 @@ const APPS=[
   {nome:"Frota",desc:"Viaturas, pedidos de intervenção e revisão",href:"frota.html",icone:ICONE_FROTA}
 ];
 document.getElementById("ano").textContent=new Date().getFullYear();
-function caberRodape(){const r=document.querySelector(".rodape");if(!r)return;r.style.fontSize="";let f=12;while(r.scrollWidth>r.clientWidth&&f>8){f-=.5;r.style.fontSize=f+"px";}}
+function caberRodape(){const r=document.querySelector(".rod-txt");if(!r)return;r.style.fontSize="";let f=12;while(r.scrollWidth>r.clientWidth&&f>8){f-=.5;r.style.fontSize=f+"px";}}
 caberRodape();addEventListener("resize",caberRodape);
 const el=document.getElementById("apps");
 APPS.forEach(a=>{
