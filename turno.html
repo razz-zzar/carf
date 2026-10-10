@@ -117,6 +117,20 @@ h2 span{font:600 15px var(--mono);color:var(--muted)}
 .m.mencao{border-left-color:#3f9b9e;box-shadow:0 0 0 1px rgba(63,155,158,.5)}
 .filtro{display:flex;gap:6px}
 .filtro .tog{min-height:40px;font-size:14px;padding:6px 12px;border-radius:999px}
+.citaN{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:start;background:var(--bg);border:1px solid var(--line);border-left:4px solid var(--green);border-radius:8px;padding:8px 8px 8px 10px}
+.citaN .x{background:none;border:1px solid var(--line);color:var(--fg);border-radius:8px;width:36px;height:36px;font:700 18px var(--body);cursor:pointer}
+.cq{font-size:14px;color:var(--muted);min-width:0}
+.cq b{display:block;color:var(--green);font-size:13px;letter-spacing:.02em}
+.cq span{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere;white-space:pre-wrap}
+.cita{display:block;width:100%;text-align:left;background:rgba(255,255,255,.04);border:0;border-left:3px solid var(--green);border-radius:6px;padding:6px 8px;cursor:pointer;font:inherit;color:inherit}
+.cita.eu{border-left-color:#3f9b9e}
+.m{transition:transform .15s ease}
+.m.arrasto{transition:none}
+.m .arr{position:absolute;left:-34px;top:50%;transform:translateY(-50%);color:var(--green);font:700 20px var(--body);opacity:0}
+.m{position:relative}
+.m.realce{animation:realce 1.6s ease}
+@keyframes realce{0%,40%{box-shadow:0 0 0 3px var(--green)}100%{box-shadow:none}}
+.resp .rr{background:none;border:0;color:var(--green);font:600 12px var(--body);text-decoration:underline;cursor:pointer;padding:4px}
 .ver{position:fixed;inset:0;z-index:40;background:rgba(0,0,0,.94);display:flex;flex-direction:column;padding:calc(10px + env(safe-area-inset-top,0px)) 12px calc(12px + env(safe-area-inset-bottom,0px));gap:10px}
 .ver .vtop{display:flex;justify-content:space-between;align-items:center;color:var(--muted);font-size:14px}
 .ver .vtop button,.ver .nav button{background:none;border:1px solid var(--line);color:var(--fg);border-radius:8px;padding:10px 16px;font:600 15px var(--body);cursor:pointer}
@@ -138,6 +152,7 @@ h2 span{font:600 15px var(--mono);color:var(--muted)}
     <h2 id="t-novo">Nova mensagem</h2>
     <div class="campo" id="c-texto">
       <div class="lbl-row"><label for="texto">Mensagem para o turno</label><button type="button" class="bmen" id="bMen" aria-label="Mencionar alguém">@ Mencionar</button></div>
+      <div class="citaN" id="citaNova" hidden><div class="cq" id="citaTxt"></div><button type="button" class="x" id="citaX" aria-label="Não responder a esta mensagem">×</button></div>
       <textarea id="texto" rows="4" placeholder="O que o próximo turno precisa de saber — pendentes, avarias, cargas, avisos"></textarea>
     </div>
     <div class="sug" id="sugNovo" hidden></div>
@@ -167,7 +182,7 @@ h2 span{font:600 15px var(--mono);color:var(--muted)}
     <div id="lista"></div>
     <button type="button" class="btn" id="maisM" hidden>Mostrar mais</button>
     <div class="msg" id="msgL" role="status"></div>
-    <div class="hint">As mensagens são partilhadas com todo o polo. Carregue em <b>Visto</b> quando ler uma mensagem, para quem a escreveu saber que a passagem foi feita. Escreva <b>@</b> e o nome para mencionar alguém: a mensagem fica destacada para essa pessoa. Qualquer supervisor pode responder e afixar; só quem escreveu pode apagar. Sem internet ficam no telemóvel e são enviadas quando a rede voltar.</div>
+    <div class="hint">As mensagens são partilhadas com todo o polo. Carregue em <b>Visto</b> quando ler uma mensagem, para quem a escreveu saber que a passagem foi feita. Escreva <b>@</b> e o nome para mencionar alguém: a mensagem fica destacada para essa pessoa. Para responder a uma mensagem, carregue em <b>Responder</b> ou arraste-a para a direita. Qualquer supervisor pode afixar; só quem escreveu pode apagar. Sem internet ficam no telemóvel e são enviadas quando a rede voltar.</div>
   </section>
 </div>
 
@@ -280,7 +295,7 @@ function registarPresenca(){
 LIG.ouvir(i=>{if(i.remoto&&!LIG.estado().erro)registarPresenca();});
 
 /* ---- Nova mensagem ---- */
-let importante=false,afixar=false,novas=[],limite=POR_PAGINA,procura="",aResponder=null,textoResp="",aConfirmar=null;
+let citar=null,importante=false,afixar=false,novas=[],limite=POR_PAGINA,procura="",aResponder=null,textoResp="",aConfirmar=null;
 const tog=(id,v)=>$(id).setAttribute("aria-pressed",v?"true":"false");
 $("importante").onclick=()=>{importante=!importante;tog("importante",importante);};
 $("afixar").onclick=()=>{afixar=!afixar;tog("afixar",afixar);};
@@ -319,16 +334,52 @@ $("publicar").onclick=async()=>{
   try{
     const fotos=[];
     for(const n of novas)fotos.push(await FOTOS.guardar(id,n.blob));
-    const d={k:"m",t:agora.toISOString(),texto,mencoes:mencoesDe(texto),importante,afixada:afixar,afixadoPor:afixar?S.nome:"",fotos,vistos:{}};
+    const mencoes=mencoesDe(texto);
+    /* quem é citado fica avisado, como numa menção */
+    if(citar&&citar.c!==CHAVE&&!mencoes.some(p=>p.c===citar.c))mencoes.push({c:citar.c,n:citar.autor});
+    const d={k:"m",t:agora.toISOString(),texto,mencoes,cita:citar?{...citar}:null,importante,afixada:afixar,afixadoPor:afixar?S.nome:"",fotos,vistos:{}};
     if(!LIG.gravar(id,diaDe(agora),d))throw new Error("storage");
     novas.forEach(n=>URL.revokeObjectURL(n.url));novas=[];desenharNovas();
-    $("texto").value="";importante=afixar=false;tog("importante",false);tog("afixar",false);
+    $("texto").value="";limparCitacao();importante=afixar=false;tog("importante",false);tog("afixar",false);
     if(document.activeElement&&document.activeElement!==document.body)document.activeElement.blur();
     carregar();assinatura="";render();
     msg("msg","Mensagem publicada"+(d.afixada?" e afixada no topo":"")+(d.mencoes.length?", com menção a "+d.mencoes.map(p=>p.n).join(", "):"")+".",true);
   }catch(e){msg("msg",e&&e.message==="storage"?"O telemóvel não deixou guardar (sem espaço ou armazenamento bloqueado).":"Não foi possível guardar as fotografias neste telemóvel. Tente de novo.",false);}
   $("publicar").disabled=false;
 };
+
+/* ---- Responder como no WhatsApp: a mensagem citada aparece por cima do texto ---- */
+function citacao(el,ci){
+  const b=document.createElement("b");b.textContent=ci.c===CHAVE?"Você":ci.autor||"?";
+  const t=document.createElement("span");t.textContent=ci.texto||"(fotografia)";el.append(b,t);
+}
+function citarMsg(x){
+  const autor=x.meu?S.nome:x.autor||"?";
+  citar={id:x.id,k:x.k||"m",autor,c:chaveDe(autor),texto:String(x.texto||"").replace(/\s+/g," ").slice(0,160)};
+  $("citaTxt").textContent="";const r=document.createElement("b");r.textContent="A responder a "+(x.meu?"si próprio":autor);
+  const t=document.createElement("span");t.textContent=citar.texto||"(fotografia)";$("citaTxt").append(r,t);
+  $("citaNova").hidden=false;
+  if(!x.meu&&!vistoPorMim(x)&&x.k!=="r")marcarVisto([x]);
+  $("texto").scrollIntoView({block:"center",behavior:"smooth"});$("texto").focus({preventScroll:true});
+}
+function limparCitacao(){citar=null;$("citaNova").hidden=true;$("citaTxt").textContent="";}
+$("citaX").onclick=limparCitacao;
+function irPara(id){
+  const el=document.querySelector('[data-id="'+CSS.escape(id)+'"]');
+  if(!el){msg("msgL","A mensagem original já não está na lista (foi apagada ou é antiga).",false);return;}
+  el.scrollIntoView({block:"center",behavior:"smooth"});el.classList.remove("realce");void el.offsetWidth;el.classList.add("realce");
+}
+/* arrastar uma mensagem para a direita = responder */
+function arrastar(el,fn){
+  let x0=0,y0=0,dx=0,ativo=false,decidido=false;
+  el.addEventListener("touchstart",e=>{const t=e.touches[0];x0=t.clientX;y0=t.clientY;dx=0;ativo=true;decidido=false;},{passive:true});
+  el.addEventListener("touchmove",e=>{if(!ativo)return;const t=e.touches[0],ddx=t.clientX-x0,ddy=t.clientY-y0;
+    if(!decidido){if(Math.abs(ddx)<10&&Math.abs(ddy)<10)return;decidido=true;if(Math.abs(ddy)>Math.abs(ddx)||ddx<0){ativo=false;return;}el.classList.add("arrasto");}
+    dx=Math.max(0,Math.min(90,ddx));el.style.transform="translateX("+dx+"px)";const a=el.querySelector(".arr");if(a)a.style.opacity=Math.min(1,dx/60);},{passive:true});
+  const fim=()=>{if(!ativo)return;ativo=false;el.classList.remove("arrasto");el.style.transform="";const a=el.querySelector(".arr");if(a)a.style.opacity=0;
+    if(dx>=60){if(navigator.vibrate)navigator.vibrate(30);fn();}dx=0;};
+  el.addEventListener("touchend",fim);el.addEventListener("touchcancel",fim);
+}
 
 /* ---- Mural ---- */
 $("procura").addEventListener("input",()=>{procura=semAcentos($("procura").value.trim());limite=POR_PAGINA;assinatura="";render();});
@@ -375,6 +426,11 @@ function cartao(m){
   const tag=(t,cl)=>{const s=document.createElement("span");s.className="tag "+cl;s.textContent=t;tg.appendChild(s);};
   if(men)tag("@ PARA SI","men");else if(nova)tag("NOVA","nova");if(m.importante)tag("IMPORTANTE","imp");if(m.afixada)tag("AFIXADA","fix");
   top.append(q,w,tg);c.appendChild(top);
+  c.dataset.id=m.id;
+  const ar=document.createElement("span");ar.className="arr";ar.textContent="↩";ar.setAttribute("aria-hidden","true");c.appendChild(ar);
+  arrastar(c,()=>citarMsg(m));
+  if(m.cita){const q2=document.createElement("button");q2.type="button";q2.className="cita"+(m.cita.c===CHAVE?" eu":"");q2.setAttribute("aria-label","Ir para a mensagem citada");
+    const cq=document.createElement("div");cq.className="cq";citacao(cq,m.cita);q2.appendChild(cq);q2.onclick=()=>irPara(m.cita.id);c.appendChild(q2);}
   const tx=document.createElement("div");tx.className="txt";escreverTexto(tx,m.texto,m.mencoes);c.appendChild(tx);
   if((m.fotos||[]).length){
     const g=document.createElement("div");g.className="thumbs";
@@ -389,6 +445,8 @@ function cartao(m){
       const rq=document.createElement("div");rq.className="rq";const b=document.createElement("b");b.textContent=r.meu?"Você":r.autor||"?";
       rq.append(b,(diaDe(new Date(r.t))!==diaDe(new Date(m.t))?dataCurta(r.t)+" ":"")+hora(r.t));
       if(r.meu){const x=document.createElement("button");x.type="button";const conf=aConfirmar===r.id;x.className="rx"+(conf?" confirm":"");x.textContent=conf?"confirmar apagar":"apagar";x.onclick=()=>apagar(r,"Resposta apagada.");rq.appendChild(x);}
+      const rr=document.createElement("button");rr.type="button";rr.className="rr";rr.textContent="responder";rr.onclick=()=>citarMsg(r);rq.appendChild(rr);
+      d.dataset.id=r.id;
       d.appendChild(rq);escreverTexto(d,r.texto,r.mencoes);box.appendChild(d);});
     c.appendChild(box);
   }
@@ -412,7 +470,7 @@ function cartao(m){
   const ac=document.createElement("div");ac.className="acoes";
   const bt=(txt,fn,cls)=>{const b=document.createElement("button");b.type="button";b.textContent=txt;if(cls)b.className=cls;b.onclick=fn;ac.appendChild(b);return b;};
   if(nova)bt("Visto ✓",()=>marcarVisto([m]),"p");
-  bt("Responder",()=>{aResponder=m.id;textoResp="";aConfirmar=null;assinatura="";render();});
+  bt("↩ Responder",()=>citarMsg(m));
   bt(m.afixada?"Desafixar":"Afixar",()=>alternarAfixar(m));
   if(m.meu)bt(aConfirmar===m.id?"Confirmar apagar":"Apagar",()=>apagar(m,"Mensagem apagada."),"dir"+(aConfirmar===m.id?" confirm":""));
   c.appendChild(ac);
