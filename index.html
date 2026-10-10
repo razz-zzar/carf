@@ -96,7 +96,7 @@ const APPS=[
   {nome:"Penalizações",desc:"Registo de penalizações por volta e motorista",href:"penalizacoes.html",icone:ICONE_PENAL},
   {nome:"Frota",desc:"Viaturas, pedidos de intervenção e revisão",href:"frota.html",icone:ICONE_FROTA},
   {nome:"Ocorrências",desc:"Volumes danificados, com fotografias e email",href:"ocorrencias.html",icone:ICONE_OCORR},
-  {nome:"Passagem de Turno",desc:"Mensagens entre turnos, com visto e afixadas",href:"turno.html",icone:ICONE_TURNO,id:"turno"}
+  {nome:"Mural",desc:"Mensagens entre turnos, com menções e avisos afixados",href:"mural.html",icone:ICONE_TURNO,id:"turno"}
 ];
 document.getElementById("ano").textContent=new Date().getFullYear();
 function caberRodape(){const r=document.querySelector(".rod-txt");if(!r)return;r.style.fontSize="";let f=12;while(r.scrollWidth>r.clientWidth&&f>8){f-=.5;r.style.fontSize=f+"px";}}
@@ -111,7 +111,7 @@ APPS.forEach(a=>{
   if(a.id){const n=document.createElement("span");n.className="badge";n.hidden=true;n.dataset.app=a.id;l.appendChild(n);}
   el.appendChild(l);
 });
-/* Passagem de Turno: com mensagens por ver o ícone ganha um ponto de notificação, o cartão fica destacado
+/* Mural: com mensagens por ver o ícone ganha um ponto de notificação, o cartão fica destacado
    e mostra o número (vermelho se houver menções). Na app instalada, o número também aparece no ícone do telemóvel. */
 let LIG_TURNO=null;
 const ICONE_TURNO_NOVO=ICONE_TURNO.replace('</svg>','<circle cx="40" cy="9" r="7" fill="#e0574f" stroke="#0a0a0a" stroke-width="2.5" class="ponto"/></svg>');
@@ -132,7 +132,7 @@ function contarTurno(){
   b.hidden=!n;b.textContent=n>99?"99+":String(n);b.classList.toggle("men",!!men);
   tile.classList.toggle("tem-novas",!!n);tile.classList.toggle("tem-men",!!men);
   const quer=n?ICONE_TURNO_NOVO:ICONE_TURNO;if(ico.dataset.v!==String(!!n)){ico.innerHTML=quer;ico.dataset.v=String(!!n);}
-  tile.setAttribute("aria-label","Passagem de Turno"+(n?", "+n+" por ver"+(men?", "+men+" com menção a si":""):""));
+  tile.setAttribute("aria-label","Mural"+(n?", "+n+" por ver"+(men?", "+men+" com menção a si":""):""));
   document.title=(n?"("+n+") ":"")+"OPS CARF";
   try{if(navigator.setAppBadge){n?navigator.setAppBadge(n):navigator.clearAppBadge();}}catch(e){}
 }
