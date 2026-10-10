@@ -50,6 +50,9 @@ h2 span{font:600 15px var(--mono);color:var(--muted)}
 .registar{border:0;border-radius:10px;padding:16px;font:700 21px var(--display);letter-spacing:.06em;text-transform:uppercase;cursor:pointer;background:var(--green);color:var(--green-ink);width:100%}
 .registar:active{background:var(--green-dk)}
 .editar .registar{background:var(--amber)}
+.apagarV{background:none;border:1px solid var(--danger,#e0574f);color:var(--danger,#e0574f);border-radius:10px;padding:12px;font:600 15px var(--body);cursor:pointer}
+.apagarV.confirm{background:var(--danger,#e0574f);color:#fff;font-weight:700}
+.apagarV:disabled{border-color:var(--line);color:var(--muted);cursor:default}
 .cancelar{background:none;border:1px solid var(--line);color:var(--muted);border-radius:10px;padding:12px;font:600 15px var(--body);cursor:pointer}
 .procura input{width:100%;background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:10px 12px;font:500 16px var(--body)}
 .procura input:focus{border-color:var(--green);outline:none}
@@ -120,6 +123,7 @@ dialog::backdrop{background:rgba(0,0,0,.7)}
     </div>
     <button class="registar" id="guardar" type="button">Registar viatura</button>
     <button class="cancelar" id="cancelar" type="button" hidden>Cancelar edição</button>
+    <button class="apagarV" id="apagarV" type="button" hidden>Apagar viatura</button>
     <div class="msg" id="msg" role="status"></div>
   </section>
 
@@ -186,6 +190,8 @@ $("km").addEventListener("input",()=>{const d=soDigitos($("km").value).slice(0,7
 $("filtro").addEventListener("input",render);
 
 function render(){
+  if(aEditar&&!BD.some(x=>x.id===aEditar))limparForm(); /* apagada noutro telemóvel */
+  pintarApagarV();
   const f=$("filtro").value.trim().toLowerCase(),fk=chaveMat(f);
   const l=BD.slice().sort((a,b)=>a.matricula.localeCompare(b.matricula,"pt"))
     .filter(v=>!f||v.marca.toLowerCase().includes(f)||(fk&&chaveMat(v.matricula).includes(fk)));
@@ -224,14 +230,22 @@ function limparForm(){
   aEditar=null;["marca","matricula","km","obs"].forEach(k=>$(k).value="");
   ["marca","matricula","km"].forEach(k=>$("c-"+k).classList.remove("erro"));
   $("cartao").classList.remove("editar");$("t-form").textContent="Nova viatura";
-  $("guardar").textContent="Registar viatura";$("cancelar").hidden=true;
+  $("guardar").textContent="Registar viatura";$("cancelar").hidden=true;$("apagarV").hidden=true;
 }
+/* Apagar a viatura que está a ser editada (só quem a registou) */
+function pintarApagarV(){
+  const v=aEditar&&BD.find(x=>x.id===aEditar),b=$("apagarV");
+  if(!v){b.hidden=true;return;}
+  b.hidden=false;b.disabled=!v.meu;b.classList.toggle("confirm",aConfirmar===v.id);
+  b.textContent=!v.meu?"Só "+(v.autor||"quem a registou")+" pode apagar esta viatura":aConfirmar===v.id?"Confirmar: apagar "+v.matricula:"Apagar viatura";
+}
+$("apagarV").onclick=()=>{if(aEditar)apagar(aEditar);};
 function editar(id){
   const v=BD.find(x=>x.id===id);if(!v)return;
   aEditar=id;aConfirmar=null;
   $("marca").value=v.marca;$("matricula").value=v.matricula;$("km").value=fmtKm(v.km);$("obs").value=v.obs||"";
   $("cartao").classList.add("editar");$("t-form").textContent="Editar "+v.matricula;
-  $("guardar").textContent="Guardar alterações";$("cancelar").hidden=false;msg("msg","");
+  $("guardar").textContent="Guardar alterações";$("cancelar").hidden=false;msg("msg","");pintarApagarV();
   render();$("cartao").scrollIntoView({behavior:"smooth",block:"start"});setTimeout(()=>$("km").focus({preventScroll:true}),350);
 }
 $("cancelar").onclick=()=>{limparForm();msg("msg","");render();};
