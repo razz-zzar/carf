@@ -13,7 +13,7 @@
 // 6. Testar: https://ops-carf-api.<conta>.workers.dev/ deve mostrar {"ok":true,...}
 // As tabelas da base de dados criam-se sozinhas no primeiro pedido.
 
-const VERSAO = 1;
+const VERSAO = 2;
 const ORIGENS = [
   "https://razz-zzar.github.io",
   "https://raw.githack.com",
@@ -21,9 +21,12 @@ const ORIGENS = [
   "http://localhost:8000",
   "http://127.0.0.1:8000",
 ];
-const APPS = new Set(["pneus", "chegadas", "penalizacoes", "frota"]);
+const APPS = new Set(["pneus", "chegadas", "penalizacoes", "frota", "ocorrencias"]);
 const DIAS_SESSAO = 180;
-const MAX_ITENS = 200, MAX_DADOS = 20000, PAGINA = 500;
+// Plano gratuito: no máximo 50 consultas à base de dados por pedido. Cada envio de registos usa
+// 1 consulta de leitura + 1 por registo, por isso cada envio leva no máximo 20 registos.
+const MAX_ITENS = 20, MAX_DADOS = 20000, PAGINA = 500;
+const MAX_FOTO = 1500000; // bytes (a app reduz as fotografias para ~150-300 KB)
 
 const SQL_TABELAS = [
   `CREATE TABLE IF NOT EXISTS polos (
@@ -37,6 +40,10 @@ const SQL_TABELAS = [
      apagado INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (polo, app, id))`,
   `CREATE INDEX IF NOT EXISTS registos_sync ON registos (polo, app, alterado)`,
   `CREATE TABLE IF NOT EXISTS tentativas (chave TEXT NOT NULL, t INTEGER NOT NULL)`,
+  `CREATE TABLE IF NOT EXISTS fotos (
+     polo TEXT NOT NULL, id TEXT NOT NULL, registo TEXT NOT NULL DEFAULT '', dados BLOB NOT NULL,
+     tipo TEXT NOT NULL DEFAULT 'image/jpeg', tamanho INTEGER NOT NULL DEFAULT 0,
+     autor_disp TEXT NOT NULL DEFAULT '', criado INTEGER NOT NULL, PRIMARY KEY (polo, id))`,
   `CREATE INDEX IF NOT EXISTS tentativas_chave ON tentativas (chave, t)`,
 ];
 let tabelasProntas = null;
@@ -153,19 +160,27 @@ async function gravar(request, env, cors, s) {
   let b; try { b = await request.json(); } catch (e) { return erro(cors, 400, "pedido", "Pedido inválido."); }
   const app = b.app, itens = Array.isArray(b.itens) ? b.itens : [];
   if (!APPS.has(app)) return erro(cors, 400, "app", "App desconhecida.");
-  if (!itens.length || itens.length > MAX_ITENS) return erro(cors, 400, "pedido", "Número de registos inválido.");
+  if (!itens.length || itens.length > MAX_ITENS) return erro(cors, 400, "pedido", "Envie entre 1 e " + MAX_ITENS + " registos de cada vez.");
+  const ids = [...new Set(itens.map(it => String(it && it.id || "")).filter(id => id && id.length <= 100))];
+  const atuais = new Map();
+  if (ids.length) {
+    const r = await env.DB.prepare("SELECT * FROM registos WHERE polo = ? AND app = ? AND id IN (" + ids.map(() => "?").join(",") + ")")
+      .bind(s.polo.id, app, ...ids).all();
+    for (const x of r.results || []) atuais.set(x.id, x);
+  }
   const resultados = [];
   let agora = Date.now();
   for (const it of itens) {
     const id = String(it && it.id || "");
     if (!id || id.length > 100) { resultados.push({ id, ok: false, codigo: "id" }); continue; }
-    const atual = await env.DB.prepare("SELECT * FROM registos WHERE polo = ? AND app = ? AND id = ?").bind(s.polo.id, app, id).first();
+    const atual = atuais.get(id);
     const t = agora++;
+    let depois;
     if (it.apagado) {
       if (!atual || atual.apagado) { resultados.push({ id, ok: true, registo: atual ? paraCliente(atual, s.disp) : null }); continue; }
       if (atual.autor_disp !== s.disp) { resultados.push({ id, ok: false, codigo: "so_autor", registo: paraCliente(atual, s.disp) }); continue; }
-      await env.DB.prepare("UPDATE registos SET apagado = 1, alterado = ?, alterado_por = ? WHERE polo = ? AND app = ? AND id = ?")
-        .bind(t, s.nome, s.polo.id, app, id).run();
+      depois = await env.DB.prepare("UPDATE registos SET apagado = 1, alterado = ?, alterado_por = ? WHERE polo = ? AND app = ? AND id = ? RETURNING *")
+        .bind(t, s.nome, s.polo.id, app, id).first();
     } else {
       const dados = JSON.stringify(it.dados && typeof it.dados === "object" ? it.dados : {});
       const dia = /^\d{4}-\d{2}-\d{2}$/.test(it.dia || "") ? it.dia : "";
@@ -173,22 +188,56 @@ async function gravar(request, env, cors, s) {
       const criado = Number.isFinite(it.criado) && it.criado > 0 && it.criado <= t ? Math.floor(it.criado) : t;
       if (!atual || atual.apagado) {
         // Novo (ou de novo depois de apagado): fica com o nome de quem o regista agora
-        await env.DB.prepare(
+        depois = await env.DB.prepare(
           `INSERT INTO registos (polo, app, id, dia, dados, autor, autor_disp, criado, alterado, alterado_por, apagado)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, '', 0)
            ON CONFLICT (polo, app, id) DO UPDATE SET dia = excluded.dia, dados = excluded.dados, autor = excluded.autor,
-             autor_disp = excluded.autor_disp, criado = excluded.criado, alterado = excluded.alterado, alterado_por = '', apagado = 0`
-        ).bind(s.polo.id, app, id, dia, dados, s.nome, s.disp, criado, t).run();
+             autor_disp = excluded.autor_disp, criado = excluded.criado, alterado = excluded.alterado, alterado_por = '', apagado = 0
+           RETURNING *`
+        ).bind(s.polo.id, app, id, dia, dados, s.nome, s.disp, criado, t).first();
       } else {
-        // Alteração de um registo que já existe (ex. km da viatura, hora corrigida): mantém o autor
-        await env.DB.prepare("UPDATE registos SET dia = ?, dados = ?, alterado = ?, alterado_por = ? WHERE polo = ? AND app = ? AND id = ?")
-          .bind(dia, dados, t, atual.autor_disp === s.disp ? "" : s.nome, s.polo.id, app, id).run();
+        // Alteração de um registo que já existe (ex. km da viatura, ocorrência resolvida): mantém o autor
+        depois = await env.DB.prepare("UPDATE registos SET dia = ?, dados = ?, alterado = ?, alterado_por = ? WHERE polo = ? AND app = ? AND id = ? RETURNING *")
+          .bind(dia, dados, t, atual.autor_disp === s.disp ? "" : s.nome, s.polo.id, app, id).first();
       }
     }
-    const depois = await env.DB.prepare("SELECT * FROM registos WHERE polo = ? AND app = ? AND id = ?").bind(s.polo.id, app, id).first();
-    resultados.push({ id, ok: true, registo: paraCliente(depois, s.disp) });
+    if (depois) atuais.set(id, depois);
+    resultados.push({ id, ok: true, registo: depois ? paraCliente(depois, s.disp) : null });
   }
   return resposta(cors, { resultados, agora: Date.now() });
+}
+
+/* ---------- fotografias (guardadas na base de dados, por polo) ---------- */
+const idFoto = s => /^[A-Za-z0-9_-]{8,80}$/.test(s);
+async function enviarFoto(request, url, env, cors, s) {
+  const id = url.searchParams.get("id") || "", registo = String(url.searchParams.get("registo") || "").slice(0, 100);
+  if (!idFoto(id)) return erro(cors, 400, "id", "Identificador de fotografia inválido.");
+  const tipo = (request.headers.get("Content-Type") || "").split(";")[0].trim().toLowerCase();
+  if (!["image/jpeg", "image/png", "image/webp"].includes(tipo)) return erro(cors, 400, "tipo", "Só são aceites fotografias (JPEG, PNG ou WebP).");
+  const bytes = new Uint8Array(await request.arrayBuffer());
+  if (!bytes.length) return erro(cors, 400, "vazia", "Fotografia vazia.");
+  if (bytes.length > MAX_FOTO) return erro(cors, 413, "grande", "Fotografia demasiado grande.");
+  // Se já existir (reenvio depois de falha de rede), não volta a gravar
+  await env.DB.prepare(
+    "INSERT INTO fotos (polo, id, registo, dados, tipo, tamanho, autor_disp, criado) VALUES (?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT (polo, id) DO NOTHING"
+  ).bind(s.polo.id, id, registo, bytes, tipo, bytes.length, s.disp, Date.now()).run();
+  return resposta(cors, { ok: true, id, tamanho: bytes.length });
+}
+async function lerFoto(id, env, cors, s) {
+  if (!idFoto(id)) return erro(cors, 400, "id", "Identificador de fotografia inválido.");
+  const f = await env.DB.prepare("SELECT dados, tipo FROM fotos WHERE polo = ? AND id = ?").bind(s.polo.id, id).first();
+  if (!f) return erro(cors, 404, "foto", "Fotografia não encontrada.");
+  const d = f.dados instanceof ArrayBuffer ? new Uint8Array(f.dados) : new Uint8Array(f.dados);
+  return new Response(d, { headers: { ...cors, "Content-Type": f.tipo, "Cache-Control": "private, max-age=31536000, immutable" } });
+}
+async function apagarFotos(request, env, cors, s) {
+  let b; try { b = await request.json(); } catch (e) { return erro(cors, 400, "pedido", "Pedido inválido."); }
+  const ids = (Array.isArray(b.ids) ? b.ids : []).filter(idFoto).slice(0, 40);
+  if (!ids.length) return resposta(cors, { ok: true, apagadas: 0 });
+  // Só quem tirou a fotografia a pode apagar
+  const r = await env.DB.prepare("DELETE FROM fotos WHERE polo = ? AND autor_disp = ? AND id IN (" + ids.map(() => "?").join(",") + ")")
+    .bind(s.polo.id, s.disp, ...ids).run();
+  return resposta(cors, { ok: true, apagadas: (r.meta && r.meta.changes) || 0 });
 }
 
 /* ---------- gestão (só com o código de administrador) ---------- */
@@ -199,7 +248,9 @@ async function gestao(request, url, env, cors) {
   }
   if (request.method === "GET") {
     const r = await env.DB.prepare("SELECT id, nome, config, ordem, ativo, alterado FROM polos ORDER BY ordem, nome").all();
-    return resposta(cors, { polos: (r.results || []).map(p => ({ ...p, config: configDe(p), ativo: !!p.ativo })) });
+    const f = await env.DB.prepare("SELECT COUNT(*) AS n, COALESCE(SUM(tamanho), 0) AS bytes FROM fotos").first();
+    return resposta(cors, { polos: (r.results || []).map(p => ({ ...p, config: configDe(p), ativo: !!p.ativo })),
+      fotos: { n: (f && f.n) || 0, bytes: (f && f.bytes) || 0 } });
   }
   let b; try { b = await request.json(); } catch (e) { return erro(cors, 400, "pedido", "Pedido inválido."); }
   const id = String(b.id || "").toLowerCase().trim(), nome = limpaNome(b.nome);
@@ -250,6 +301,9 @@ export default {
         return resposta(cors, { polo: { id: s.polo.id, nome: s.polo.nome }, nome: s.nome, config: configDe(s.polo) });
       if (caminho === "/registos" && request.method === "GET") return await listar(url, env, cors, s);
       if (caminho === "/registos" && request.method === "POST") return await gravar(request, env, cors, s);
+      if (caminho === "/fotos" && request.method === "POST") return await enviarFoto(request, url, env, cors, s);
+      if (caminho === "/fotos/apagar" && request.method === "POST") return await apagarFotos(request, env, cors, s);
+      if (caminho.startsWith("/fotos/") && request.method === "GET") return await lerFoto(decodeURIComponent(caminho.slice(7)), env, cors, s);
       return erro(cors, 404, "caminho", "Caminho desconhecido.");
     } catch (e) {
       return erro(cors, 500, "interno", "Erro no servidor: " + (e && e.message || e));
