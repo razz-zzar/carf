@@ -12,7 +12,7 @@
 <link rel="icon" href="carf-icon-192.png">
 <link rel="apple-touch-icon" href="carf-icon-192.png">
 <style>
-/* Layout: nova ocorrência (tipo, volta, guia lida com a câmara, cliente, volumes, descrição, fotografias), ocorrências do dia com estado aberta/resolvida, PDF por ocorrência e Excel do dia */
+/* Layout: nova ocorrência (tipo, volta, guia lida com a câmara, expedidor, volumes, descrição, fotografias), ocorrências do dia com estado aberta/resolvida, PDF por ocorrência e Excel do dia */
 :root{
   --bg:#0c0f0d; --panel:#151a17; --line:#26302a; --fg:#eef3ef; --muted:#93a39a;
   --green:#B9D406; --green-dk:#94aa05; --green-ink:#0a0a0a; --danger:#e0574f;
@@ -118,6 +118,7 @@ select{appearance:none;-webkit-appearance:none;background-image:linear-gradient(
 .oc .ref{font:600 14px var(--mono);color:var(--fg);overflow-wrap:anywhere}
 .oc .ref small{font:600 11px var(--body);letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
 .oc .cli{font-size:15px;overflow-wrap:anywhere}
+.oc .cli .rot{font:600 11px var(--body);letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
 .oc .desc{font-size:15px;white-space:pre-wrap;overflow-wrap:anywhere;border-left:2px solid var(--line);padding-left:8px}
 .oc .res{font-size:14px;background:rgba(185,212,6,.08);border-radius:8px;padding:8px 10px;white-space:pre-wrap;overflow-wrap:anywhere}
 .oc .res b{color:var(--green)}
@@ -178,8 +179,8 @@ select{appearance:none;-webkit-appearance:none;background-image:linear-gradient(
       <div class="com-scan"><input type="text" id="guia" class="mono" inputmode="numeric" autocomplete="off" placeholder="Ler ou escrever"><button type="button" class="scan-mini" id="lerGuia" aria-label="Ler código da guia com a câmara"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 8V5a1 1 0 0 1 1-1h3M16 4h3a1 1 0 0 1 1 1v3M20 16v3a1 1 0 0 1-1 1h-3M8 20H5a1 1 0 0 1-1-1v-3M7 9v6M10 9v6M13 9v6M17 9v6"/></svg></button></div>
     </div>
     <div class="campo" id="c-cliente">
-      <label for="cliente">Cliente / destinatário</label>
-      <input type="text" id="cliente" autocomplete="off" autocapitalize="words" list="clientes" placeholder="Nome do cliente">
+      <label for="cliente">Expedidor</label>
+      <input type="text" id="cliente" autocomplete="off" autocapitalize="words" list="clientes" placeholder="Nome do expedidor">
       <datalist id="clientes"></datalist>
     </div>
     <div class="campo" id="c-desc">
@@ -355,7 +356,7 @@ function cartao(r,antiga){
   if(antiga)parte("Dia",diaPT(r.dia));
   parte("Volta",r.volta);parte("Guia",r.guia);parte("Vol.",r.volumes);
   c.appendChild(ref);
-  if(r.cliente){const d=document.createElement("div");d.className="cli";d.textContent=r.cliente;c.appendChild(d);}
+  if(r.cliente){const d=document.createElement("div");d.className="cli";const s=document.createElement("small");s.className="rot";s.textContent="Expedidor ";d.append(s,r.cliente);c.appendChild(d);}
   if(r.descricao){const d=document.createElement("div");d.className="desc";d.textContent=r.descricao;c.appendChild(d);}
   if((r.fotos||[]).length){
     const g=document.createElement("div");g.className="thumbs";
@@ -368,7 +369,7 @@ function cartao(r,antiga){
   const m=document.createElement("div");m.className="meta";m.textContent="Registada por "+SJT.autorTxt(r)+" · "+(antiga?diaPT(r.dia)+" ":"")+hora(r.t)+(r.pendente?" · a enviar":"");c.appendChild(m);
   if(aResolver===r.id){
     const w=document.createElement("div");w.className="resolver";
-    const t=document.createElement("textarea");t.id="resTxt";t.placeholder="Como foi resolvida? (opcional) — ex. cliente aceitou, peça substituída";t.value=textoResolver;
+    const t=document.createElement("textarea");t.id="resTxt";t.placeholder="Como foi resolvida? (opcional) — ex. crédito acordado, peça substituída";t.value=textoResolver;
     t.addEventListener("input",()=>{textoResolver=t.value;});
     const bs=document.createElement("div");
     const cn=document.createElement("button");cn.type="button";cn.textContent="Cancelar";cn.onclick=()=>{aResolver=null;textoResolver="";assinatura="";render();};
@@ -434,7 +435,7 @@ async function pdf(r,partilhar){
   msg("msgL","A preparar o PDF…",true);
   try{
     const blobs=[];for(const fid of r.fotos||[]){try{blobs.push(await FOTOS.blob(fid));}catch(e){blobs.push(null);}}
-    const campos=[["Data e hora",dataPT(r.t)+" às "+hora(r.t)],["Polo",S.polo.nome],["Tipo",r.tipo],["Volta",r.volta],["Nº da guia",r.guia],["Cliente / destinatário",r.cliente],["Volumes afetados",String(r.volumes||"")],["Registada por",r.autor||S.nome]];
+    const campos=[["Data e hora",dataPT(r.t)+" às "+hora(r.t)],["Polo",S.polo.nome],["Tipo",r.tipo],["Volta",r.volta],["Nº da guia",r.guia],["Expedidor",r.cliente],["Volumes afetados",String(r.volumes||"")],["Registada por",r.autor||S.nome]];
     const res=r.estado==="resolvida"?("Resolvida por "+(r.resolvidoPor||"?")+(r.resolvidoEm?" em "+dataPT(r.resolvidoEm)+" às "+hora(r.resolvidoEm):"")+"."+(r.resolucao?"\n"+r.resolucao:"")):"";
     const bytes=await SJT_PDF.relatorio({marca:"OPS CARF · "+S.polo.nome,titulo:"Ocorrência — "+r.tipo,estado:r.estado==="resolvida"?"RESOLVIDA":"ABERTA",estadoOk:r.estado==="resolvida",
       campos,seccoes:[["Descrição",r.descricao],["Resolução",res]],fotos:blobs,rodape:"OPS CARF · Ocorrência "+r.id.slice(0,10)+" · gerado em "+dataPT(new Date().toISOString())+" às "+hora(new Date().toISOString())});
@@ -495,7 +496,7 @@ function gerarExcel(dia){
   const [y,m,d]=dia.split("-");
   const linhas=l.map(r=>[d+"/"+m+"/"+y,hora(r.t),r.tipo,/^\d+$/.test(r.volta)?+r.volta:r.volta,r.guia||"",r.cliente||"",+r.volumes||"",String(r.descricao||"").replace(/\s*\n\s*/g," "),
     r.estado==="resolvida"?"Resolvida":"Aberta",r.estado==="resolvida"?((r.resolucao||"").replace(/\s*\n\s*/g," ")+(r.resolvidoPor?" ("+r.resolvidoPor+")":"")).trim():"",(r.fotos||[]).length,r.autor||""]);
-  return {bytes:criarXlsx({titulo:"OCORRÊNCIAS — "+d+"/"+m+"/"+y+" — "+S.polo.nome,folha:"Ocorrências",cab:["Data","Hora","Tipo","Volta","Guia","Cliente / destinatário","Volumes","Descrição","Estado","Resolução","Fotografias","Registada por"],linhas,larguras:[12,8,26,10,24,26,10,48,12,40,12,20]}),nome:`ocorrencias-${y}-${m}-${d}.xlsx`};
+  return {bytes:criarXlsx({titulo:"OCORRÊNCIAS — "+d+"/"+m+"/"+y+" — "+S.polo.nome,folha:"Ocorrências",cab:["Data","Hora","Tipo","Volta","Guia","Expedidor","Volumes","Descrição","Estado","Resolução","Fotografias","Registada por"],linhas,larguras:[12,8,26,10,24,26,10,48,12,40,12,20]}),nome:`ocorrencias-${y}-${m}-${d}.xlsx`};
 }
 $("excel").onclick=()=>{
   try{
