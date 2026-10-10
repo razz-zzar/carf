@@ -76,6 +76,7 @@ input:focus-visible,textarea:focus-visible,button:focus-visible{outline:2px soli
       <label for="lPneus">Voltas que trazem pneus<textarea id="lPneus" spellcheck="false"></textarea></label>
       <label for="lInter">Carros extra <small>(interruptor nas chegadas)</small><textarea id="lInter" spellcheck="false"></textarea></label>
     </div>
+    <label for="lPrev">Hora prevista de chegada <small>— uma linha por volta: volta = hora (ex. 1201 = 13:44). Opcional.</small><textarea id="lPrev" spellcheck="false" style="min-height:160px"></textarea></label>
     <label for="lMatriz">Subcontratados por volta <small>— uma linha por volta: volta = subcontratado (ex. 1201 = LG)</small><textarea id="lMatriz" spellcheck="false" style="min-height:180px"></textarea></label>
     <label for="pEmailPen">Email para penalizações <small>— para onde se envia o ficheiro semanal (opcional; vários separados por vírgula)</small><input id="pEmailPen" type="email" inputmode="email" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="ex. operacoes@empresa.pt" multiple></label>
     <label for="pEmail">Email para ocorrências <small>— para onde se enviam os volumes danificados (opcional; vários separados por vírgula)</small><input id="pEmail" type="email" inputmode="email" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="ex. apoio.cliente@empresa.pt" multiple></label>
@@ -121,6 +122,7 @@ function preencher(c){
   c=c||{};
   $("lVoltasC").value=(c.voltasC||[]).join("\n");$("lVoltasS").value=(c.voltasS||[]).join("\n");
   $("lPneus").value=(c.voltasPneus||[]).join("\n");$("lInter").value=(c.interruptor||[]).join("\n");
+  $("lPrev").value=Object.entries(c.previsoes||{}).map(([v,h])=>v+" = "+h).join("\n");
   $("lMatriz").value=Object.entries(c.matriz||{}).map(([v,s])=>v+" = "+s).join("\n");
   $("lMotivos").value=(c.motivos||[]).map(([m,v])=>m+" = "+v).join("\n");
   $("pEmail").value=c.emailOcorrencias||"";
@@ -142,8 +144,14 @@ function lerConfig(){
   linhas($("lMotivos").value).forEach(l=>{const m=l.match(/^(.+?)\s*=\s*(.+)$/);if(!m){erros.push("Motivos: falta o “=” em “"+l+"”");return;}
     const v=m[2].trim().toLowerCase().replace(/\s*€$/,"").replace(",",".");
     if(v==="nao_pago"||v==="reembolso")motivos.push([m[1].trim(),v]);else if(/^\d+(\.\d+)?$/.test(v))motivos.push([m[1].trim(),+v]);else erros.push("Motivos: valor inválido em “"+l+"”");});
+  const previsoes={};
+  linhas($("lPrev").value).forEach(l=>{const m=l.match(/^(.+?)\s*(?:[=;:\t]|\s)\s*(\d{1,2})[:.hH](\d{2})\s*$/);
+    if(!m||+m[2]>23||+m[3]>59){erros.push("Hora prevista: não percebi “"+l+"” (use volta = 13:44)");return;}previsoes[m[1].trim()]=String(+m[2]).padStart(2,"0")+":"+m[3];});
+  const vc=linhas($("lVoltasC").value),semVolta=Object.keys(previsoes).filter(v=>!vc.includes(v));
+  if(semVolta.length)erros.push("Hora prevista para voltas que não estão nas voltas de chegada: "+semVolta.join(", ")+" (o nome tem de ser igual)");
   const c={voltasC:linhas($("lVoltasC").value),voltasS:linhas($("lVoltasS").value),voltasPneus:linhas($("lPneus").value),interruptor:linhas($("lInter").value),matriz};
   if(motivos.length)c.motivos=motivos;
+  if(Object.keys(previsoes).length)c.previsoes=previsoes;
   const em=$("pEmail").value.split(/[,;\s]+/).map(x=>x.trim()).filter(Boolean);
   em.forEach(x=>{if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(x))erros.push("Email para ocorrências inválido: “"+x+"”");});
   if(em.length)c.emailOcorrencias=em.join(", ");

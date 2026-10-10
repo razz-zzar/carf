@@ -70,6 +70,10 @@ h2{font-family:var(--display);font-size:20px;font-weight:700;text-transform:uppe
 .est{display:flex;flex-wrap:wrap;align-items:baseline;column-gap:12px;row-gap:2px}
 .indicar{background:none;border:0;padding:4px 0;margin-top:2px;color:var(--green);font:600 13px var(--body);text-decoration:underline;text-underline-offset:3px;cursor:pointer}
 .v.ed{grid-template-areas:"num num" "ed ed"}
+.prev{display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px;margin-top:4px;font:600 13px var(--mono);letter-spacing:0;color:var(--muted)}
+.prev .d{font:700 12px var(--body);letter-spacing:0;border-radius:4px;padding:2px 6px;white-space:nowrap}
+.prev .d.aviso{background:#e0a84f;color:#0a0a0a}.prev .d.mau{background:var(--danger,#e0574f);color:#fff}.prev .d.bom{background:rgba(185,212,6,.15);color:var(--green)}
+.v.atras{border-color:rgba(224,87,79,.6)}
 .v>.num{grid-area:num}.v>.est{grid-area:est}.v>button{grid-area:btn}.v>.editor{grid-area:ed}
 .editor{display:flex;flex-direction:column;gap:8px;min-width:0}
 .editor label{font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
@@ -146,6 +150,14 @@ const INTERRUPTOR=new Set(SJT.lista("interruptor",S));
 /* Rotas que trazem pneus (assinaladas com X na folha) — só nas chegadas */
 const PNEUS=new Set(SJT.lista("voltasPneus",S));
 const VOLTAS_S=SJT.lista("voltasS",S);
+/* Hora prevista de chegada de cada volta (gestão do polo) */
+const PREV=(S.config&&S.config.previsoes)||{};
+const minDe=hm=>{const m=/^(\d{1,2}):(\d{2})$/.exec(hm||"");return m?+m[1]*60+ +m[2]:null;};
+/* diferença em minutos entre a chegada (ou agora) e a hora prevista: positivo = atraso */
+function atraso(v,dia,t){const p=minDe(PREV[v]);if(p==null)return null;const ref=new Date(t||Date.now());
+  const [y,mo,d]=dia.split("-").map(Number),base=new Date(y,mo-1,d,0,p);return Math.round((ref-base)/60000);}
+const txtAtraso=x=>x===0?"à hora":x>0?(x>=60?Math.floor(x/60)+"h"+String(x%60).padStart(2,"0"):x+" min")+" atrasada":(-x>=60?Math.floor(-x/60)+"h"+String(-x%60).padStart(2,"0"):-x+" min")+" adiantada";
+const corAtraso=x=>x>30?"mau":x>5?"aviso":"bom";
 /* Para o Excel: todas as voltas, chegadas primeiro e depois as que só têm saída */
 const VOLTAS_TODAS=[...VOLTAS_C,...VOLTAS_S.filter(v=>!VOLTAS_C.includes(v))];
 
@@ -205,6 +217,13 @@ function render(){
     const r=reg(doDia[v]),row=document.createElement("div");row.className="v"+(r?" ok":"");
     const n=document.createElement("div");n.className="num"+(/^\d+$/.test(v)?"":" txt");n.innerHTML=INTERRUPTOR.has(v)?"<small>Extra</small>":"<small>Volta</small>";n.append(v);
     if(modo==="c"&&PNEUS.has(v)){const p=document.createElement("span");p.className="pneu";p.title="Traz pneus";p.innerHTML=ICONE_PNEU+"Pneus";n.querySelector("small").appendChild(p);}
+    if(modo==="c"&&PREV[v]){
+      const pv=document.createElement("div");pv.className="prev";pv.append("Prevista "+PREV[v]);
+      const x=r?atraso(v,dia,r.t):(eHoje?atraso(v,dia):null);
+      if(x!=null&&(r||x>0)){const d=document.createElement("span");d.className="d "+(r?corAtraso(x):x>30?"mau":"aviso");d.textContent=r?txtAtraso(x):(x>=60?Math.floor(x/60)+"h"+String(x%60).padStart(2,"0"):x+" min")+" de atraso";pv.appendChild(d);
+        if(!r&&x>30)row.classList.add("atras");}
+      n.appendChild(pv);
+    }
     if(aEditar===v){row.classList.add("ed");row.append(n,editor(v,r));l.appendChild(row);return;}
     const e=document.createElement("div");e.className="est";
     if(r){
@@ -232,12 +251,15 @@ function render(){
       btn.disabled=!eHoje;btn.onclick=()=>chegou(v);btn.setAttribute("aria-label","Volta "+v+" "+t.btn.toLowerCase());}
     row.append(n,e,btn);l.appendChild(row);
   };
-  /* Por chegar/sair: pela ordem da lista. Já chegaram/saíram: a mais recente em cima. */
-  const porFazer=V().filter(v=>!doDia[v]),feitas=V().filter(v=>!!doDia[v]).sort((a,b)=>String(reg(doDia[b]).t).localeCompare(String(reg(doDia[a]).t)));
+  /* Por chegar: pela hora prevista (as que não têm previsão ficam no fim, pela ordem da lista); por sair: pela ordem da lista.
+     Já chegaram/saíram: a mais recente em cima. */
+  const ordem=new Map(V().map((v,i)=>[v,i])),pm=v=>{const m=modo==="c"?minDe(PREV[v]):null;return m==null?1e9:m;};
+  const porFazer=V().filter(v=>!doDia[v]).sort((a,b)=>pm(a)-pm(b)||ordem.get(a)-ordem.get(b)),feitas=V().filter(v=>!!doDia[v]).sort((a,b)=>String(reg(doDia[b]).t).localeCompare(String(reg(doDia[a]).t)));
   const cab=(txt,n,cls)=>{const h=document.createElement("div");h.className="grupo-h"+(cls?" "+cls:"");h.append(txt);const b=document.createElement("b");b.textContent=n;h.appendChild(b);l.appendChild(h);};
   const vazio=txt=>{const p=document.createElement("div");p.className="grupo-vazio";p.textContent=txt;l.appendChild(p);};
   if(!V().length){vazio(modo==="c"?"Este polo ainda não tem voltas de chegada. Peça ao administrador para as acrescentar na gestão.":"Este polo ainda não tem voltas de saída. Peça ao administrador para as acrescentar na gestão.");return;}
-  cab(t.lfalta,porFazer.length);
+  const atrasadas=modo==="c"&&eHoje?porFazer.filter(v=>{const x=atraso(v,dia);return x!=null&&x>0;}).length:0;
+  cab(t.lfalta+(atrasadas?" · "+atrasadas+" em atraso":""),porFazer.length);
   if(porFazer.length)porFazer.forEach(linha);else vazio(modo==="c"?"Já chegaram todas as voltas.":"Já saíram todas as voltas.");
   cab(modo==="c"?"Já chegaram":"Já saíram",feitas.length,"feitos");
   if(feitas.length)feitas.forEach(linha);else vazio(modo==="c"?"Ainda não chegou nenhuma volta.":"Ainda não saiu nenhuma volta.");
@@ -282,6 +304,8 @@ function anular(v){
 }
 /* Se a app ficar aberta e passar a meia-noite, muda para o novo dia */
 document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible"&&$("dia").value===diaAberto&&hoje()!==diaAberto){diaAberto=hoje();$("dia").value=diaAberto;render();}});
+/* os atrasos atualizam-se de minuto a minuto */
+setInterval(()=>{if(!aEditar&&$("dia").value===hoje()&&Object.keys(PREV).length)render();},60000);
 setInterval(()=>{if($("dia").value===diaAberto&&hoje()!==diaAberto){diaAberto=hoje();$("dia").value=diaAberto;render();}},60000);
 
 /* Gerador mínimo de .xlsx (sem bibliotecas, funciona offline) */
@@ -331,8 +355,9 @@ function gerarExcel(dia){
   const [y,m,d]=dia.split("-");
   const h=x=>{const r=reg(x);return r?hora(r.t):"";};
   const quem=x=>{const r=reg(x);return r&&r.autor||"";};
-  const linhas=VOLTAS_TODAS.map(v=>[/^\d+$/.test(v)?+v:v,h(ch[v]),h(sa[v]),quem(ch[v]),quem(sa[v])]);
-  return {bytes:criarXlsx({titulo:"CHEGADAS E SAÍDAS — "+d+"/"+m+"/"+y,folha:"Chegadas e saídas",cab:["Volta","Hora de chegada","Hora de saída","Chegada registada por","Saída registada por"],linhas,larguras:[12,18,18,22,22]}),nome:`chegadas-saidas-${y}-${m}-${d}.xlsx`};
+  const dif=v=>{const r=reg(ch[v]);if(!r)return "";const x=atraso(v,dia,r.t);return x==null?"":x;};
+  const linhas=VOLTAS_TODAS.map(v=>[/^\d+$/.test(v)?+v:v,PREV[v]||"",h(ch[v]),dif(v),h(sa[v]),quem(ch[v]),quem(sa[v])]);
+  return {bytes:criarXlsx({titulo:"CHEGADAS E SAÍDAS — "+d+"/"+m+"/"+y,folha:"Chegadas e saídas",cab:["Volta","Hora prevista","Hora de chegada","Atraso (min)","Hora de saída","Chegada registada por","Saída registada por"],linhas,larguras:[12,14,18,14,18,22,22]}),nome:`chegadas-saidas-${y}-${m}-${d}.xlsx`};
 }
 $("excel").onclick=()=>{
   try{
