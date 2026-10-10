@@ -84,7 +84,7 @@ const APPS=[
   {nome:"Chegadas e Saídas",desc:"Horas de chegada e saída de cada volta",href:"chegadas.html",icone:ICONE_CHEGADA},
   {nome:"Penalizações",desc:"Registo de penalizações por volta e motorista",href:"penalizacoes.html",icone:ICONE_PENAL},
   {nome:"Frota",desc:"Viaturas, pedidos de intervenção e revisão",href:"frota.html",icone:ICONE_FROTA},
-  {nome:"Ocorrências",desc:"Mercadoria danificada, com fotografias e PDF",href:"ocorrencias.html",icone:ICONE_OCORR}
+  {nome:"Ocorrências",desc:"Volumes danificados, com fotografias e email",href:"ocorrencias.html",icone:ICONE_OCORR}
 ];
 document.getElementById("ano").textContent=new Date().getFullYear();
 function caberRodape(){const r=document.querySelector(".rod-txt");if(!r)return;r.style.fontSize="";let f=12;while(r.scrollWidth>r.clientWidth&&f>8){f-=.5;r.style.fontSize=f+"px";}}

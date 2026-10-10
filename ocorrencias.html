@@ -12,7 +12,7 @@
 <link rel="icon" href="carf-icon-192.png">
 <link rel="apple-touch-icon" href="carf-icon-192.png">
 <style>
-/* Layout: nova ocorrência (tipo, volta, guia lida com a câmara, expedidor, volumes, descrição, fotografias), ocorrências do dia com estado aberta/resolvida, PDF por ocorrência e Excel do dia */
+/* Layout: nova ocorrência (tipo, volta, guia lida com a câmara, expedidor, volumes, descrição, fotografias), ocorrências do dia com estado aberta/resolvida, email com as fotografias em anexo e Excel do dia */
 :root{
   --bg:#0c0f0d; --panel:#151a17; --line:#26302a; --fg:#eef3ef; --muted:#93a39a;
   --green:#B9D406; --green-dk:#94aa05; --green-ink:#0a0a0a; --danger:#e0574f;
@@ -47,7 +47,7 @@ h2 span{font:600 15px var(--mono);color:var(--muted)}
 .campo textarea{font-size:17px;min-height:84px;resize:vertical}
 .campo input:focus,.campo select:focus,.campo textarea:focus{border-color:var(--green);outline:none}
 .campo input.mono{font-family:var(--mono);font-weight:600}
-.campo.erro input,.campo.erro select{border-color:var(--danger)}
+.campo.erro input,.campo.erro select,.campo.erro textarea{border-color:var(--danger)}
 .eur{position:relative}
 .eur input{padding-right:38px}
 .eur::after{content:"€";position:absolute;right:14px;top:50%;transform:translateY(-50%);color:var(--muted);font:600 18px var(--body);pointer-events:none}
@@ -123,6 +123,7 @@ select{appearance:none;-webkit-appearance:none;background-image:linear-gradient(
 .oc .res{font-size:14px;background:rgba(185,212,6,.08);border-radius:8px;padding:8px 10px;white-space:pre-wrap;overflow-wrap:anywhere}
 .oc .res b{color:var(--green)}
 .oc .meta{font-size:13px;color:var(--muted)}
+.oc .meta.mail{color:var(--green)}
 .oc .acoes{display:flex;flex-wrap:wrap;gap:8px}
 .oc .acoes button{background:none;border:1px solid var(--line);color:var(--fg);border-radius:8px;padding:10px 12px;font:600 14px var(--body);cursor:pointer;min-height:42px}
 .oc .acoes button.p{border-color:var(--green);color:var(--green)}
@@ -225,7 +226,6 @@ select{appearance:none;-webkit-appearance:none;background-image:linear-gradient(
 <script src="sjt-listas.js"></script>
 <script src="sjt-online.js"></script>
 <script src="sjt-leitor.js"></script>
-<script src="sjt-pdf.js"></script>
 <script>
 const S=SJT.exigirSessao();
 const $=id=>document.getElementById(id);
@@ -258,14 +258,14 @@ function sugerirClientes(){const dl=$("clientes");dl.textContent="";[...new Set(
 const vol=()=>Math.max(1,parseInt($("volumes").value,10)||1);
 $("menos").onclick=()=>{$("volumes").value=Math.max(1,vol()-1);};
 $("mais").onclick=()=>{$("volumes").value=vol()+1;};
-["volta","desc"].forEach(k=>$(k).addEventListener("input",()=>$("c-"+k).classList.remove("erro")));
+[["volta","volta"],["desc","desc"],["guia","guia"],["cliente","cliente"]].forEach(([k,c])=>$(k).addEventListener("input",()=>$("c-"+c).classList.remove("erro")));
 
 $("lerGuia").onclick=async()=>{
   const txt=await SJT_LEITOR.abrir({titulo:"Ler guia",texto:"Aponte para o código de barras da guia de transporte.",preferir:"barras"});
   if(!txt)return;
   const r=SJT_LEITOR.numeroGuia(txt);
   if(!r){msg("msg","O código lido não tem um número de guia. Escreva-o à mão.",false);return;}
-  $("guia").value=r.num;
+  $("guia").value=r.num;$("c-guia").classList.remove("erro");
   msg("msg","Nº da guia preenchido pelo "+r.origem+": "+r.num+"."+(r.curto?" Atenção: o código só tinha "+r.todos+" algarismos — confirme.":""),!r.curto);
 };
 
@@ -298,6 +298,8 @@ $("registar").onclick=async()=>{
   const volta=$("volta").value.trim(),desc=$("desc").value.trim(),falta=[];
   if(!tipo){falta.push("o tipo");$("c-tipo").classList.add("erro");}
   if(!volta){falta.push("a volta");$("c-volta").classList.add("erro");}
+  if(!$("guia").value.trim()){falta.push("a guia");$("c-guia").classList.add("erro");}
+  if(!$("cliente").value.trim()){falta.push("o expedidor");$("c-cliente").classList.add("erro");}
   if(!desc){falta.push("a descrição");$("c-desc").classList.add("erro");}
   if(falta.length){msg("msg","Falta indicar "+falta.join(", ").replace(/, ([^,]*)$/," e $1")+".",false);return;}
   $("registar").disabled=true;
@@ -333,7 +335,7 @@ function render(){
   const doDia=ordenar(BD.filter(r=>r.dia===dia)),mostrar=filtroAbertas?doDia.filter(r=>r.estado!=="resolvida"):doDia;
   const antigas=ordenar(BD.filter(r=>r.dia<dia&&r.estado!=="resolvida"));
   /* não redesenha se nada mudou (evita piscar as fotografias e perder o que se está a escrever) */
-  const sig=JSON.stringify([dia,filtroAbertas,aConfirmar,aResolver,[...mostrar,...antigas].map(r=>[r.id,r.estado,r.pendente,r.alteradoPor,(r.fotos||[]).length,r.resolucao])]);
+  const sig=JSON.stringify([dia,filtroAbertas,aConfirmar,aResolver,[...mostrar,...antigas].map(r=>[r.id,r.estado,r.pendente,r.alteradoPor,(r.fotos||[]).length,r.resolucao,r.emailEm])]);
   if(sig===assinatura)return;assinatura=sig;
   const abertas=doDia.filter(r=>r.estado!=="resolvida").length;
   $("total").textContent=doDia.length?doDia.length+(abertas?" · "+abertas+" aberta"+(abertas===1?"":"s"):""):"0";
@@ -366,6 +368,7 @@ function cartao(r,antiga){
   }
   if(r.estado==="resolvida"){const d=document.createElement("div");d.className="res";const b=document.createElement("b");b.textContent="Resolvida";
     d.append(b," por "+(r.resolvidoPor||"?")+(r.resolvidoEm?" em "+dataPT(r.resolvidoEm)+" às "+hora(r.resolvidoEm):"")+(r.resolucao?"\n"+r.resolucao:""));c.appendChild(d);}
+  if(r.emailPor){const e=document.createElement("div");e.className="meta mail";e.textContent="✉ Email preparado por "+r.emailPor+(r.emailEm?" em "+dataPT(r.emailEm)+" às "+hora(r.emailEm):"");c.appendChild(e);}
   const m=document.createElement("div");m.className="meta";m.textContent="Registada por "+SJT.autorTxt(r)+" · "+(antiga?diaPT(r.dia)+" ":"")+hora(r.t)+(r.pendente?" · a enviar":"");c.appendChild(m);
   if(aResolver===r.id){
     const w=document.createElement("div");w.className="resolver";
@@ -381,8 +384,7 @@ function cartao(r,antiga){
   const bt=(txt,fn,cls)=>{const b=document.createElement("button");b.type="button";b.textContent=txt;if(cls)b.className=cls;b.onclick=fn;ac.appendChild(b);return b;};
   if(r.estado==="resolvida")bt(aConfirmar==="re"+r.id?"Confirmar reabrir":"Reabrir",()=>reabrir(r),aConfirmar==="re"+r.id?"confirm":"");
   else bt("Resolver",()=>{aResolver=r.id;textoResolver="";aConfirmar=null;assinatura="";render();},"p");
-  bt("PDF",()=>pdf(r,false));
-  if(podePartilhar)bt("Partilhar",()=>pdf(r,true));
+  bt(r.emailPor?"Enviar email de novo":"Enviar email",()=>enviarEmail(r),r.emailPor?"":"p");
   if(r.meu){const b=bt(aConfirmar===r.id?"Confirmar apagar":"Apagar",()=>apagar(r),"dir"+(aConfirmar===r.id?" confirm":""));}
   c.appendChild(ac);
   return c;
@@ -429,23 +431,62 @@ $("verAnt").onclick=()=>{if(verI>0){verI--;mostrarVer();}};
 $("verSeg").onclick=()=>{if(verI<verLista.length-1){verI++;mostrarVer();}};
 document.addEventListener("keydown",e=>{if($("ver").hidden)return;if(e.key==="Escape")fecharFoto();if(e.key==="ArrowLeft")$("verAnt").click();if(e.key==="ArrowRight")$("verSeg").click();});
 
-/* ---- PDF por ocorrência ---- */
-const podePartilhar=!!(navigator.canShare&&(()=>{try{return navigator.canShare({files:[new File([new Uint8Array(1)],"t.pdf",{type:"application/pdf"})]});}catch(e){return false;}})());
-async function pdf(r,partilhar){
-  msg("msgL","A preparar o PDF…",true);
-  try{
-    const blobs=[];for(const fid of r.fotos||[]){try{blobs.push(await FOTOS.blob(fid));}catch(e){blobs.push(null);}}
-    const campos=[["Data e hora",dataPT(r.t)+" às "+hora(r.t)],["Polo",S.polo.nome],["Tipo",r.tipo],["Volta",r.volta],["Nº da guia",r.guia],["Expedidor",r.cliente],["Volumes afetados",String(r.volumes||"")],["Registada por",r.autor||S.nome]];
-    const res=r.estado==="resolvida"?("Resolvida por "+(r.resolvidoPor||"?")+(r.resolvidoEm?" em "+dataPT(r.resolvidoEm)+" às "+hora(r.resolvidoEm):"")+"."+(r.resolucao?"\n"+r.resolucao:"")):"";
-    const bytes=await SJT_PDF.relatorio({marca:"OPS CARF · "+S.polo.nome,titulo:"Ocorrência — "+r.tipo,estado:r.estado==="resolvida"?"RESOLVIDA":"ABERTA",estadoOk:r.estado==="resolvida",
-      campos,seccoes:[["Descrição",r.descricao],["Resolução",res]],fotos:blobs,rodape:"OPS CARF · Ocorrência "+r.id.slice(0,10)+" · gerado em "+dataPT(new Date().toISOString())+" às "+hora(new Date().toISOString())});
-    const d=new Date(r.t),nome="ocorrencia-"+String(r.volta).replace(/[^\w-]+/g,"_")+"-"+diaDe(d)+"-"+pad(d.getHours())+pad(d.getMinutes())+".pdf";
-    const fic=new File([bytes],nome,{type:"application/pdf"});
-    if(partilhar&&podePartilhar){try{await navigator.share({files:[fic],title:"Ocorrência — volta "+r.volta});msg("msgL","");}catch(e){if(e&&e.name!=="AbortError")msg("msgL","Não foi possível partilhar. Use o botão PDF.",false);else msg("msgL","");}return;}
-    const url=URL.createObjectURL(fic),a=document.createElement("a");a.href=url;a.download=nome;document.body.appendChild(a);a.click();a.remove();
-    setTimeout(()=>URL.revokeObjectURL(url),15000);
-    msg("msgL","PDF gerado: "+nome+" (ver em Transferências)."+(blobs.some(b=>!b)?" Algumas fotografias ainda não estavam disponíveis.":""),true);
-  }catch(e){msg("msgL","Não foi possível gerar o PDF.",false);}
+/* ---- Email com as fotografias em anexo ----
+   Telemóvel: abre a partilha do sistema (Gmail, Outlook…) com assunto, texto e fotografias já anexadas;
+   o destinatário escolhe-se na app de email (o endereço do polo fica copiado para colar).
+   Sem partilha de ficheiros (ex. alguns computadores): abre o email com destinatário, assunto e texto
+   e descarrega as fotografias para anexar à mão. */
+function saudacao(){const h=new Date().getHours();return h<13?"Bom dia":h<20?"Boa tarde":"Boa noite";}
+const destinoEmail=()=>((S.config||{}).emailOcorrencias||"").trim();
+function textoEmail(r){
+  const assunto="Volume danificado | "+(r.guia||"sem guia")+" | "+(r.cliente||"sem expedidor");
+  const l=[saudacao()+",","",
+    "Informamos que o volume abaixo indicado se encontra danificado"+(r.tipo&&/embalagem/i.test(r.tipo)?" (embalagem aberta/danificada)":"")+", conforme verificado no armazém de "+S.polo.nome+".","",
+    "Guia de transporte: "+(r.guia||"—"),"Expedidor: "+(r.cliente||"—"),"Volta: "+r.volta,"Volumes afetados: "+(r.volumes||1),"Data do registo: "+dataPT(r.t)+" às "+hora(r.t),"",
+    "Descrição: "+String(r.descricao||"").replace(/\s*\n\s*/g," "),""];
+  if((r.fotos||[]).length)l.push("Seguem em anexo as fotografias do volume.","");
+  l.push("Pedimos que contactem o expedidor para perceber se o volume deve ser entregue no estado em que se encontra ou devolvido e, caso seja necessário, que seja enviada a reposição.","",
+    "Obrigado.","","Com os melhores cumprimentos,",S.nome,S.polo.nome+" · OPS CARF");
+  return {assunto,corpo:l.join("\n")};
+}
+async function copiar(t){try{await navigator.clipboard.writeText(t);return true;}catch(e){return false;}}
+async function enviarEmail(r){
+  msg("msgL","A preparar o email…",true);
+  const {assunto,corpo}=textoEmail(r),para=destinoEmail();
+  const ficheiros=[],faltam=[];
+  for(const [i,fid] of (r.fotos||[]).entries()){
+    try{const b=await FOTOS.blob(fid);ficheiros.push(new File([b],"volume-danificado-"+String(r.guia||r.volta).replace(/[^\w-]+/g,"_")+"-"+(i+1)+".jpg",{type:"image/jpeg"}));}
+    catch(e){faltam.push(i+1);}
+  }
+  const aviso=faltam.length?" Atenção: "+(faltam.length===1?"a fotografia "+faltam[0]+" ainda não está":"as fotografias "+faltam.join(", ")+" ainda não estão")+" disponível — foi tirada noutro telemóvel e ainda não foi enviada.":"";
+  let partilha=false;
+  try{partilha=!!(navigator.share&&navigator.canShare&&navigator.canShare({files:ficheiros.length?ficheiros:[new File([""],"x.txt",{type:"text/plain"})],title:assunto,text:corpo}));}catch(e){}
+  if(partilha&&ficheiros.length){
+    const copiado=para?await copiar(para):false;
+    try{
+      await navigator.share({title:assunto,text:corpo,files:ficheiros});
+      marcarEmail(r);
+      msg("msgL","Email preparado na app escolhida."+(para?(copiado?" O endereço "+para+" foi copiado: cole-o no campo Para.":" Envie para: "+para+"."):" Escreva o destinatário no campo Para.")+aviso,!aviso);
+    }catch(e){
+      if(e&&e.name==="AbortError"){msg("msgL","");return;}
+      msg("msgL","Não foi possível abrir a partilha. A abrir o email sem anexos…",false);abrirMailto(r,assunto,corpo,para,ficheiros,aviso);
+    }
+    return;
+  }
+  abrirMailto(r,assunto,corpo,para,ficheiros,aviso);
+}
+function abrirMailto(r,assunto,corpo,para,ficheiros,aviso){
+  /* Descarrega as fotografias para anexar à mão e abre o email já escrito */
+  ficheiros.forEach((f,i)=>setTimeout(()=>{const u=URL.createObjectURL(f),a=document.createElement("a");a.href=u;a.download=f.name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),15000);},i*400));
+  const href="mailto:"+encodeURIComponent(para).replace(/%2C/gi,",").replace(/%40/g,"@")+"?subject="+encodeURIComponent(assunto)+"&body="+encodeURIComponent(corpo);
+  setTimeout(()=>{const a=document.createElement("a");a.href=href;document.body.appendChild(a);a.click();a.remove();},ficheiros.length*400+100);
+  marcarEmail(r);
+  msg("msgL","Email aberto com o assunto e o texto."+(ficheiros.length?" As fotografias foram descarregadas (ver Transferências): anexe-as ao email.":"")+aviso,!aviso);
+}
+function marcarEmail(r){
+  const atual=BD.find(x=>x.id===r.id)||r;
+  guardarAlteracao(atual,{emailPor:S.nome,emailEm:new Date().toISOString()});
+  carregar();assinatura="";render();
 }
 
 /* ---- Excel do dia ---- */
