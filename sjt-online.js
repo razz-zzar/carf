@@ -79,7 +79,7 @@
   }
 
   /* ---------- ligação de uma app ---------- */
-  function ligar(app, { aoMudar, diasLocais = 62 } = {}) {
+  function ligar(app, { aoMudar, diasLocais = 62, todosApagam = false } = {}) {
     const s = sessao() || { token: "", polo: { id: "" }, nome: "" };
     const chave = "sjt_dados_" + s.polo.id + "_" + app;
     const est = ler(chave, null) || { cache: {}, fila: {}, cursor: 0 };
@@ -127,11 +127,11 @@
       if (!guardar()) { est.cache[id] = antR; if (f) est.fila[id] = f; else delete est.fila[id]; return false; }
       avisar({ local: true }); agendar(); return true;
     }
-    const podeApagar = r => !!(r && r.meu);
+    const podeApagar = r => !!(r && (r.meu || todosApagam));
     function apagar(id) {
       const r = est.cache[id];
       if (!r || r.apagado) return true;
-      if (!r.meu) return false;
+      if (!r.meu && !todosApagam) return false;
       r.apagado = true; r.pendente = true; est.fila[id] = { id, apagado: true };
       guardar(); avisar({ local: true }); agendar(); return true;
     }

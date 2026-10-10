@@ -13,7 +13,7 @@
 // 6. Testar: https://ops-carf-api.<conta>.workers.dev/ deve mostrar {"ok":true,...}
 // As tabelas da base de dados criam-se sozinhas no primeiro pedido.
 
-const VERSAO = 3;
+const VERSAO = 4;
 const ORIGENS = [
   "https://razz-zzar.github.io",
   "https://raw.githack.com",
@@ -22,6 +22,8 @@ const ORIGENS = [
   "http://127.0.0.1:8000",
 ];
 const APPS = new Set(["pneus", "chegadas", "penalizacoes", "frota", "ocorrencias", "turno"]);
+// Apps em que qualquer supervisor do polo pode apagar (nas outras só quem registou)
+const TODOS_APAGAM = new Set(["frota"]);
 const DIAS_SESSAO = 180;
 // Plano gratuito: no máximo 50 consultas à base de dados por pedido. Cada envio de registos usa
 // 1 consulta de leitura + 1 por registo, por isso cada envio leva no máximo 20 registos.
@@ -195,7 +197,7 @@ async function gravar(request, env, cors, s) {
         .bind(...args, t, atual.alterado_por, s.polo.id, app, id).first();
     } else if (it.apagado) {
       if (!atual || atual.apagado) { resultados.push({ id, ok: true, registo: atual ? paraCliente(atual, s.disp) : null }); continue; }
-      if (atual.autor_disp !== s.disp) { resultados.push({ id, ok: false, codigo: "so_autor", registo: paraCliente(atual, s.disp) }); continue; }
+      if (atual.autor_disp !== s.disp && !TODOS_APAGAM.has(app)) { resultados.push({ id, ok: false, codigo: "so_autor", registo: paraCliente(atual, s.disp) }); continue; }
       depois = await env.DB.prepare("UPDATE registos SET apagado = 1, alterado = ?, alterado_por = ? WHERE polo = ? AND app = ? AND id = ? RETURNING *")
         .bind(t, s.nome, s.polo.id, app, id).first();
     } else {
