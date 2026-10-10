@@ -433,11 +433,10 @@ function textoEmail(r){
   const assunto="Volume danificado | "+(r.guia||"sem guia")+" | "+(r.cliente||"sem expedidor");
   const l=[saudacao()+",","",
     "Informamos que o volume abaixo indicado se encontra danificado"+(r.tipo&&/embalagem/i.test(r.tipo)?" (embalagem aberta/danificada)":"")+", conforme verificado no armazém de "+S.polo.nome+".","",
-    "Guia de transporte: "+(r.guia||"—"),"Expedidor: "+(r.cliente||"—"),"Volumes afetados: "+(r.volumes||1),"Data do registo: "+dataPT(r.t)+" às "+hora(r.t),"",
+    "Guia de transporte: "+(r.guia||"—"),"Expedidor: "+(r.cliente||"—"),"Volumes afetados: "+(r.volumes||1),"",
     "Descrição: "+String(r.descricao||"").replace(/\s*\n\s*/g," "),""];
   if((r.fotos||[]).length)l.push("Seguem em anexo as fotografias do volume.","");
-  l.push("Pedimos que contactem o expedidor para perceber se o volume deve ser entregue no estado em que se encontra ou devolvido e, caso seja necessário, que seja enviada a reposição.","",
-    "Obrigado.","","Com os melhores cumprimentos,",S.nome,S.polo.nome+" · OPS CARF");
+  l.push("Pedimos que contactem o expedidor para perceber se o volume deve ser entregue no estado em que se encontra ou devolvido e, caso seja necessário, que seja enviada a reposição.","");
   return {assunto,corpo:l.join("\n")};
 }
 async function copiar(t){try{await navigator.clipboard.writeText(t);return true;}catch(e){return false;}}
