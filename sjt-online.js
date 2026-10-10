@@ -87,7 +87,7 @@
     /* A cópia local guarda só os últimos dias (o servidor guarda tudo) */
     if (diasLocais) {
       const lim = new Date(Date.now() - diasLocais * 86400000).toISOString().slice(0, 10);
-      for (const [id, r] of Object.entries(est.cache)) if (r.dia && r.dia < lim && !est.fila[id]) delete est.cache[id];
+      for (const [id, r] of Object.entries(est.cache)) if (r.dia && r.dia < lim && !est.fila[id] && !(r.dados && r.dados.afixada)) delete est.cache[id]; /* as afixadas ficam sempre */
     }
     const estado = { rede: navigator.onLine !== false, erro: "", ultima: 0, aSincronizar: false };
     const ouvintes = new Set(); if (aoMudar) ouvintes.add(aoMudar);
@@ -104,6 +104,27 @@
       est.cache[id] = r;
       est.fila[id] = { id, dia: r.dia, dados, criado: r.criado };
       if (!guardar()) { if (ant) est.cache[id] = ant; else delete est.cache[id]; if (filaAnt) est.fila[id] = filaAnt; else delete est.fila[id]; return false; }
+      avisar({ local: true }); agendar(); return true;
+    }
+    /* Altera só alguns campos de um registo (ex. { "vistos.ana": {...} } ou { afixada: true }; null apaga o campo).
+       O servidor junta a alteração ao registo que já tem, por isso duas pessoas a mexer ao mesmo tempo não se apagam. */
+    function aplicar(d, campos) {
+      for (const [k, v] of Object.entries(campos)) {
+        const p = k.split("."); let o = d;
+        for (let i = 0; i < p.length - 1; i++) { if (!o[p[i]] || typeof o[p[i]] !== "object") o[p[i]] = {}; o = o[p[i]]; }
+        if (v === null) delete o[p[p.length - 1]]; else o[p[p.length - 1]] = v;
+      }
+    }
+    function mudar(id, campos) {
+      const r = est.cache[id];
+      if (!r || r.apagado) return false;
+      const antR = JSON.parse(JSON.stringify(r)), f = est.fila[id];
+      if (f && f.apagado) return false;
+      r.dados = JSON.parse(JSON.stringify(r.dados || {})); aplicar(r.dados, campos); r.pendente = true;
+      /* objeto novo na fila: o que já está a ser enviado não se confunde com esta alteração */
+      if (f && f.dados) est.fila[id] = { ...f, dados: JSON.parse(JSON.stringify(r.dados)) };
+      else est.fila[id] = { id, campos: { ...(f && f.campos || {}), ...campos } };
+      if (!guardar()) { est.cache[id] = antR; if (f) est.fila[id] = f; else delete est.fila[id]; return false; }
       avisar({ local: true }); agendar(); return true;
     }
     const podeApagar = r => !!(r && r.meu);
@@ -137,6 +158,7 @@
               if (mudouEntretanto) continue;
               if (res.registo) { if (res.registo.apagado) delete est.cache[res.id]; else est.cache[res.id] = res.registo; }
               else if (enviado && enviado.apagado) delete est.cache[res.id];
+              if (res.codigo === "nao_existe") { delete est.cache[res.id]; continue; } /* foi apagado entretanto por quem o fez */
               if (!res.ok) avisos.push(res.codigo === "so_autor" ? "Só quem fez o registo o pode apagar." : "Um registo não foi aceite pelo servidor.");
             }
             guardar();
@@ -189,7 +211,7 @@
       };
       setTimeout(ciclo, 0);
     }
-    return { app, sessao: s, registos, obter, gravar, apagar, podeApagar, sincronizar, pendentes, estado: () => ({ ...estado, pendentes: pendentes() }),
+    return { app, sessao: s, registos, obter, gravar, mudar, apagar, podeApagar, sincronizar, pendentes, estado: () => ({ ...estado, pendentes: pendentes() }),
              ouvir: f => ouvintes.add(f), primeiraVez: () => est.cursor === 0 };
   }
 

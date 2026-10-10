@@ -13,7 +13,7 @@
 // 6. Testar: https://ops-carf-api.<conta>.workers.dev/ deve mostrar {"ok":true,...}
 // As tabelas da base de dados criam-se sozinhas no primeiro pedido.
 
-const VERSAO = 2;
+const VERSAO = 3;
 const ORIGENS = [
   "https://razz-zzar.github.io",
   "https://raw.githack.com",
@@ -21,12 +21,14 @@ const ORIGENS = [
   "http://localhost:8000",
   "http://127.0.0.1:8000",
 ];
-const APPS = new Set(["pneus", "chegadas", "penalizacoes", "frota", "ocorrencias"]);
+const APPS = new Set(["pneus", "chegadas", "penalizacoes", "frota", "ocorrencias", "turno"]);
 const DIAS_SESSAO = 180;
 // Plano gratuito: no máximo 50 consultas à base de dados por pedido. Cada envio de registos usa
 // 1 consulta de leitura + 1 por registo, por isso cada envio leva no máximo 20 registos.
 const MAX_ITENS = 20, MAX_DADOS = 20000, PAGINA = 500;
-const MAX_FOTO = 1500000; // bytes (a app reduz as fotografias para ~150-300 KB)
+const MAX_FOTO = 1500000;
+// Campos que se podem alterar sozinhos: "afixada" ou "vistos.<chave>" (letras, números, - e _)
+const CAMPO = /^[A-Za-z][A-Za-z0-9_]{0,30}(\.[A-Za-z0-9_-]{1,60})?$/; // bytes (a app reduz as fotografias para ~150-300 KB)
 
 const SQL_TABELAS = [
   `CREATE TABLE IF NOT EXISTS polos (
@@ -176,7 +178,22 @@ async function gravar(request, env, cors, s) {
     const atual = atuais.get(id);
     const t = agora++;
     let depois;
-    if (it.apagado) {
+    if (it.campos && typeof it.campos === "object" && !it.apagado) {
+      // Altera só alguns campos (ex. "visto por", afixar), sem reescrever o resto: duas pessoas
+      // a marcar ao mesmo tempo não apagam a marca uma da outra.
+      if (!atual || atual.apagado) { resultados.push({ id, ok: false, codigo: "nao_existe" }); continue; }
+      const pares = Object.entries(it.campos).slice(0, 10).filter(([k]) => CAMPO.test(k));
+      if (!pares.length) { resultados.push({ id, ok: false, codigo: "campos" }); continue; }
+      let expr = "dados"; const args = [];
+      for (const [k, v] of pares) {
+        const caminho = "$" + k.split(".").map(x => '."' + x + '"').join("");
+        if (v === null) { expr = "json_remove(" + expr + ", ?)"; args.push(caminho); }
+        else { expr = "json_set(" + expr + ", ?, json(?))"; args.push(caminho, JSON.stringify(v)); }
+      }
+      if (args.reduce((n, a) => n + String(a).length, 0) + String(atual.dados).length > MAX_DADOS) { resultados.push({ id, ok: false, codigo: "grande" }); continue; }
+      depois = await env.DB.prepare("UPDATE registos SET dados = " + expr + ", alterado = ?, alterado_por = ? WHERE polo = ? AND app = ? AND id = ? AND apagado = 0 RETURNING *")
+        .bind(...args, t, atual.alterado_por, s.polo.id, app, id).first();
+    } else if (it.apagado) {
       if (!atual || atual.apagado) { resultados.push({ id, ok: true, registo: atual ? paraCliente(atual, s.disp) : null }); continue; }
       if (atual.autor_disp !== s.disp) { resultados.push({ id, ok: false, codigo: "so_autor", registo: paraCliente(atual, s.disp) }); continue; }
       depois = await env.DB.prepare("UPDATE registos SET apagado = 1, alterado = ?, alterado_por = ? WHERE polo = ? AND app = ? AND id = ? RETURNING *")
