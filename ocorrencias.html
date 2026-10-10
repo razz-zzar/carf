@@ -137,7 +137,8 @@ select{appearance:none;-webkit-appearance:none;background-image:linear-gradient(
 .resolver div{display:grid;grid-template-columns:1fr 1.4fr;gap:8px}
 .resolver button{border-radius:8px;padding:12px;font:700 15px var(--display);letter-spacing:.05em;text-transform:uppercase;cursor:pointer;border:1px solid var(--line);background:none;color:var(--fg)}
 .resolver button.p{background:var(--green);border-color:var(--green);color:var(--green-ink)}
-.grupo-h{font:700 15px var(--display);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-top:6px}
+.grupo-h{font:700 15px var(--display);letter-spacing:.06em;text-transform:uppercase;color:var(--danger);margin-top:6px}
+.grupo-h.res{color:var(--green);border-top:1px solid var(--line);padding-top:14px;margin-top:10px}
 .mcampo{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"rot btn" "val btn";column-gap:10px;align-items:center;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 10px 10px 12px}
 .mrot{grid-area:rot;font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
 .mval{grid-area:val;font-size:15px;overflow-wrap:anywhere;user-select:all}
@@ -339,9 +340,10 @@ $("maisOc").onclick=()=>{limite+=POR_PAGINA;assinatura="";render();};
 $("fTodas").onclick=()=>{filtroAbertas=false;$("fTodas").setAttribute("aria-pressed","true");$("fAbertas").setAttribute("aria-pressed","false");assinatura="";render();};
 $("fAbertas").onclick=()=>{filtroAbertas=true;$("fTodas").setAttribute("aria-pressed","false");$("fAbertas").setAttribute("aria-pressed","true");assinatura="";render();};
 const ordenar=l=>l.slice().sort((a,b)=>String(b.t).localeCompare(String(a.t)));
-/* Lista contínua: todas as ocorrências, da mais recente para a mais antiga */
+/* Lista contínua: primeiro as abertas, depois as resolvidas; em cada grupo, da mais recente para a mais antiga (data de registo) */
+const aberta=r=>r.estado!=="resolvida";
 function visiveis(){
-  let l=ordenar(BD);
+  const o=ordenar(BD);let l=[...o.filter(aberta),...o.filter(r=>!aberta(r))];
   if(filtroAbertas)l=l.filter(r=>r.estado!=="resolvida");
   if(procura)l=l.filter(r=>semAcentos([r.guia,r.cliente,r.descricao,r.tipo,r.autor].join(" ")).includes(procura));
   return l;
@@ -357,7 +359,13 @@ function render(){
   const el=$("lista");el.textContent="";
   if(!mostrar.length){const p=document.createElement("div");p.className="vazio";
     p.textContent=procura?"Nenhuma ocorrência corresponde à procura.":filtroAbertas?"Não há ocorrências abertas.":"Ainda não há ocorrências registadas.";el.appendChild(p);}
-  mostrar.forEach(r=>el.appendChild(cartao(r)));
+  const nAb=todas.filter(aberta).length,nRes=todas.length-nAb;
+  let grupo=null;
+  mostrar.forEach(r=>{
+    const g=aberta(r)?"a":"r";
+    if(g!==grupo){grupo=g;const h=document.createElement("div");h.className="grupo-h"+(g==="r"?" res":"");h.textContent=g==="a"?"Em aberto ("+nAb+")":"Resolvidas ("+nRes+")";el.appendChild(h);}
+    el.appendChild(cartao(r));
+  });
   $("maisOc").hidden=todas.length<=limite;
   $("maisOc").textContent="Mostrar mais ("+(todas.length-limite)+")";
   if(aResolver){const t=document.getElementById("resTxt");if(t){t.value=textoResolver;t.focus({preventScroll:true});}}
@@ -576,7 +584,7 @@ function criarXlsx({titulo,folha,cab,linhas,larguras}){
   return zipStore([["[Content_Types].xml",e.encode(ct)],["_rels/.rels",e.encode(rels)],["xl/workbook.xml",e.encode(wb)],["xl/_rels/workbook.xml.rels",e.encode(wrels)],["xl/styles.xml",e.encode(styles)],["xl/worksheets/sheet1.xml",e.encode(sheet)]]);
 }
 function gerarExcel(){
-  const l=visiveis().reverse();
+  const l=visiveis();
   if(!l.length)return null;
   const hj=new Date(),[y,m,d]=[hj.getFullYear(),pad(hj.getMonth()+1),pad(hj.getDate())];
   const linhas=l.map(r=>[dataPT(r.t),hora(r.t),r.tipo,r.guia||"",r.cliente||"",+r.volumes||"",String(r.descricao||"").replace(/\s*\n\s*/g," "),
