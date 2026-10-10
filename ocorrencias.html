@@ -12,7 +12,7 @@
 <link rel="icon" href="carf-icon-192.png">
 <link rel="apple-touch-icon" href="carf-icon-192.png">
 <style>
-/* Layout: nova ocorrência (tipo, guia lida com a câmara, expedidor, volumes, descrição, fotografias), ocorrências do dia com estado aberta/resolvida, email com as fotografias em anexo e Excel do dia */
+/* Layout: nova ocorrência (tipo, guia lida com a câmara, expedidor, volumes, descrição, fotografias), lista contínua de ocorrências (sem divisão por dia) com pesquisa e estado aberta/resolvida, email com as fotografias em anexo e Excel do dia */
 :root{
   --bg:#0c0f0d; --panel:#151a17; --line:#26302a; --fg:#eef3ef; --muted:#93a39a;
   --green:#B9D406; --green-dk:#94aa05; --green-ink:#0a0a0a; --danger:#e0574f;
@@ -108,7 +108,10 @@ select{appearance:none;-webkit-appearance:none;background-image:linear-gradient(
 .thumb .falta{position:absolute;inset:0;display:grid;place-items:center;text-align:center;font-size:11px;color:var(--muted);padding:6px}
 .filtro{display:flex;gap:6px}
 .filtro .chip{padding:8px 12px;font-size:14px}
-#lista,#antigas{display:flex;flex-direction:column;gap:10px}
+#lista{display:flex;flex-direction:column;gap:10px}
+.procura{width:100%;background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:12px;font:500 16px var(--body)}
+.procura:focus{border-color:var(--green);outline:none}
+.btn.mais{padding:12px;font-size:16px}
 .oc{background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:12px 12px 12px 14px;display:flex;flex-direction:column;gap:8px;border-left:4px solid var(--danger)}
 .oc.resolvida{border-left-color:var(--green)}
 .oc .top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
@@ -156,12 +159,10 @@ select{appearance:none;-webkit-appearance:none;background-image:linear-gradient(
       <img class="logo" alt="Logotipo" src="data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0idXRmLTgiPz4KPCEtLSBHZW5lcmF0b3I6IEFkb2JlIElsbHVzdHJhdG9yIDI3LjAuMCwgU1ZHIEV4cG9ydCBQbHVnLUluIC4gU1ZHIFZlcnNpb246IDYuMDAgQnVpbGQgMCkgIC0tPgo8c3ZnIHZlcnNpb249IjEuMSIgaWQ9IkxheWVyXzEiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgeG1sbnM6eGxpbms9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkveGxpbmsiIHg9IjBweCIgeT0iMHB4IgoJIHZpZXdCb3g9IjAgMCA0NTYgMTg0LjMiIHN0eWxlPSJlbmFibGUtYmFja2dyb3VuZDpuZXcgMCAwIDQ1NiAxODQuMzsiIHhtbDpzcGFjZT0icHJlc2VydmUiPgo8c3R5bGUgdHlwZT0idGV4dC9jc3MiPgoJLnN0MHtmaWxsOiNCOUQ0MDY7fQoJLnN0MXtmaWxsOiMwMDdCN0Y7fQoJLnN0MntmaWxsOiMzRjlCOUU7fQo8L3N0eWxlPgo8Zz4KCTxwYXRoIGNsYXNzPSJzdDAiIGQ9Ik00NDQuMiw3Mi43Yy0yMy40LDcuNi00Ni41LDE1LjEtNjkuNywyMi43Yy0zLTMuNC00LjItNy40LTUuNi0xMS4yYy0zLjQtOS4xLTQuOS0xOC42LTUuMS0yOC4zCgkJYy0wLjMtMTcuOCwxMC4zLTI5LjksMjMuOC0zNC4yYzIyLjMtNy4xLDQ0LjUtMTQuMyw2Ni43LTIxLjVjMC41LTAuMSwxLTAuMSwxLjUtMC4yQzQ1Ni41LDMuNiw0NDguNSw1My41LDQ0NC4yLDcyLjd6Ii8+Cgk8cGF0aCBjbGFzcz0ic3QxIiBkPSJNNDU1LDE0Ny4xYy04LjcsNi43LTE4LjEsMTIuMy0yNy4xLDE4LjZjLTguMyw1LjgtMTYuOSwxMS4zLTI1LjMsMTdjLTEuNiwxLjEtMywxLjktNSwxLjQKCQljLTE2LjItNC4xLTMwLjYtMTEuMS00MS0yNC43Yy01LjEtNi43LTguMy0xNC40LTkuNy0yMi43Yy0wLjQtMi4xLTAuNC00LjQtMC4xLTYuNWMyLTE0LDQuMi0yNy45LDYuMy00MS45CgkJYzEuMy04LjYsMi42LTE3LjMsNC4xLTI1LjljMS40LDcuNCwxLjksMTQuOCw0LjMsMjJjMTEuMiwzMi43LDMzLjIsNTMuMyw2Ny4yLDYwLjhjNi45LDEuNSwxMy44LDEuOCwyMC44LDEuOAoJCUM0NTEuMywxNDYuNSw0NTMuMiwxNDYuMiw0NTUsMTQ3LjF6Ii8+Cgk8cGF0aCBjbGFzcz0ic3QyIiBkPSJNNDU1LDE0Ny4xYy0xLjgtMC4xLTMuNy0wLjEtNS41LTAuMmMyLTEuNCw0LjMtMC43LDYuNS0wLjljMCwwLjQsMCwwLjgtMC4xLDAuOQoJCUM0NTUuNywxNDcuMSw0NTUuMywxNDcuMSw0NTUsMTQ3LjF6Ii8+Cgk8cGF0aCBkPSJNMzMzLjIsNTMuNmMtMTUuMywwLTMwLjctMC40LTQ2LDAuMWMtMTQuMywwLjQtMjUuOSwxMC43LTI4LjQsMjQuM2MtMS41LDgtMi44LDE2LjEtNC4zLDI0LjFjLTEuNyw5LjItMy41LDE4LjQtNS4zLDI4LjIKCQljLTYuNS00LjctMTIuNi05LjEtMTkuMS0xMy44YzEuOS0xLjMsMy4zLTIuMiw0LjYtMy4xYzguMi01LjgsMTMuOC0xMy40LDE2LjMtMjMuMWM1LTE5LjItNy4xLTM1LjYtMjQuOS0zNi4zCgkJYy05LjMtMC40LTE4LjcsMC0yOC0wLjNjLTE2LjMtMC41LTI5LDExLTMxLjUsMjYuMmMtMi4yLDEzLjEtNC45LDI2LjEtNy4zLDM5LjFjLTAuMywwLTAuNiwwLjEtMC45LDAuMQoJCWMtMy44LTIxLjYtNy42LTQzLjMtMTEuNS02NC45Yy04LjMsMC0xNi4xLDAtMjQuMywwYy03LjksMTEuMS0xNiwyMi4zLTI0LDMzLjZjLTgsMTEuMi0xNiwyMi40LTI0LDMzLjZjLTExLjUsMC0yMi42LDAuMS0zMy44LDAKCQljLTE0LjEtMC4xLTIyLjUtMTEuNS0xOC44LTI1LjFjMy4yLTExLjgsMTUuNC0yMS44LDI4LjEtMjEuNWMxMi4zLDAuMiwyNC43LDAuMSwzNywwYzEuNiwwLDMuMywwLjQsNC42LTEuMgoJCWM1LjEtNi4zLDEwLjMtMTIuNiwxNS43LTE5LjJjLTEuNC0wLjEtMi4yLTAuMi0zLTAuMmMtMTksMC0zOCwwLTU3LDBjLTIuMiwwLTQuMywwLjEtNi40LDAuNmMtMTUuMywzLjQtMjYuMywxMi4zLTM0LDI1LjYKCQljLTYsMTAuNC04LjcsMjEuNi02LjIsMzMuNmMzLjQsMTYuOSwxNy43LDI4LjIsMzUuNiwyOC41YzEwLjMsMC4yLDIwLjcsMCwzMSwwYzYuMiwwLDEyLjMsMCwxOC40LDBjNS4yLTcuMiwxMC4yLTE0LjIsMTUuMi0yMS4yCgkJYzUuOC0wLjEsMTEuMSwxLjQsMTYuMiwzLjRjOS4zLDMuOCwxNi44LDkuOSwyMi44LDE3LjRjMTIuNCwwLDI0LjMsMCwzNi4yLDBjMi40LTEyLjgsNC44LTI1LjMsNy4zLTM4LjNjMS45LDEuNCwzLjIsMi40LDQuNSwzLjQKCQljMTMuOSwxMC45LDI3LjgsMjEuOCw0MS42LDMyLjhjMi4yLDEuOCw0LjQsMi42LDcuMiwyLjZjOS4yLTAuMiwxOC4zLDAsMjcuNS0wLjFjMS4zLDAsMi43LDAuNCwzLjktMC44CgkJYzIuMi0xMS42LDQuNC0yMy4zLDYuNy0zNS41YzE0LDAsMjcuNywwLDQxLjYsMGMxLjYtNi44LDMuMS0xMy4yLDQuNy0yMC4yYy0xNC41LDAtMjguNCwwLTQyLjYsMGMwLjMtMS41LDAuNi0yLjUsMC43LTMuNAoJCWMxLjMtNy41LDIuMy04LjQsOS42LTguNGMxMi43LDAsMjUuMywwLDM4LDBjMS40LDAsMywwLjUsNC40LTAuOGMwLjktNi4yLDIuOC0xMi41LDMuMy0xOC45QzMzNC4xLDUzLjksMzMzLjcsNTMuNiwzMzMuMiw1My42egoJCSBNMTA4LjIsMTExLjJjNy05LjksMTMuNy0xOS4yLDIxLTI5LjVjMi4xLDExLjcsMy45LDIyLjQsNS45LDMzLjVDMTI2LjMsMTEyLjEsMTE3LjcsMTExLjIsMTA4LjIsMTExLjJ6IE0yMTcuMiwxMDAuMgoJCWMtMi44LDAuNC01LjYsMC4zLTguNSwwLjNjLTcuOCwwLTE1LjYsMC0yMy43LDBjLTEtMi43LDAuMi00LjcsMC41LTYuOGMwLjgtNC42LDEuNi05LjIsMi42LTEzLjdjMS00LjgsMi42LTYuMSw3LjUtNi4xCgkJYzguMywwLDE2LjcsMCwyNSwwYzguNCwwLDEzLjMsNi41LDEwLjYsMTQuNEMyMjksOTUsMjI0LjMsOTkuMiwyMTcuMiwxMDAuMnoiLz4KPC9nPgo8L3N2Zz4K">
       <div style="min-width:0"><h1>Ocorrências</h1><a class="voltar" href="./">‹ Início</a></div>
     </div>
-    <div class="datebox"><input type="date" id="dia" aria-label="Dia"></div>
   </header>
 
   <section class="card" aria-labelledby="t-novo" id="cartaoNovo">
     <h2 id="t-novo">Nova ocorrência</h2>
-    <div class="aviso" id="aviso" hidden>Está a ver outro dia. Só é possível registar ocorrências no dia de hoje.</div>
     <div class="campo" id="c-tipo">
       <label id="l-tipo">Tipo de ocorrência</label>
       <div class="chips" id="tipos" role="group" aria-labelledby="l-tipo"></div>
@@ -202,16 +203,18 @@ select{appearance:none;-webkit-appearance:none;background-image:linear-gradient(
   </section>
 
   <section class="card" aria-labelledby="t-lista">
-    <h2 id="t-lista">Ocorrências do dia <span id="total">0</span></h2>
+    <h2 id="t-lista">Ocorrências <span id="total">0</span></h2>
+    <input type="search" id="procura" class="procura" placeholder="Procurar guia, expedidor ou descrição" autocomplete="off" aria-label="Procurar ocorrências">
     <div class="filtro" role="group" aria-label="Mostrar"><button type="button" class="chip" id="fTodas" aria-pressed="true">Todas</button><button type="button" class="chip" id="fAbertas" aria-pressed="false">Só abertas</button></div>
     <div id="lista"></div>
-    <div id="antigasCx" hidden><div class="grupo-h" id="antigasT">Em aberto de outros dias</div><div id="antigas"></div></div>
+    <button type="button" class="btn mais" id="maisOc" hidden>Mostrar mais</button>
     <div class="msg" id="msgL" role="status"></div>
     <div class="hint">As ocorrências e as fotografias são partilhadas com todo o polo. Sem internet ficam no telemóvel e são enviadas quando a rede voltar. Qualquer supervisor pode marcar uma ocorrência como resolvida; só quem a registou a pode apagar.</div>
   </section>
 
   <section class="card">
-    <button class="btn" id="excel" type="button">Exportar Excel do dia</button>
+    <button class="btn" id="excel" type="button">Exportar Excel</button>
+    <div class="hint">Exporta as ocorrências que estão na lista (com a pesquisa e o filtro aplicados).</div>
     <div class="msg" id="msgX" role="status"></div>
   </section>
 </div>
@@ -253,13 +256,13 @@ const MAX_FOTOS=6;
 /* ---- Dados partilhados pelo polo ---- */
 const FOTOS=SJT.fotos();
 let BD=[],assinatura="";
-const LIG=SJT.ligar("ocorrencias",{aoMudar:()=>{carregar();render();}});
+const LIG=SJT.ligar("ocorrencias",{diasLocais:0,aoMudar:()=>{carregar();render();}});
 function carregar(){BD=LIG.registos().map(r=>({...r.dados,id:r.id,dia:r.dia,autor:r.autor,meu:r.meu,alteradoPor:r.alteradoPor,pendente:!!r.pendente}));}
 carregar();
 
 /* ---- Formulário ---- */
-let tipo="",novas=[],aConfirmar=null,aResolver=null,textoResolver="",filtroAbertas=false,diaAberto=hoje();
-$("dia").value=diaAberto;
+let tipo="",novas=[],aConfirmar=null,aResolver=null,textoResolver="",filtroAbertas=false,procura="",limite=30;
+const POR_PAGINA=30;
 const gT=$("tipos");
 TIPOS.forEach(t=>{const b=document.createElement("button");b.type="button";b.className="chip";b.textContent=t;b.setAttribute("aria-pressed","false");
   b.onclick=()=>{tipo=t;gT.querySelectorAll(".chip").forEach(c=>c.setAttribute("aria-pressed",c===b?"true":"false"));$("c-tipo").classList.remove("erro");};gT.appendChild(b);});
@@ -319,7 +322,6 @@ $("registar").onclick=async()=>{
     for(const n of novas)fotos.push(await FOTOS.guardar(id,n.blob));
     const r={t:agora.toISOString(),tipo,guia:$("guia").value.trim(),cliente:$("cliente").value.replace(/\s+/g," ").trim(),volumes:vol(),descricao:desc,fotos,estado:"aberta",resolucao:"",resolvidoPor:"",resolvidoEm:""};
     if(!LIG.gravar(id,dia,r))throw new Error("storage");
-    if($("dia").value!==dia)$("dia").value=dia;
     novas.forEach(n=>URL.revokeObjectURL(n.url));novas=[];desenharNovas();
     tipo="";gT.querySelectorAll(".chip").forEach(c=>c.setAttribute("aria-pressed","false"));
     ["guia","cliente","desc"].forEach(k=>$(k).value="");$("volumes").value=1;
@@ -331,32 +333,36 @@ $("registar").onclick=async()=>{
 };
 
 /* ---- Lista ---- */
-$("dia").addEventListener("change",()=>{aConfirmar=null;aResolver=null;msg("msgL","");msg("msgX","");assinatura="";render();});
+const semAcentos=t=>String(t||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase();
+$("procura").addEventListener("input",()=>{procura=semAcentos($("procura").value.trim());limite=POR_PAGINA;assinatura="";render();});
+$("maisOc").onclick=()=>{limite+=POR_PAGINA;assinatura="";render();};
 $("fTodas").onclick=()=>{filtroAbertas=false;$("fTodas").setAttribute("aria-pressed","true");$("fAbertas").setAttribute("aria-pressed","false");assinatura="";render();};
 $("fAbertas").onclick=()=>{filtroAbertas=true;$("fTodas").setAttribute("aria-pressed","false");$("fAbertas").setAttribute("aria-pressed","true");assinatura="";render();};
 const ordenar=l=>l.slice().sort((a,b)=>String(b.t).localeCompare(String(a.t)));
+/* Lista contínua: todas as ocorrências, da mais recente para a mais antiga */
+function visiveis(){
+  let l=ordenar(BD);
+  if(filtroAbertas)l=l.filter(r=>r.estado!=="resolvida");
+  if(procura)l=l.filter(r=>semAcentos([r.guia,r.cliente,r.descricao,r.tipo,r.autor].join(" ")).includes(procura));
+  return l;
+}
 function render(){
-  const dia=$("dia").value||hoje(),eHoje=dia===hoje();
-  $("aviso").hidden=eHoje;$("registar").disabled=!eHoje;
-  ["guia","cliente","desc","volumes"].forEach(k=>$(k).disabled=!eHoje);
-  ["tirar","galeria","lerGuia","menos","mais"].forEach(k=>$(k).disabled=!eHoje||(k==="tirar"||k==="galeria")&&novas.length>=MAX_FOTOS);
-  gT.querySelectorAll(".chip").forEach(c=>c.disabled=!eHoje);
-  const doDia=ordenar(BD.filter(r=>r.dia===dia)),mostrar=filtroAbertas?doDia.filter(r=>r.estado!=="resolvida"):doDia;
-  const antigas=ordenar(BD.filter(r=>r.dia<dia&&r.estado!=="resolvida"));
+  $("tirar").disabled=$("galeria").disabled=novas.length>=MAX_FOTOS;
+  const todas=visiveis(),mostrar=todas.slice(0,limite);
   /* não redesenha se nada mudou (evita piscar as fotografias e perder o que se está a escrever) */
-  const sig=JSON.stringify([dia,filtroAbertas,aConfirmar,aResolver,[...mostrar,...antigas].map(r=>[r.id,r.estado,r.pendente,r.alteradoPor,(r.fotos||[]).length,r.resolucao,r.emailEm])]);
+  const sig=JSON.stringify([filtroAbertas,procura,limite,aConfirmar,aResolver,BD.length,mostrar.map(r=>[r.id,r.estado,r.pendente,r.alteradoPor,(r.fotos||[]).length,r.resolucao,r.emailEm])]);
   if(sig===assinatura)return;assinatura=sig;
-  const abertas=doDia.filter(r=>r.estado!=="resolvida").length;
-  $("total").textContent=doDia.length?doDia.length+(abertas?" · "+abertas+" aberta"+(abertas===1?"":"s"):""):"0";
+  const abertas=BD.filter(r=>r.estado!=="resolvida").length;
+  $("total").textContent=BD.length?BD.length+(abertas?" · "+abertas+" aberta"+(abertas===1?"":"s"):""):"0";
   const el=$("lista");el.textContent="";
-  if(!mostrar.length){const p=document.createElement("div");p.className="vazio";p.textContent=doDia.length?"Não há ocorrências abertas neste dia.":"Sem ocorrências registadas neste dia.";el.appendChild(p);}
-  mostrar.forEach(r=>el.appendChild(cartao(r,false)));
-  $("antigasCx").hidden=!antigas.length;
-  $("antigasT").textContent="Em aberto de outros dias ("+antigas.length+")";
-  const ea=$("antigas");ea.textContent="";antigas.forEach(r=>ea.appendChild(cartao(r,true)));
+  if(!mostrar.length){const p=document.createElement("div");p.className="vazio";
+    p.textContent=procura?"Nenhuma ocorrência corresponde à procura.":filtroAbertas?"Não há ocorrências abertas.":"Ainda não há ocorrências registadas.";el.appendChild(p);}
+  mostrar.forEach(r=>el.appendChild(cartao(r)));
+  $("maisOc").hidden=todas.length<=limite;
+  $("maisOc").textContent="Mostrar mais ("+(todas.length-limite)+")";
   if(aResolver){const t=document.getElementById("resTxt");if(t){t.value=textoResolver;t.focus({preventScroll:true});}}
 }
-function cartao(r,antiga){
+function cartao(r){
   const c=document.createElement("article");c.className="oc"+(r.estado==="resolvida"?" resolvida":"");
   const top=document.createElement("div");top.className="top";
   const tp=document.createElement("div");tp.className="tipo";tp.textContent=r.tipo;
@@ -364,7 +370,6 @@ function cartao(r,antiga){
   top.append(tp,es);c.appendChild(top);
   const ref=document.createElement("div");ref.className="ref";
   const parte=(rot,val)=>{if(!val&&val!==0)return;if(ref.childNodes.length)ref.append("  ·  ");const s=document.createElement("small");s.textContent=rot+" ";ref.append(s,String(val));};
-  if(antiga)parte("Dia",diaPT(r.dia));
   parte("Guia",r.guia);parte("Vol.",r.volumes);
   c.appendChild(ref);
   if(r.cliente){const d=document.createElement("div");d.className="cli";const s=document.createElement("small");s.className="rot";s.textContent="Expedidor ";d.append(s,r.cliente);c.appendChild(d);}
@@ -378,7 +383,7 @@ function cartao(r,antiga){
   if(r.estado==="resolvida"){const d=document.createElement("div");d.className="res";const b=document.createElement("b");b.textContent="Resolvida";
     d.append(b," por "+(r.resolvidoPor||"?")+(r.resolvidoEm?" em "+dataPT(r.resolvidoEm)+" às "+hora(r.resolvidoEm):"")+(r.resolucao?"\n"+r.resolucao:""));c.appendChild(d);}
   if(r.emailPor){const e=document.createElement("div");e.className="meta mail";e.textContent="✉ Email preparado por "+r.emailPor+(r.emailEm?" em "+dataPT(r.emailEm)+" às "+hora(r.emailEm):"");c.appendChild(e);}
-  const m=document.createElement("div");m.className="meta";m.textContent="Registada por "+SJT.autorTxt(r)+" · "+(antiga?diaPT(r.dia)+" ":"")+hora(r.t)+(r.pendente?" · a enviar":"");c.appendChild(m);
+  const m=document.createElement("div");m.className="meta";m.textContent="Registada por "+SJT.autorTxt(r)+" · "+dataPT(r.t)+" às "+hora(r.t)+(r.pendente?" · a enviar":"");c.appendChild(m);
   if(aResolver===r.id){
     const w=document.createElement("div");w.className="resolver";
     const t=document.createElement("textarea");t.id="resTxt";t.placeholder="Como foi resolvida? (opcional) — ex. crédito acordado, peça substituída";t.value=textoResolver;
@@ -570,18 +575,19 @@ function criarXlsx({titulo,folha,cab,linhas,larguras}){
   const e=new TextEncoder();
   return zipStore([["[Content_Types].xml",e.encode(ct)],["_rels/.rels",e.encode(rels)],["xl/workbook.xml",e.encode(wb)],["xl/_rels/workbook.xml.rels",e.encode(wrels)],["xl/styles.xml",e.encode(styles)],["xl/worksheets/sheet1.xml",e.encode(sheet)]]);
 }
-function gerarExcel(dia){
-  const l=BD.filter(r=>r.dia===dia).sort((a,b)=>String(a.t).localeCompare(String(b.t)));
+function gerarExcel(){
+  const l=visiveis().reverse();
   if(!l.length)return null;
-  const [y,m,d]=dia.split("-");
-  const linhas=l.map(r=>[d+"/"+m+"/"+y,hora(r.t),r.tipo,r.guia||"",r.cliente||"",+r.volumes||"",String(r.descricao||"").replace(/\s*\n\s*/g," "),
+  const hj=new Date(),[y,m,d]=[hj.getFullYear(),pad(hj.getMonth()+1),pad(hj.getDate())];
+  const linhas=l.map(r=>[dataPT(r.t),hora(r.t),r.tipo,r.guia||"",r.cliente||"",+r.volumes||"",String(r.descricao||"").replace(/\s*\n\s*/g," "),
     r.estado==="resolvida"?"Resolvida":"Aberta",r.estado==="resolvida"?((r.resolucao||"").replace(/\s*\n\s*/g," ")+(r.resolvidoPor?" ("+r.resolvidoPor+")":"")).trim():"",(r.fotos||[]).length,r.autor||""]);
-  return {bytes:criarXlsx({titulo:"OCORRÊNCIAS — "+d+"/"+m+"/"+y+" — "+S.polo.nome,folha:"Ocorrências",cab:["Data","Hora","Tipo","Guia","Expedidor","Volumes","Descrição","Estado","Resolução","Fotografias","Registada por"],linhas,larguras:[12,8,26,24,26,10,48,12,40,12,20]}),nome:`ocorrencias-${y}-${m}-${d}.xlsx`};
+  const filtro=[filtroAbertas?"só abertas":"",procura?"procura: "+$("procura").value.trim():""].filter(Boolean).join(", ");
+  return {bytes:criarXlsx({titulo:"OCORRÊNCIAS — "+S.polo.nome+" — exportado a "+d+"/"+m+"/"+y+(filtro?" ("+filtro+")":""),folha:"Ocorrências",cab:["Data","Hora","Tipo","Guia","Expedidor","Volumes","Descrição","Estado","Resolução","Fotografias","Registada por"],linhas,larguras:[12,8,26,24,26,10,48,12,40,12,20]}),nome:`ocorrencias-${y}-${m}-${d}.xlsx`};
 }
 $("excel").onclick=()=>{
   try{
-    const x=gerarExcel($("dia").value||hoje());
-    if(!x){msg("msgX","Ainda não há ocorrências registadas neste dia.",false);return;}
+    const x=gerarExcel();
+    if(!x){msg("msgX","Não há ocorrências na lista para exportar.",false);return;}
     const url=URL.createObjectURL(new Blob([x.bytes],{type:MIME_XLSX}));
     const a=document.createElement("a");a.href=url;a.download=x.nome;document.body.appendChild(a);a.click();a.remove();
     setTimeout(()=>URL.revokeObjectURL(url),15000);
@@ -589,10 +595,6 @@ $("excel").onclick=()=>{
   }catch(err){msg("msgX","Não foi possível gerar o Excel.",false);}
 };
 
-/* Se a app ficar aberta e passar a meia-noite, muda para o novo dia */
-function virarDia(){if($("dia").value===diaAberto&&hoje()!==diaAberto){diaAberto=hoje();$("dia").value=diaAberto;assinatura="";render();}}
-document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")virarDia();});
-setInterval(virarDia,60000);
 
 SJT.barra(LIG,document.querySelector("header"),{pendentes:()=>FOTOS.pendentes(),ouvir:f=>FOTOS.ouvir(f)});
 FOTOS.ouvir(()=>{assinatura="";render();});
