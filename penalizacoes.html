@@ -76,6 +76,28 @@ select{appearance:none;-webkit-appearance:none;background-image:linear-gradient(
 .msg{font-size:14px;min-height:20px}
 .msg.ok{color:var(--green)} .msg.err{color:var(--danger)}
 .hint{font-size:13px;color:var(--muted)}
+/* Semana */
+.semana{display:grid;grid-template-columns:52px minmax(0,1fr) 52px;gap:8px;align-items:stretch}
+.semana button{background:var(--bg);color:var(--green);border:1px solid var(--line);border-radius:10px;font:700 26px var(--display);cursor:pointer;min-height:52px}
+.semana button:disabled{color:var(--line);cursor:default}
+.sem-txt{display:flex;flex-direction:column;align-items:center;justify-content:center;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:6px}
+.sem-txt b{font:700 17px var(--display);letter-spacing:.05em;text-transform:uppercase}
+.sem-txt span{font:500 13px var(--mono);color:var(--muted)}
+.hoje-btn{background:none;border:0;color:var(--green);font:600 14px var(--body);cursor:pointer;padding:4px;justify-self:center}
+.sem-tot{display:flex;gap:12px}
+.sem-tot div{flex:1;border-left:3px solid var(--green);padding-left:10px}
+.sem-tot b{display:block;font:600 24px var(--mono)}
+.sem-tot span{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
+.dia-h{font:700 14px var(--display);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:10px 0 2px;display:flex;justify-content:space-between}
+.dia-h:first-child{margin-top:0}
+/* Email */
+.mcampo{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"rot btn" "val btn";column-gap:10px;align-items:center;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 10px 10px 12px}
+.mrot{grid-area:rot;font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.mval{grid-area:val;font-size:15px;overflow-wrap:anywhere;user-select:all}
+.mcop{grid-area:btn;background:none;border:1px solid var(--green);color:var(--green);border-radius:8px;padding:10px 14px;font:600 14px var(--body);cursor:pointer;min-width:84px}
+.mcop.ok{background:var(--green);color:var(--green-ink)}
+.mnota{font-size:13px;color:var(--muted)}
+#email{margin-bottom:2px}
 /* Resumo antes de gravar */
 .veu{position:fixed;inset:0;background:rgba(0,0,0,.7);display:flex;align-items:flex-end;justify-content:center;z-index:10;padding:16px 16px calc(16px + env(safe-area-inset-bottom,0px))}
 .resumo{width:100%;max-width:560px;max-height:calc(100dvh - 32px);overflow:auto;background:var(--panel);border:1px solid var(--green);border-radius:14px;padding:18px 16px;display:flex;flex-direction:column;gap:14px}
@@ -96,12 +118,10 @@ select{appearance:none;-webkit-appearance:none;background-image:linear-gradient(
       <img class="logo" alt="Logotipo" src="data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0idXRmLTgiPz4KPCEtLSBHZW5lcmF0b3I6IEFkb2JlIElsbHVzdHJhdG9yIDI3LjAuMCwgU1ZHIEV4cG9ydCBQbHVnLUluIC4gU1ZHIFZlcnNpb246IDYuMDAgQnVpbGQgMCkgIC0tPgo8c3ZnIHZlcnNpb249IjEuMSIgaWQ9IkxheWVyXzEiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgeG1sbnM6eGxpbms9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkveGxpbmsiIHg9IjBweCIgeT0iMHB4IgoJIHZpZXdCb3g9IjAgMCA0NTYgMTg0LjMiIHN0eWxlPSJlbmFibGUtYmFja2dyb3VuZDpuZXcgMCAwIDQ1NiAxODQuMzsiIHhtbDpzcGFjZT0icHJlc2VydmUiPgo8c3R5bGUgdHlwZT0idGV4dC9jc3MiPgoJLnN0MHtmaWxsOiNCOUQ0MDY7fQoJLnN0MXtmaWxsOiMwMDdCN0Y7fQoJLnN0MntmaWxsOiMzRjlCOUU7fQo8L3N0eWxlPgo8Zz4KCTxwYXRoIGNsYXNzPSJzdDAiIGQ9Ik00NDQuMiw3Mi43Yy0yMy40LDcuNi00Ni41LDE1LjEtNjkuNywyMi43Yy0zLTMuNC00LjItNy40LTUuNi0xMS4yYy0zLjQtOS4xLTQuOS0xOC42LTUuMS0yOC4zCgkJYy0wLjMtMTcuOCwxMC4zLTI5LjksMjMuOC0zNC4yYzIyLjMtNy4xLDQ0LjUtMTQuMyw2Ni43LTIxLjVjMC41LTAuMSwxLTAuMSwxLjUtMC4yQzQ1Ni41LDMuNiw0NDguNSw1My41LDQ0NC4yLDcyLjd6Ii8+Cgk8cGF0aCBjbGFzcz0ic3QxIiBkPSJNNDU1LDE0Ny4xYy04LjcsNi43LTE4LjEsMTIuMy0yNy4xLDE4LjZjLTguMyw1LjgtMTYuOSwxMS4zLTI1LjMsMTdjLTEuNiwxLjEtMywxLjktNSwxLjQKCQljLTE2LjItNC4xLTMwLjYtMTEuMS00MS0yNC43Yy01LjEtNi43LTguMy0xNC40LTkuNy0yMi43Yy0wLjQtMi4xLTAuNC00LjQtMC4xLTYuNWMyLTE0LDQuMi0yNy45LDYuMy00MS45CgkJYzEuMy04LjYsMi42LTE3LjMsNC4xLTI1LjljMS40LDcuNCwxLjksMTQuOCw0LjMsMjJjMTEuMiwzMi43LDMzLjIsNTMuMyw2Ny4yLDYwLjhjNi45LDEuNSwxMy44LDEuOCwyMC44LDEuOAoJCUM0NTEuMywxNDYuNSw0NTMuMiwxNDYuMiw0NTUsMTQ3LjF6Ii8+Cgk8cGF0aCBjbGFzcz0ic3QyIiBkPSJNNDU1LDE0Ny4xYy0xLjgtMC4xLTMuNy0wLjEtNS41LTAuMmMyLTEuNCw0LjMtMC43LDYuNS0wLjljMCwwLjQsMCwwLjgtMC4xLDAuOQoJCUM0NTUuNywxNDcuMSw0NTUuMywxNDcuMSw0NTUsMTQ3LjF6Ii8+Cgk8cGF0aCBkPSJNMzMzLjIsNTMuNmMtMTUuMywwLTMwLjctMC40LTQ2LDAuMWMtMTQuMywwLjQtMjUuOSwxMC43LTI4LjQsMjQuM2MtMS41LDgtMi44LDE2LjEtNC4zLDI0LjFjLTEuNyw5LjItMy41LDE4LjQtNS4zLDI4LjIKCQljLTYuNS00LjctMTIuNi05LjEtMTkuMS0xMy44YzEuOS0xLjMsMy4zLTIuMiw0LjYtMy4xYzguMi01LjgsMTMuOC0xMy40LDE2LjMtMjMuMWM1LTE5LjItNy4xLTM1LjYtMjQuOS0zNi4zCgkJYy05LjMtMC40LTE4LjcsMC0yOC0wLjNjLTE2LjMtMC41LTI5LDExLTMxLjUsMjYuMmMtMi4yLDEzLjEtNC45LDI2LjEtNy4zLDM5LjFjLTAuMywwLTAuNiwwLjEtMC45LDAuMQoJCWMtMy44LTIxLjYtNy42LTQzLjMtMTEuNS02NC45Yy04LjMsMC0xNi4xLDAtMjQuMywwYy03LjksMTEuMS0xNiwyMi4zLTI0LDMzLjZjLTgsMTEuMi0xNiwyMi40LTI0LDMzLjZjLTExLjUsMC0yMi42LDAuMS0zMy44LDAKCQljLTE0LjEtMC4xLTIyLjUtMTEuNS0xOC44LTI1LjFjMy4yLTExLjgsMTUuNC0yMS44LDI4LjEtMjEuNWMxMi4zLDAuMiwyNC43LDAuMSwzNywwYzEuNiwwLDMuMywwLjQsNC42LTEuMgoJCWM1LjEtNi4zLDEwLjMtMTIuNiwxNS43LTE5LjJjLTEuNC0wLjEtMi4yLTAuMi0zLTAuMmMtMTksMC0zOCwwLTU3LDBjLTIuMiwwLTQuMywwLjEtNi40LDAuNmMtMTUuMywzLjQtMjYuMywxMi4zLTM0LDI1LjYKCQljLTYsMTAuNC04LjcsMjEuNi02LjIsMzMuNmMzLjQsMTYuOSwxNy43LDI4LjIsMzUuNiwyOC41YzEwLjMsMC4yLDIwLjcsMCwzMSwwYzYuMiwwLDEyLjMsMCwxOC40LDBjNS4yLTcuMiwxMC4yLTE0LjIsMTUuMi0yMS4yCgkJYzUuOC0wLjEsMTEuMSwxLjQsMTYuMiwzLjRjOS4zLDMuOCwxNi44LDkuOSwyMi44LDE3LjRjMTIuNCwwLDI0LjMsMCwzNi4yLDBjMi40LTEyLjgsNC44LTI1LjMsNy4zLTM4LjNjMS45LDEuNCwzLjIsMi40LDQuNSwzLjQKCQljMTMuOSwxMC45LDI3LjgsMjEuOCw0MS42LDMyLjhjMi4yLDEuOCw0LjQsMi42LDcuMiwyLjZjOS4yLTAuMiwxOC4zLDAsMjcuNS0wLjFjMS4zLDAsMi43LDAuNCwzLjktMC44CgkJYzIuMi0xMS42LDQuNC0yMy4zLDYuNy0zNS41YzE0LDAsMjcuNywwLDQxLjYsMGMxLjYtNi44LDMuMS0xMy4yLDQuNy0yMC4yYy0xNC41LDAtMjguNCwwLTQyLjYsMGMwLjMtMS41LDAuNi0yLjUsMC43LTMuNAoJCWMxLjMtNy41LDIuMy04LjQsOS42LTguNGMxMi43LDAsMjUuMywwLDM4LDBjMS40LDAsMywwLjUsNC40LTAuOGMwLjktNi4yLDIuOC0xMi41LDMuMy0xOC45QzMzNC4xLDUzLjksMzMzLjcsNTMuNiwzMzMuMiw1My42egoJCSBNMTA4LjIsMTExLjJjNy05LjksMTMuNy0xOS4yLDIxLTI5LjVjMi4xLDExLjcsMy45LDIyLjQsNS45LDMzLjVDMTI2LjMsMTEyLjEsMTE3LjcsMTExLjIsMTA4LjIsMTExLjJ6IE0yMTcuMiwxMDAuMgoJCWMtMi44LDAuNC01LjYsMC4zLTguNSwwLjNjLTcuOCwwLTE1LjYsMC0yMy43LDBjLTEtMi43LDAuMi00LjcsMC41LTYuOGMwLjgtNC42LDEuNi05LjIsMi42LTEzLjdjMS00LjgsMi42LTYuMSw3LjUtNi4xCgkJYzguMywwLDE2LjcsMCwyNSwwYzguNCwwLDEzLjMsNi41LDEwLjYsMTQuNEMyMjksOTUsMjI0LjMsOTkuMiwyMTcuMiwxMDAuMnoiLz4KPC9nPgo8L3N2Zz4K">
       <div style="min-width:0"><h1>Penalizações</h1><a class="voltar" href="./">‹ Início</a></div>
     </div>
-    <div class="datebox"><input type="date" id="dia" aria-label="Dia"></div>
   </header>
 
   <section class="card" aria-labelledby="t-novo">
     <h2 id="t-novo">Nova penalização</h2>
-    <div class="aviso" id="aviso" hidden>Está a ver outro dia. Só é possível registar penalizações no dia de hoje.</div>
     <div class="par">
       <div class="campo" id="c-volta">
         <label for="volta">Volta</label>
@@ -141,15 +161,35 @@ select{appearance:none;-webkit-appearance:none;background-image:linear-gradient(
   </section>
 
   <section class="card" aria-labelledby="t-lista">
-    <h2 id="t-lista">Penalizações do dia <span id="total">0</span></h2>
+    <h2 id="t-lista">Penalizações da semana <span id="total">0</span></h2>
+    <div class="semana" role="group" aria-label="Semana">
+      <button type="button" id="semAnt" aria-label="Semana anterior">‹</button>
+      <div class="sem-txt"><b id="semNum"></b><span id="semDatas"></span></div>
+      <button type="button" id="semSeg" aria-label="Semana seguinte">›</button>
+    </div>
+    <button type="button" class="hoje-btn" id="semHoje" hidden>Voltar à semana atual</button>
+    <div class="sem-tot" id="semTot"></div>
     <div id="lista"></div>
     <div class="hint">Os registos são partilhados com todo o armazém. Sem internet ficam no telemóvel e são enviados quando a rede voltar.</div>
   </section>
 
   <section class="card">
-    <button class="btn" id="excel" type="button">Exportar Excel do dia</button>
+    <button class="registar" id="email" type="button">Enviar por email</button>
+    <button class="btn" id="excel" type="button">Descarregar Excel da semana</button>
     <div class="msg" id="msgX" role="status"></div>
   </section>
+</div>
+
+<div class="veu" id="mail" hidden>
+  <div class="resumo" role="dialog" aria-modal="true" aria-labelledby="t-mail">
+    <h2 id="t-mail">Enviar por email</h2>
+    <div class="mcampo" id="mParaCx"><div class="mrot">Para</div><div class="mval" id="mPara"></div><button type="button" class="mcop" id="mCopPara">Copiar</button></div>
+    <div class="mcampo"><div class="mrot">Assunto</div><div class="mval" id="mAssunto"></div><button type="button" class="mcop" id="mCopAss">Copiar</button></div>
+    <div class="mnota" id="mNota"></div>
+    <button class="registar" id="mAbrir" type="button">Abrir email com o ficheiro</button>
+    <div class="acoes"><button class="btn" id="mFechar" type="button">Fechar</button><button class="btn" id="mXlsx" type="button">Descarregar Excel</button></div>
+    <div class="msg" id="mMsg" role="status"></div>
+  </div>
 </div>
 
 <div class="veu" id="veu" hidden>
@@ -183,9 +223,19 @@ const eur=n=>n.toLocaleString("pt-PT",{minimumFractionDigits:n%1?2:0,maximumFrac
 const motivoDe=m=>MOTIVOS.find(x=>x[0]===m);
 
 /* BD: { "AAAA-MM-DD": [ {id, t, volta, sub, motorista, motivo, valor (número ou texto), reemb, obs} ] } */
-let BD={},aConfirmar=null,diaAberto=hoje(),pendente=null;
+let BD={},aConfirmar=null,pendente=null;
+/* Semanas de segunda a domingo; semana = data da segunda-feira (AAAA-MM-DD) */
+const dataDe=dia=>{const [y,m,d]=dia.split("-").map(Number);return new Date(y,m-1,d);};
+function segundaDe(dia){const d=dataDe(dia);d.setDate(d.getDate()-((d.getDay()+6)%7));return diaDe(d);}
+const somaDias=(dia,n)=>{const d=dataDe(dia);d.setDate(d.getDate()+n);return diaDe(d);};
+function numSemana(dia){const d=dataDe(dia);d.setDate(d.getDate()+3-((d.getDay()+6)%7));const j=new Date(d.getFullYear(),0,4);return 1+Math.round(((d-j)/86400000-3+((j.getDay()+6)%7))/7);}
+const ddmm=dia=>{const [y,m,d]=dia.split("-");return d+"/"+m;};
+let semana=segundaDe(hoje());
+const diasDaSemana=s=>Array.from({length:7},(_,i)=>somaDias(s,i));
+const daSemana=s=>diasDaSemana(s).flatMap(d=>(BD[d]||[]).map(r=>({...r,dia:d})));
+const NOMES_DIA=["Domingo","Segunda","Terça","Quarta","Quinta","Sexta","Sábado"];
 /* Penalizações partilhadas pelo armazém (ver sjt-online.js) */
-const LIG=SJT.ligar("penalizacoes",{aoMudar:()=>{carregar();sugerirMotoristas();render();}});
+const LIG=SJT.ligar("penalizacoes",{diasLocais:0,aoMudar:()=>{carregar();sugerirMotoristas();render();}});
 function carregar(){BD={};LIG.registos().forEach(r=>{(BD[r.dia]=BD[r.dia]||[]).push({...r.dados,id:r.id,autor:r.autor,meu:r.meu,alteradoPor:r.alteradoPor,pendente:!!r.pendente});});}
 carregar();
 function msg(id,t,ok){const m=$(id);m.textContent=t||"";m.className="msg "+(ok?"ok":"err");}
@@ -226,18 +276,34 @@ $("reemb").addEventListener("input",valorDoMotivo);
 ["volta","sub","motorista","motivo","valor","reemb"].forEach(k=>$(k).addEventListener("input",()=>{const c=$("c-"+k);c&&c.classList.remove("erro");}));
 $("motivo").addEventListener("change",()=>$("c-motivo").classList.remove("erro"));
 
-$("dia").value=diaAberto;
-$("dia").addEventListener("change",()=>{aConfirmar=null;msg("msg","");msg("msgX","");render();});
+function irSemana(s){semana=s;aConfirmar=null;msg("msgX","");render();}
+$("semAnt").onclick=()=>irSemana(somaDias(semana,-7));
+$("semSeg").onclick=()=>irSemana(somaDias(semana,7));
+$("semHoje").onclick=()=>irSemana(segundaDe(hoje()));
 
 const CAMPOS=["volta","sub","motorista","motivo","reemb","valor","obs"];
 function render(){
-  const dia=$("dia").value||hoje(),eHoje=dia===hoje(),l=(BD[dia]||[]).slice().sort((a,b)=>b.t.localeCompare(a.t));
-  $("aviso").hidden=eHoje;$("registar").disabled=!eHoje;
-  CAMPOS.forEach(k=>$(k).disabled=!eHoje);
+  const atual=segundaDe(hoje()),fim=somaDias(semana,6);
+  $("semNum").textContent="Semana "+numSemana(semana)+(semana===atual?" · esta semana":"");
+  $("semDatas").textContent=ddmm(semana)+" a "+ddmm(fim)+"/"+fim.slice(0,4);
+  $("semSeg").disabled=semana>=atual;$("semHoje").hidden=semana===atual;
+  const l=daSemana(semana);
+  const soma=l.reduce((a,r)=>a+(typeof r.valor==="number"?r.valor:0),0),naoPago=l.filter(r=>typeof r.valor!=="number").length;
   $("total").textContent=l.length;
+  $("semTot").innerHTML="";
+  [[l.length,"Penalizações"],[eur(soma),"Total"+(naoPago?" (+"+naoPago+" sem valor)":"")]].forEach(([v,t])=>{const d=document.createElement("div");const b=document.createElement("b");b.textContent=v;const s=document.createElement("span");s.textContent=t;d.append(b,s);$("semTot").appendChild(d);});
   const el=$("lista");el.textContent="";
-  if(!l.length){const p=document.createElement("div");p.className="vazio";p.textContent="Sem penalizações registadas neste dia.";el.appendChild(p);return;}
-  l.forEach(r=>{
+  if(!l.length){const p=document.createElement("div");p.className="vazio";p.textContent="Sem penalizações registadas nesta semana.";el.appendChild(p);return;}
+  /* agrupadas por dia, do mais recente para o mais antigo */
+  diasDaSemana(semana).reverse().forEach(dia=>{
+    const ld=(BD[dia]||[]).slice().sort((a,b)=>b.t.localeCompare(a.t));
+    if(!ld.length)return;
+    const h=document.createElement("div");h.className="dia-h";const nd=dataDe(dia);
+    h.innerHTML="";const e1=document.createElement("span");e1.textContent=NOMES_DIA[nd.getDay()]+", "+ddmm(dia);const e2=document.createElement("span");e2.textContent=ld.length+" penalizaç"+(ld.length===1?"ão":"ões");h.append(e1,e2);el.appendChild(h);
+    ld.forEach(r=>el.appendChild(linha(r)));
+  });
+}
+function linha(r){
     const row=document.createElement("div");row.className="r";
     const info=document.createElement("div");info.className="info";
     const top=document.createElement("div");top.className="top";
@@ -251,10 +317,9 @@ function render(){
     info.append(top,m,mt,au);
     if(r.obs){const o=document.createElement("div");o.className="obs";o.textContent=r.obs;info.appendChild(o);}
     const b=document.createElement("button");b.type="button";b.className="anular"+(aConfirmar===r.id?" confirm":"");
-    b.textContent=aConfirmar===r.id?"Confirmar":"Apagar";b.hidden=!eHoje||!r.meu;b.onclick=()=>apagar(r.id);
+    b.textContent=aConfirmar===r.id?"Confirmar":"Apagar";b.hidden=!r.meu;b.onclick=()=>apagar(r.id);
     b.setAttribute("aria-label",(aConfirmar===r.id?"Confirmar apagar":"Apagar")+" penalização da volta "+r.volta);
-    row.append(info,b);el.appendChild(row);
-  });
+    row.append(info,b);return row;
 }
 
 /* 1.º passo: validar e mostrar o resumo */
@@ -294,7 +359,7 @@ document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("veu").hidden)$(
 $("gravar").onclick=()=>{
   if(!pendente)return;
   const agora=new Date(),dia=diaDe(agora);
-  if($("dia").value!==dia)$("dia").value=dia;
+  semana=segundaDe(dia);
   const r={id:agora.getTime().toString(36)+Math.random().toString(36).slice(2,6)+SJT.dispositivo().replace(/[^a-z0-9]/gi,"").slice(0,4),t:agora.toISOString(),...pendente};
   if(!LIG.gravar(r.id,dia,r)){fecharResumo();msg("msg","O telemóvel não deixou guardar (sem espaço ou armazenamento bloqueado).",false);return;}
   carregar();
@@ -312,10 +377,11 @@ function apagar(id){
   carregar();sugerirMotoristas();msg("msg","Penalização apagada.",true);render();
 }
 
-/* Se a app ficar aberta e passar a meia-noite, muda para o novo dia */
-function virarDia(){if($("dia").value===diaAberto&&hoje()!==diaAberto){diaAberto=hoje();$("dia").value=diaAberto;render();}}
-document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")virarDia();});
-setInterval(virarDia,60000);
+/* Se a app ficar aberta e mudar a semana (segunda-feira à meia-noite), passa para a nova semana */
+let semAtual=segundaDe(hoje());
+function virarSemana(){const s=segundaDe(hoje());if(s!==semAtual){if(semana===semAtual)semana=s;semAtual=s;render();}}
+document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")virarSemana();});
+setInterval(virarSemana,60000);
 
 /* Gerador mínimo de .xlsx (sem bibliotecas, funciona offline) */
 const MIME_XLSX="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
@@ -358,27 +424,85 @@ function criarXlsx({titulo,folha,cab,linhas,larguras}){
   const e=new TextEncoder();
   return zipStore([["[Content_Types].xml",e.encode(ct)],["_rels/.rels",e.encode(rels)],["xl/workbook.xml",e.encode(wb)],["xl/_rels/workbook.xml.rels",e.encode(wrels)],["xl/styles.xml",e.encode(styles)],["xl/worksheets/sheet1.xml",e.encode(sheet)]]);
 }
-function gerarExcel(dia){
-  const l=(BD[dia]||[]).slice().sort((a,b)=>a.t.localeCompare(b.t));
-  if(!l.length)return null;
-  const [y,m,d]=dia.split("-");
-  const linhas=l.map(r=>{
+function linhasSemana(s){
+  return daSemana(s).sort((a,b)=>a.t.localeCompare(b.t)).map(r=>{
     let obs=(r.obs||"").replace(/\s*\n\s*/g," ");
     if(typeof r.reemb==="number")obs=("Reembolso: "+eur(r.reemb)+" + 25%"+(obs?". "+obs:""));
     const val=r.valor===undefined?"":r.valor;
-    return [d+"/"+m+"/"+y,/^\d+$/.test(r.volta)?+r.volta:r.volta,r.sub||"",r.motorista,r.motivo,val,obs,r.autor||""];
+    return [ddmm(r.dia)+"/"+r.dia.slice(0,4),/^\d+$/.test(r.volta)?+r.volta:r.volta,r.sub||"",r.motorista,r.motivo,val,obs,r.autor||""];
   });
-  return {bytes:criarXlsx({titulo:"PENALIZAÇÕES — "+d+"/"+m+"/"+y,folha:"Penalizações",cab:["Data","Volta","Subcontratado","Motorista","Motivo","Valor (€)","Observações","Registado por"],linhas,larguras:[13,10,18,26,40,16,44,20]}),nome:`penalizacoes-${y}-${m}-${d}.xlsx`};
 }
+const CAB=["Data","Volta","Subcontratado","Motorista","Motivo","Valor (€)","Observações","Registado por"];
+const nomeSemana=s=>"Semana "+numSemana(s)+" ("+ddmm(s)+" a "+ddmm(somaDias(s,6))+"/"+somaDias(s,6).slice(0,4)+")";
+const ficheiroBase=s=>"penalizacoes-"+S.polo.nome.normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^\w]+/g,"-").replace(/^-|-$/g,"").toLowerCase()+"-"+somaDias(s,3).slice(0,4)+"-S"+String(numSemana(s)).padStart(2,"0");
+function gerarExcel(s){
+  const linhas=linhasSemana(s);if(!linhas.length)return null;
+  return {bytes:criarXlsx({titulo:"PENALIZAÇÕES — "+nomeSemana(s)+" — "+S.polo.nome,folha:"Penalizações",cab:CAB,linhas,larguras:[13,10,18,26,40,16,44,20]}),nome:ficheiroBase(s)+".xlsx"};
+}
+/* CSV (abre no Excel): a partilha do telemóvel só aceita certos tipos de ficheiro e o .xlsx não está entre eles */
+function gerarCsv(s){
+  const linhas=linhasSemana(s);if(!linhas.length)return null;
+  const q=v=>{const t=typeof v==="number"?String(v).replace(".",","):String(v==null?"":v);return /[";\n]/.test(t)?'"'+t.replace(/"/g,'""')+'"':t;};
+  const txt="﻿"+[CAB,...linhas].map(l=>l.map(q).join(";")).join("\r\n")+"\r\n";
+  return {texto:txt,nome:ficheiroBase(s)+".csv"};
+}
+function descarregar(blob,nome){const url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=nome;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),15000);}
 $("excel").onclick=()=>{
   try{
-    const x=gerarExcel($("dia").value||hoje());
-    if(!x){msg("msgX","Ainda não há penalizações registadas neste dia.",false);return;}
-    const url=URL.createObjectURL(new Blob([x.bytes],{type:MIME_XLSX}));
-    const a=document.createElement("a");a.href=url;a.download=x.nome;document.body.appendChild(a);a.click();a.remove();
-    setTimeout(()=>URL.revokeObjectURL(url),15000);
+    const x=gerarExcel(semana);
+    if(!x){msg("msgX","Não há penalizações nesta semana.",false);return;}
+    descarregar(new Blob([x.bytes],{type:MIME_XLSX}),x.nome);
     msg("msgX","Excel gerado: "+x.nome+" (ver em Transferências).",true);
   }catch(err){msg("msgX","Não foi possível gerar o Excel.",false);}
+};
+
+/* ---- Enviar por email ---- */
+async function copiar(t){try{await navigator.clipboard.writeText(t);return true;}catch(e){return false;}}
+function saudacao(){const h=new Date().getHours();return h<13?"Bom dia":h<20?"Boa tarde":"Boa noite";}
+let mailAtual=null;
+function textoMail(s){
+  const l=daSemana(s),soma=l.reduce((a,r)=>a+(typeof r.valor==="number"?r.valor:0),0);
+  const assunto="Penalizações | "+nomeSemana(s)+" | "+S.polo.nome;
+  const corpo=[saudacao()+",","","Segue em anexo o ficheiro com as penalizações registadas no polo de "+S.polo.nome+" na "+nomeSemana(s).replace("Semana","semana")+".","",
+    "Total de penalizações: "+l.length,"Valor total: "+eur(soma)+(l.some(r=>typeof r.valor!=="number")?" (há penalizações sem valor em euros, ver ficheiro)":""),""].join("\n");
+  return {assunto,corpo};
+}
+$("email").onclick=()=>{
+  if(!daSemana(semana).length){msg("msgX","Não há penalizações nesta semana para enviar.",false);return;}
+  const {assunto,corpo}=textoMail(semana),para=((S.config||{}).emailPenalizacoes||"").trim();
+  mailAtual={s:semana,assunto,corpo,para};
+  $("mParaCx").hidden=!para;$("mPara").textContent=para;$("mAssunto").textContent=assunto;
+  ["mCopPara","mCopAss"].forEach(k=>{$(k).textContent="Copiar";$(k).classList.remove("ok");});
+  $("mNota").textContent="O ficheiro vai em CSV (abre diretamente no Excel): a partilha do telemóvel não aceita ficheiros .xlsx. Se precisar do Excel formatado, use Descarregar Excel e anexe-o. Ao abrir o email, o assunto fica copiado: se não aparecer, cole-o."+(para?"":" Este polo ainda não tem email para penalizações definido na gestão.");
+  $("mMsg").textContent="";$("mail").hidden=false;document.body.classList.add("preso");$("mAbrir").focus();
+};
+function fecharMail(){$("mail").hidden=true;document.body.classList.remove("preso");}
+$("mFechar").onclick=fecharMail;
+$("mail").addEventListener("click",e=>{if(e.target===$("mail"))fecharMail();});
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("mail").hidden)fecharMail();});
+async function botaoCopiar(id,txt){const ok=await copiar(txt);$(id).textContent=ok?"Copiado ✓":"Selecione";$(id).classList.toggle("ok",ok);
+  ["mCopPara","mCopAss"].filter(k=>k!==id).forEach(k=>{$(k).textContent="Copiar";$(k).classList.remove("ok");});}
+$("mCopPara").onclick=()=>botaoCopiar("mCopPara",mailAtual.para);
+$("mCopAss").onclick=()=>botaoCopiar("mCopAss",mailAtual.assunto);
+$("mXlsx").onclick=()=>{const x=gerarExcel(mailAtual.s);if(x){descarregar(new Blob([x.bytes],{type:MIME_XLSX}),x.nome);$("mMsg").textContent="Excel descarregado: "+x.nome+" (ver em Transferências).";$("mMsg").className="msg ok";}};
+$("mAbrir").onclick=async()=>{
+  const m=mailAtual;if(!m)return;
+  const c=gerarCsv(m.s);if(!c)return;
+  const fic=new File([c.texto],c.nome,{type:"text/csv"});
+  let partilha=false;
+  try{partilha=!!(navigator.share&&navigator.canShare&&navigator.canShare({files:[fic],title:m.assunto,text:m.corpo}));}catch(e){}
+  const copiado=await copiar(m.assunto);
+  if(copiado){$("mCopAss").textContent="Copiado ✓";$("mCopAss").classList.add("ok");}
+  if(partilha){
+    try{await navigator.share({title:m.assunto,text:m.corpo,files:[fic]});fecharMail();
+      msg("msgX","Email preparado na app escolhida com o ficheiro "+c.nome+"."+(copiado?" O assunto foi copiado — cole-o se não aparecer.":"")+(m.para?" Destinatário: "+m.para+".":""),true);return;}
+    catch(e){if(e&&e.name==="AbortError")return;}
+  }
+  /* sem partilha de ficheiros: descarrega o Excel e abre o email preenchido para anexar */
+  const x=gerarExcel(m.s);if(x)descarregar(new Blob([x.bytes],{type:MIME_XLSX}),x.nome);
+  const href="mailto:"+encodeURIComponent(m.para).replace(/%2C/gi,",").replace(/%40/g,"@")+"?subject="+encodeURIComponent(m.assunto)+"&body="+encodeURIComponent(m.corpo);
+  setTimeout(()=>{const a=document.createElement("a");a.href=href;document.body.appendChild(a);a.click();a.remove();},500);
+  fecharMail();msg("msgX","Email aberto com destinatário, assunto e texto. O Excel foi descarregado (ver Transferências): anexe-o ao email.",true);
 };
 
 /* Registos de antes do online, que ficaram neste telemóvel */
