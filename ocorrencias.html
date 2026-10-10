@@ -135,6 +135,12 @@ select{appearance:none;-webkit-appearance:none;background-image:linear-gradient(
 .resolver button{border-radius:8px;padding:12px;font:700 15px var(--display);letter-spacing:.05em;text-transform:uppercase;cursor:pointer;border:1px solid var(--line);background:none;color:var(--fg)}
 .resolver button.p{background:var(--green);border-color:var(--green);color:var(--green-ink)}
 .grupo-h{font:700 15px var(--display);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-top:6px}
+.mcampo{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"rot btn" "val btn";column-gap:10px;align-items:center;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 10px 10px 12px}
+.mrot{grid-area:rot;font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.mval{grid-area:val;font-size:15px;overflow-wrap:anywhere;user-select:all}
+.mcop{grid-area:btn;background:none;border:1px solid var(--green);color:var(--green);border-radius:8px;padding:10px 14px;font:600 14px var(--body);cursor:pointer;min-width:84px}
+.mcop.ok{background:var(--green);color:var(--green-ink)}
+.mnota{font-size:13px;color:var(--muted)}
 .ver{position:fixed;inset:0;z-index:40;background:rgba(0,0,0,.94);display:flex;flex-direction:column;padding:calc(10px + env(safe-area-inset-top,0px)) 12px calc(12px + env(safe-area-inset-bottom,0px));gap:10px}
 .ver .vtop{display:flex;justify-content:space-between;align-items:center;color:var(--muted);font-size:14px}
 .ver .vtop button,.ver .nav button{background:none;border:1px solid var(--line);color:var(--fg);border-radius:8px;padding:10px 16px;font:600 15px var(--body);cursor:pointer}
@@ -208,6 +214,18 @@ select{appearance:none;-webkit-appearance:none;background-image:linear-gradient(
     <button class="btn" id="excel" type="button">Exportar Excel do dia</button>
     <div class="msg" id="msgX" role="status"></div>
   </section>
+</div>
+
+<div class="veu" id="mail" hidden>
+  <div class="resumo" role="dialog" aria-modal="true" aria-labelledby="t-mail">
+    <h2 id="t-mail">Enviar email</h2>
+    <div class="mcampo" id="mParaCx"><div class="mrot">Para</div><div class="mval" id="mPara"></div><button type="button" class="mcop" id="mCopPara">Copiar</button></div>
+    <div class="mcampo"><div class="mrot">Assunto</div><div class="mval" id="mAssunto"></div><button type="button" class="mcop" id="mCopAss">Copiar</button></div>
+    <div class="mnota" id="mNota"></div>
+    <button class="registar" id="mAbrir" type="button">Abrir email com as fotografias</button>
+    <div class="acoes"><button class="btn" id="mFechar" type="button">Fechar</button><button class="btn" id="mSemFotos" type="button">Sem fotografias</button></div>
+    <div class="msg" id="mMsg" role="status"></div>
+  </div>
 </div>
 
 <div class="ver" id="ver" hidden role="dialog" aria-modal="true" aria-label="Fotografia">
@@ -440,38 +458,69 @@ function textoEmail(r){
   return {assunto,corpo:l.join("\n")};
 }
 async function copiar(t){try{await navigator.clipboard.writeText(t);return true;}catch(e){return false;}}
+/* O assunto passado na partilha nem sempre chega à app de email (depende do telemóvel, do browser
+   e de haver só uma fotografia). Por isso a janela mostra o Para e o Assunto para copiar, e ao abrir
+   o email o assunto fica já copiado. */
+let mailAtual=null;
 async function enviarEmail(r){
-  msg("msgL","A preparar o email…",true);
   const {assunto,corpo}=textoEmail(r),para=destinoEmail();
-  const ficheiros=[],faltam=[];
-  for(const [i,fid] of (r.fotos||[]).entries()){
-    try{const b=await FOTOS.blob(fid);ficheiros.push(new File([b],"volume-danificado-"+String(r.guia||"sem-guia").replace(/[^\w-]+/g,"_")+"-"+(i+1)+".jpg",{type:"image/jpeg"}));}
+  mailAtual={r,assunto,corpo,para,ficheiros:null,aviso:""};
+  $("mParaCx").hidden=!para;$("mPara").textContent=para;$("mAssunto").textContent=assunto;
+  ["mCopPara","mCopAss"].forEach(k=>{$(k).textContent="Copiar";$(k).classList.remove("ok");});
+  const n=(r.fotos||[]).length;
+  $("mAbrir").textContent=n?"Abrir email com "+(n===1?"a fotografia":"as "+n+" fotografias"):"Abrir email";
+  $("mSemFotos").hidden=!n;
+  $("mNota").textContent="Ao abrir o email, o assunto fica copiado: se não aparecer, toque no campo Assunto e cole."+(para?"":" Este polo ainda não tem email para ocorrências definido na gestão — escreva o destinatário.");
+  $("mMsg").textContent="";$("mail").hidden=false;document.body.classList.add("preso");$("mAbrir").focus();
+}
+function fecharMail(){$("mail").hidden=true;document.body.classList.remove("preso");}
+$("mFechar").onclick=fecharMail;
+$("mail").addEventListener("click",e=>{if(e.target===$("mail"))fecharMail();});
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("mail").hidden)fecharMail();});
+async function botaoCopiar(id,txt){const ok=await copiar(txt);$(id).textContent=ok?"Copiado ✓":"Selecione";$(id).classList.toggle("ok",ok);
+  ["mCopPara","mCopAss"].filter(k=>k!==id).forEach(k=>{$(k).textContent="Copiar";$(k).classList.remove("ok");});}
+$("mCopPara").onclick=()=>botaoCopiar("mCopPara",mailAtual.para);
+$("mCopAss").onclick=()=>botaoCopiar("mCopAss",mailAtual.assunto);
+async function ficheirosDe(m){
+  if(m.ficheiros)return m.ficheiros;
+  const fs=[],faltam=[];
+  for(const [i,fid] of (m.r.fotos||[]).entries()){
+    try{const b=await FOTOS.blob(fid);fs.push(new File([b],"volume-danificado-"+String(m.r.guia||"sem-guia").replace(/[^\w-]+/g,"_")+"-"+(i+1)+".jpg",{type:"image/jpeg"}));}
     catch(e){faltam.push(i+1);}
   }
-  const aviso=faltam.length?" Atenção: "+(faltam.length===1?"a fotografia "+faltam[0]+" ainda não está":"as fotografias "+faltam.join(", ")+" ainda não estão")+" disponível — foi tirada noutro telemóvel e ainda não foi enviada.":"";
+  m.aviso=faltam.length?" Atenção: "+(faltam.length===1?"a fotografia "+faltam[0]+" ainda não está disponível":"as fotografias "+faltam.join(", ")+" ainda não estão disponíveis")+" (tirada noutro telemóvel e ainda não enviada).":"";
+  m.ficheiros=fs;return fs;
+}
+$("mAbrir").onclick=async()=>{
+  const m=mailAtual;if(!m)return;
+  $("mAbrir").disabled=true;$("mMsg").textContent="A preparar…";$("mMsg").className="msg ok";
+  const fs=await ficheirosDe(m);
   let partilha=false;
-  try{partilha=!!(navigator.share&&navigator.canShare&&navigator.canShare({files:ficheiros.length?ficheiros:[new File([""],"x.txt",{type:"text/plain"})],title:assunto,text:corpo}));}catch(e){}
-  if(partilha&&ficheiros.length){
-    const copiado=para?await copiar(para):false;
+  try{partilha=fs.length>0&&!!(navigator.share&&navigator.canShare&&navigator.canShare({files:fs,title:m.assunto,text:m.corpo}));}catch(e){}
+  const copiado=await copiar(m.assunto);
+  if(copiado){$("mCopAss").textContent="Copiado ✓";$("mCopAss").classList.add("ok");$("mCopPara").textContent="Copiar";$("mCopPara").classList.remove("ok");}
+  $("mAbrir").disabled=false;
+  if(partilha){
     try{
-      await navigator.share({title:assunto,text:corpo,files:ficheiros});
-      marcarEmail(r);
-      msg("msgL","Email preparado na app escolhida."+(para?(copiado?" O endereço "+para+" foi copiado: cole-o no campo Para.":" Envie para: "+para+"."):" Escreva o destinatário no campo Para.")+aviso,!aviso);
+      await navigator.share({title:m.assunto,text:m.corpo,files:fs});
+      marcarEmail(m.r);fecharMail();
+      msg("msgL","Email preparado na app escolhida."+(copiado?" O assunto foi copiado — cole-o se não aparecer.":"")+(m.para?" Destinatário: "+m.para+".":"")+m.aviso,!m.aviso);
     }catch(e){
-      if(e&&e.name==="AbortError"){msg("msgL","");return;}
-      msg("msgL","Não foi possível abrir a partilha. A abrir o email sem anexos…",false);abrirMailto(r,assunto,corpo,para,ficheiros,aviso);
+      if(e&&e.name==="AbortError"){$("mMsg").textContent="";return;}
+      fecharMail();abrirMailto(m.r,m.assunto,m.corpo,m.para,fs,m.aviso);
     }
     return;
   }
-  abrirMailto(r,assunto,corpo,para,ficheiros,aviso);
-}
+  fecharMail();abrirMailto(m.r,m.assunto,m.corpo,m.para,fs,m.aviso);
+};
+$("mSemFotos").onclick=()=>{const m=mailAtual;if(!m)return;fecharMail();abrirMailto(m.r,m.assunto,m.corpo,m.para,[],"");};
 function abrirMailto(r,assunto,corpo,para,ficheiros,aviso){
   /* Descarrega as fotografias para anexar à mão e abre o email já escrito */
   ficheiros.forEach((f,i)=>setTimeout(()=>{const u=URL.createObjectURL(f),a=document.createElement("a");a.href=u;a.download=f.name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),15000);},i*400));
   const href="mailto:"+encodeURIComponent(para).replace(/%2C/gi,",").replace(/%40/g,"@")+"?subject="+encodeURIComponent(assunto)+"&body="+encodeURIComponent(corpo);
   setTimeout(()=>{const a=document.createElement("a");a.href=href;document.body.appendChild(a);a.click();a.remove();},ficheiros.length*400+100);
   marcarEmail(r);
-  msg("msgL","Email aberto com o assunto e o texto."+(ficheiros.length?" As fotografias foram descarregadas (ver Transferências): anexe-as ao email.":"")+aviso,!aviso);
+  msg("msgL","Email aberto com destinatário, assunto e texto."+(ficheiros.length?" As fotografias foram descarregadas (ver Transferências): anexe-as ao email.":"")+aviso,!aviso);
 }
 function marcarEmail(r){
   const atual=BD.find(x=>x.id===r.id)||r;
