@@ -30,6 +30,13 @@ h1{font:700 34px/1.1 var(--display);letter-spacing:.06em;text-transform:uppercas
 .app{position:relative}
 .badge{position:absolute;top:10px;right:10px;min-width:26px;height:26px;border-radius:13px;background:var(--green);color:#0a0a0a;font:700 14px/26px system-ui,sans-serif;padding:0 7px;text-align:center}
 .badge[hidden]{display:none}
+.badge.men{background:#e0574f;color:#fff}
+.app.tem-novas{border-color:var(--green);box-shadow:0 0 0 1px var(--green) inset}
+.app.tem-men{border-color:#e0574f;box-shadow:0 0 0 1px #e0574f inset}
+.app.tem-novas .ico{border-color:var(--green)}
+.ico .ponto{transform-origin:40px 9px;animation:pisca 1.6s ease-in-out infinite}
+@keyframes pisca{0%,100%{transform:scale(1)}50%{transform:scale(1.25)}}
+@media (prefers-reduced-motion:reduce){.ico .ponto{animation:none}}
 .ico{width:72px;height:72px;border-radius:18px;background:#0a0a0a;border:1px solid var(--line);display:grid;place-items:center;flex:none}
 .app b{font:700 19px/1.15 var(--display);letter-spacing:.03em;text-transform:uppercase;overflow-wrap:normal;max-width:100%}
 .app small{color:var(--muted);font-size:12px;line-height:1.3}
@@ -104,15 +111,38 @@ APPS.forEach(a=>{
   if(a.id){const n=document.createElement("span");n.className="badge";n.hidden=true;n.dataset.app=a.id;l.appendChild(n);}
   el.appendChild(l);
 });
-/* Passagem de Turno: nº de mensagens por ver no cartão (atualiza sozinho enquanto o hub está aberto) */
+/* Passagem de Turno: com mensagens por ver o ícone ganha um ponto de notificação, o cartão fica destacado
+   e mostra o número (vermelho se houver menções). Na app instalada, o número também aparece no ícone do telemóvel. */
 let LIG_TURNO=null;
+const ICONE_TURNO_NOVO=ICONE_TURNO.replace('</svg>','<circle cx="40" cy="9" r="7" fill="#e0574f" stroke="#0a0a0a" stroke-width="2.5" class="ponto"/></svg>');
 function contarTurno(){
   const b=document.querySelector('.badge[data-app="turno"]');if(!b||!LIG_TURNO)return;
-  const s=SJT.sessao()||{},ch=String(s.nome||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"").slice(0,60)||"sem-nome";
-  const n=LIG_TURNO.registos().filter(r=>{const d=r.dados||{};if(d.k!=="m"||r.meu||(d.vistos&&d.vistos[ch]))return false;return d.afixada||Date.now()-new Date(d.t).getTime()<7*86400000;}).length;
-  b.hidden=!n;b.textContent=n>99?"99+":String(n);b.setAttribute("aria-label",n+" por ver");
+  const s=SJT.sessao()||{},ch=String(s.nome||"").normalize("NFD").replace(/[̀-ͯ]/g,"").toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"").slice(0,60)||"sem-nome";
+  const regs=LIG_TURNO.registos(),resp={};
+  regs.forEach(r=>{const d=r.dados||{};if(d.k==="r")(resp[d.pai]=resp[d.pai]||[]).push({...d,meu:r.meu});});
+  const meMen=d=>(d.mencoes||[]).some(p=>p&&p.c===ch);
+  let n=0,men=0;
+  regs.forEach(r=>{const d=r.dados||{};if(d.k!=="m")return;
+    const v=d.vistos&&d.vistos[ch],tv=v?String(v.t||""):"";
+    const rm=(resp[r.id]||[]).some(x=>!x.meu&&meMen(x)&&String(x.t)>tv);
+    const mp=rm||(!r.meu&&!v&&meMen(d));
+    const porVer=rm||(!r.meu&&!v&&(d.afixada||mp||Date.now()-new Date(d.t).getTime()<7*86400000));
+    if(porVer)n++;if(mp)men++;});
+  const tile=b.closest(".app"),ico=tile.querySelector(".ico");
+  b.hidden=!n;b.textContent=n>99?"99+":String(n);b.classList.toggle("men",!!men);
+  tile.classList.toggle("tem-novas",!!n);tile.classList.toggle("tem-men",!!men);
+  const quer=n?ICONE_TURNO_NOVO:ICONE_TURNO;if(ico.dataset.v!==String(!!n)){ico.innerHTML=quer;ico.dataset.v=String(!!n);}
+  tile.setAttribute("aria-label","Passagem de Turno"+(n?", "+n+" por ver"+(men?", "+men+" com menção a si":""):""));
+  document.title=(n?"("+n+") ":"")+"OPS CARF";
+  try{if(navigator.setAppBadge){n?navigator.setAppBadge(n):navigator.clearAppBadge();}}catch(e){}
 }
-function ligarTurno(){if(LIG_TURNO)return;const s=SJT.sessao();if(!s||!s.token)return;LIG_TURNO=SJT.ligar("turno",{diasLocais:60,aoMudar:contarTurno});contarTurno();}
+function ligarTurno(){if(LIG_TURNO)return;const s=SJT.sessao();if(!s||!s.token)return;LIG_TURNO=SJT.ligar("turno",{diasLocais:60,aoMudar:contarTurno});contarTurno();
+  /* quem entra no hub fica na lista de nomes que se podem mencionar */
+  let pres=false;
+  LIG_TURNO.ouvir(i=>{if(pres||!i.remoto||LIG_TURNO.estado().erro)return;pres=true;
+    const ch=String(s.nome||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"").slice(0,60)||"sem-nome";
+    const r=LIG_TURNO.obter("p-"+ch),d=new Date(),dia=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+    if(!r||!r.dia||Date.now()-new Date(r.dia).getTime()>20*86400000||(r.dados&&r.dados.n)!==s.nome)LIG_TURNO.gravar("p-"+ch,dia,{k:"p",n:s.nome});});}
 /* Nomes compridos: reduz a letra até cada palavra caber no cartão */
 function ajustar(){document.querySelectorAll(".app b").forEach(b=>{b.style.fontSize="";let f=19;while(b.scrollWidth>b.clientWidth&&f>13){f--;b.style.fontSize=f+"px";}});}
 ajustar();addEventListener("resize",ajustar);

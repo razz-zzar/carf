@@ -102,9 +102,21 @@ h2 span{font:600 15px var(--mono);color:var(--muted)}
 .m .acoes .dir{margin-left:auto}
 .responder{display:flex;flex-direction:column;gap:8px}
 .responder textarea{width:100%;background:var(--panel);color:var(--fg);border:1px solid var(--green);border-radius:8px;padding:10px;font:500 16px var(--body);min-height:64px;resize:vertical}
-.responder div{display:grid;grid-template-columns:1fr 1.4fr;gap:8px}
+.responder .bts{display:grid;grid-template-columns:1fr 1.4fr;gap:8px}
 .responder button{border-radius:8px;padding:12px;font:700 15px var(--display);letter-spacing:.05em;text-transform:uppercase;cursor:pointer;border:1px solid var(--line);background:none;color:var(--fg)}
 .responder button.p{background:var(--green);border-color:var(--green);color:var(--green-ink)}
+.lbl-row{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.bmen{background:none;border:1px solid var(--green);color:var(--green);border-radius:8px;padding:6px 10px;font:700 14px var(--body);cursor:pointer;letter-spacing:0;text-transform:none}
+.sug{display:flex;flex-wrap:wrap;gap:6px;background:var(--bg);border:1px solid var(--green);border-radius:10px;padding:8px}
+.sug .t{width:100%;font-size:12px;color:var(--muted)}
+.sug button{background:var(--panel);color:var(--fg);border:1px solid var(--line);border-radius:999px;padding:8px 12px;font:600 15px var(--body);cursor:pointer}
+.sug button:hover,.sug button:focus-visible{border-color:var(--green)}
+.men{color:var(--green);font-weight:700}
+.men.eu{background:var(--green);color:var(--green-ink);border-radius:4px;padding:0 3px}
+.tag.men{background:#3f9b9e;color:#fff}
+.m.mencao{border-left-color:#3f9b9e;box-shadow:0 0 0 1px rgba(63,155,158,.5)}
+.filtro{display:flex;gap:6px}
+.filtro .tog{min-height:40px;font-size:14px;padding:6px 12px;border-radius:999px}
 .ver{position:fixed;inset:0;z-index:40;background:rgba(0,0,0,.94);display:flex;flex-direction:column;padding:calc(10px + env(safe-area-inset-top,0px)) 12px calc(12px + env(safe-area-inset-bottom,0px));gap:10px}
 .ver .vtop{display:flex;justify-content:space-between;align-items:center;color:var(--muted);font-size:14px}
 .ver .vtop button,.ver .nav button{background:none;border:1px solid var(--line);color:var(--fg);border-radius:8px;padding:10px 16px;font:600 15px var(--body);cursor:pointer}
@@ -125,9 +137,10 @@ h2 span{font:600 15px var(--mono);color:var(--muted)}
   <section class="card" aria-labelledby="t-novo">
     <h2 id="t-novo">Nova mensagem</h2>
     <div class="campo" id="c-texto">
-      <label for="texto">Mensagem para o turno</label>
+      <div class="lbl-row"><label for="texto">Mensagem para o turno</label><button type="button" class="bmen" id="bMen" aria-label="Mencionar alguém">@ Mencionar</button></div>
       <textarea id="texto" rows="4" placeholder="O que o próximo turno precisa de saber — pendentes, avarias, cargas, avisos"></textarea>
     </div>
+    <div class="sug" id="sugNovo" hidden></div>
     <div class="opcoes">
       <button type="button" class="tog imp" id="importante" aria-pressed="false">Importante</button>
       <button type="button" class="tog" id="afixar" aria-pressed="false">Afixar no topo</button>
@@ -149,11 +162,12 @@ h2 span{font:600 15px var(--mono);color:var(--muted)}
   <section class="card" aria-labelledby="t-lista">
     <h2 id="t-lista">Mensagens <span id="total">0</span></h2>
     <div class="novas" id="novasCx" hidden><span id="novasTxt"></span><button type="button" id="vistoTodas">Marcar todas vistas</button></div>
+    <div class="filtro" role="group" aria-label="Mostrar"><button type="button" class="tog" id="fTodas" aria-pressed="true">Todas</button><button type="button" class="tog" id="fMen" aria-pressed="false">Menções a mim</button></div>
     <input type="search" id="procura" class="procura" placeholder="Procurar texto ou nome" autocomplete="off" aria-label="Procurar mensagens">
     <div id="lista"></div>
     <button type="button" class="btn" id="maisM" hidden>Mostrar mais</button>
     <div class="msg" id="msgL" role="status"></div>
-    <div class="hint">As mensagens são partilhadas com todo o polo. Carregue em <b>Visto</b> quando ler uma mensagem, para quem a escreveu saber que a passagem foi feita. Qualquer supervisor pode responder e afixar; só quem escreveu pode apagar. Sem internet ficam no telemóvel e são enviadas quando a rede voltar.</div>
+    <div class="hint">As mensagens são partilhadas com todo o polo. Carregue em <b>Visto</b> quando ler uma mensagem, para quem a escreveu saber que a passagem foi feita. Escreva <b>@</b> e o nome para mencionar alguém: a mensagem fica destacada para essa pessoa. Qualquer supervisor pode responder e afixar; só quem escreveu pode apagar. Sem internet ficam no telemóvel e são enviadas quando a rede voltar.</div>
   </section>
 </div>
 
@@ -186,21 +200,84 @@ const MAX_FOTOS=4,POR_PAGINA=40,DIAS_NOVAS=7;
 
 /* ---- Dados partilhados pelo polo ---- */
 const FOTOS=SJT.fotos();
-let MSG=[],RESP={},assinatura="";
+let MSG=[],RESP={},PESSOAS={},assinatura="";
+const chaveDe=n=>semAcentos(n).replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"").slice(0,60)||"sem-nome";
 const LIG=SJT.ligar("turno",{diasLocais:60,aoMudar:()=>{carregar();render();}});
 function carregar(){
-  MSG=[];RESP={};
+  MSG=[];RESP={};PESSOAS={};
+  const pessoa=n=>{n=String(n||"").trim();if(n)PESSOAS[chaveDe(n)]=n;};
   for(const r of LIG.registos()){
     const d={...r.dados,id:r.id,dia:r.dia,autor:r.autor,meu:r.meu,pendente:!!r.pendente};
+    pessoa(r.autor);
+    if(d.k==="p"){pessoa(d.n);continue;}
+    Object.values(d.vistos||{}).forEach(v=>v&&pessoa(v.n));
     if(d.k==="r"){(RESP[d.pai]=RESP[d.pai]||[]).push(d);}else MSG.push(d);
   }
+  pessoa(S.nome);
   Object.values(RESP).forEach(l=>l.sort((a,b)=>String(a.t).localeCompare(String(b.t))));
   MSG.sort((a,b)=>String(b.t).localeCompare(String(a.t)));
 }
 carregar();
-const vistoPorMim=m=>m.meu||!!(m.vistos&&m.vistos[CHAVE]);
+/* Por ver: mensagem de outra pessoa ainda sem o meu visto, ou uma resposta que me menciona depois do meu visto */
+const mencionaMe=x=>(x.mencoes||[]).some(p=>p&&p.c===CHAVE);
+const meuVisto=m=>m.vistos&&m.vistos[CHAVE];
+const respMencao=m=>{const v=meuVisto(m),tv=v?String(v.t||""):"";return (RESP[m.id]||[]).some(r=>!r.meu&&mencionaMe(r)&&String(r.t)>tv);};
+const mencaoPorVer=m=>respMencao(m)||(!m.meu&&!meuVisto(m)&&mencionaMe(m));
+const vistoPorMim=m=>!respMencao(m)&&(m.meu||!!meuVisto(m));
 const recente=m=>Date.now()-new Date(m.t).getTime()<DIAS_NOVAS*86400000;
-const porVer=()=>MSG.filter(m=>!vistoPorMim(m)&&(recente(m)||m.afixada));
+const porVer=()=>MSG.filter(m=>!vistoPorMim(m)&&(recente(m)||m.afixada||mencaoPorVer(m)));
+const paraMim=m=>mencionaMe(m)||(RESP[m.id]||[]).some(mencionaMe);
+
+/* ---- Menções: escrever @ mostra os nomes das pessoas do polo ---- */
+const pessoas=()=>Object.entries(PESSOAS).map(([c,n])=>({c,n})).sort((a,b)=>a.n.localeCompare(b.n,"pt"));
+function mencoesDe(texto){
+  const t=semAcentos(texto),vistas=new Set();
+  return pessoas().sort((a,b)=>b.n.length-a.n.length).filter(p=>{if(vistas.has(p.c)||!t.includes("@"+semAcentos(p.n)))return false;vistas.add(p.c);return true;}).map(p=>({c:p.c,n:p.n}));
+}
+function ligarMencoes(ta,caixa){
+  function sugerir(){
+    const pos=ta.selectionStart==null?ta.value.length:ta.selectionStart,antes=ta.value.slice(0,pos),mt=antes.match(/(^|\s)@([^\s@]{0,30})$/);
+    if(!mt){caixa.hidden=true;return;}
+    const q=semAcentos(mt[2]),l=pessoas().filter(p=>p.c!==CHAVE&&(!q||semAcentos(p.n).split(/\s+/).some(w=>w.startsWith(q))||semAcentos(p.n).startsWith(q))).slice(0,10);
+    caixa.textContent="";
+    const t=document.createElement("div");t.className="t";
+    t.textContent=l.length?"Mencionar:":"Ninguém com esse nome. Só aparecem as pessoas que já entraram na app neste polo.";caixa.appendChild(t);
+    l.forEach(p=>{const b=document.createElement("button");b.type="button";b.textContent="@"+p.n;
+      b.addEventListener("pointerdown",e=>e.preventDefault());
+      b.onclick=()=>{const ini=antes.length-mt[2].length-1,novo=ta.value.slice(0,ini)+"@"+p.n+" "+ta.value.slice(pos);
+        ta.value=novo;const c=ini+p.n.length+2;ta.focus();ta.setSelectionRange(c,c);caixa.hidden=true;ta.dispatchEvent(new Event("input"));};
+      caixa.appendChild(b);});
+    caixa.hidden=false;
+  }
+  ["input","click","keyup"].forEach(ev=>ta.addEventListener(ev,sugerir));
+  ta.addEventListener("blur",()=>setTimeout(()=>{if(document.activeElement!==ta)caixa.hidden=true;},150));
+  return sugerir;
+}
+function inserirArroba(ta){
+  const pos=ta.selectionStart==null?ta.value.length:ta.selectionStart,antes=ta.value.slice(0,pos);
+  const ins=(antes&&!/\s$/.test(antes)?" ":"")+"@";
+  ta.value=antes+ins+ta.value.slice(pos);ta.focus();ta.setSelectionRange(pos+ins.length,pos+ins.length);ta.dispatchEvent(new Event("input"));
+}
+/* texto com as menções destacadas */
+function escreverTexto(el,texto,mencoes){
+  const ns=(mencoes||[]).map(p=>p.n).filter(Boolean).sort((a,b)=>b.length-a.length);
+  if(!ns.length){el.append(texto);return;}
+  const re=new RegExp("@("+ns.map(n=>n.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")).join("|")+")","gi");
+  let i=0;for(const mt of texto.matchAll(re)){
+    el.append(texto.slice(i,mt.index));
+    const s=document.createElement("span");const p=(mencoes||[]).find(x=>x.n.toLowerCase()===mt[1].toLowerCase());
+    s.className="men"+(p&&p.c===CHAVE?" eu":"");s.textContent=mt[0];el.appendChild(s);i=mt.index+mt[0].length;}
+  el.append(texto.slice(i));
+}
+/* Quem entra na app fica na lista de nomes para mencionar */
+let presenca=false;
+function registarPresenca(){
+  if(presenca||!S.token)return;presenca=true;
+  const id="p-"+CHAVE,r=LIG.obter(id),hojeD=diaDe(new Date());
+  const velho=!r||!r.dia||(Date.now()-new Date(r.dia).getTime())>20*86400000||(r.dados&&r.dados.n)!==S.nome;
+  if(velho)LIG.gravar(id,hojeD,{k:"p",n:S.nome});
+}
+LIG.ouvir(i=>{if(i.remoto&&!LIG.estado().erro)registarPresenca();});
 
 /* ---- Nova mensagem ---- */
 let importante=false,afixar=false,novas=[],limite=POR_PAGINA,procura="",aResponder=null,textoResp="",aConfirmar=null;
@@ -208,6 +285,8 @@ const tog=(id,v)=>$(id).setAttribute("aria-pressed",v?"true":"false");
 $("importante").onclick=()=>{importante=!importante;tog("importante",importante);};
 $("afixar").onclick=()=>{afixar=!afixar;tog("afixar",afixar);};
 $("texto").addEventListener("input",()=>$("c-texto").classList.remove("erro"));
+ligarMencoes($("texto"),$("sugNovo"));
+$("bMen").onclick=()=>inserirArroba($("texto"));
 $("tirar").onclick=()=>$("fCam").click();
 $("galeria").onclick=()=>$("fGal").click();
 async function juntarFicheiros(lista){
@@ -240,36 +319,43 @@ $("publicar").onclick=async()=>{
   try{
     const fotos=[];
     for(const n of novas)fotos.push(await FOTOS.guardar(id,n.blob));
-    const d={k:"m",t:agora.toISOString(),texto,importante,afixada:afixar,afixadoPor:afixar?S.nome:"",fotos,vistos:{}};
+    const d={k:"m",t:agora.toISOString(),texto,mencoes:mencoesDe(texto),importante,afixada:afixar,afixadoPor:afixar?S.nome:"",fotos,vistos:{}};
     if(!LIG.gravar(id,diaDe(agora),d))throw new Error("storage");
     novas.forEach(n=>URL.revokeObjectURL(n.url));novas=[];desenharNovas();
     $("texto").value="";importante=afixar=false;tog("importante",false);tog("afixar",false);
     if(document.activeElement&&document.activeElement!==document.body)document.activeElement.blur();
     carregar();assinatura="";render();
-    msg("msg","Mensagem publicada"+(d.afixada?" e afixada no topo":"")+".",true);
+    msg("msg","Mensagem publicada"+(d.afixada?" e afixada no topo":"")+(d.mencoes.length?", com menção a "+d.mencoes.map(p=>p.n).join(", "):"")+".",true);
   }catch(e){msg("msg",e&&e.message==="storage"?"O telemóvel não deixou guardar (sem espaço ou armazenamento bloqueado).":"Não foi possível guardar as fotografias neste telemóvel. Tente de novo.",false);}
   $("publicar").disabled=false;
 };
 
 /* ---- Mural ---- */
 $("procura").addEventListener("input",()=>{procura=semAcentos($("procura").value.trim());limite=POR_PAGINA;assinatura="";render();});
+let soMencoes=false;
+const filtrar=v=>{soMencoes=v;tog("fTodas",!v);tog("fMen",v);limite=POR_PAGINA;assinatura="";render();};
+$("fTodas").onclick=()=>filtrar(false);$("fMen").onclick=()=>filtrar(true);
 $("maisM").onclick=()=>{limite+=POR_PAGINA;assinatura="";render();};
 function corresponde(m){
+  if(soMencoes&&!paraMim(m))return false;
   if(!procura)return true;
   return semAcentos([m.texto,m.autor,...(RESP[m.id]||[]).map(r=>r.texto+" "+r.autor)].join(" ")).includes(procura);
 }
 function render(){
   const lista=MSG.filter(corresponde),fix=lista.filter(m=>m.afixada),resto=lista.filter(m=>!m.afixada),mostrar=resto.slice(0,limite);
   const pv=porVer();
-  const sig=JSON.stringify([procura,limite,aResponder,aConfirmar,pv.length,[...fix,...mostrar].map(m=>[m.id,m.pendente,m.afixada,m.importante,Object.keys(m.vistos||{}).length,(RESP[m.id]||[]).map(r=>r.id+(r.pendente?"p":""))])]);
+  const nMen=pv.filter(mencaoPorVer).length;
+  const sig=JSON.stringify([soMencoes,nMen,Object.keys(PESSOAS).length,procura,limite,aResponder,aConfirmar,pv.length,[...fix,...mostrar].map(m=>[m.id,m.pendente,m.afixada,m.importante,Object.keys(m.vistos||{}).length,(RESP[m.id]||[]).map(r=>r.id+(r.pendente?"p":""))])]);
   if(sig===assinatura)return;assinatura=sig;
   $("total").textContent=MSG.length?String(MSG.length):"0";
   $("novasCx").hidden=!pv.length;
+  try{if(navigator.setAppBadge){pv.length?navigator.setAppBadge(pv.length):navigator.clearAppBadge();}}catch(e){}
   $("novasTxt").innerHTML="";const b=document.createElement("b");b.textContent=pv.length;
   $("novasTxt").append(b,pv.length===1?" mensagem por ver":" mensagens por ver");
+  if(nMen)$("novasTxt").append(" · "+nMen+(nMen===1?" menciona-o a si":" mencionam-no a si"));
   const el=$("lista");el.textContent="";
   if(!fix.length&&!mostrar.length){const p=document.createElement("div");p.className="vazio";
-    p.textContent=procura?"Nenhuma mensagem corresponde à procura.":"Ainda não há mensagens. Escreva a primeira para o próximo turno.";el.appendChild(p);}
+    p.textContent=soMencoes?"Ninguém o mencionou"+(procura?" com esse texto.":" ainda."):procura?"Nenhuma mensagem corresponde à procura.":"Ainda não há mensagens. Escreva a primeira para o próximo turno.";el.appendChild(p);}
   const cab=(t,cls)=>{const h=document.createElement("div");h.className="grupo-h"+(cls?" "+cls:"");h.textContent=t;el.appendChild(h);};
   if(fix.length){cab("Afixadas ("+fix.length+")","fix");fix.forEach(m=>el.appendChild(cartao(m)));}
   let dia=null;
@@ -280,15 +366,16 @@ function render(){
 }
 function cartao(m){
   const nova=!vistoPorMim(m);
-  const c=document.createElement("article");c.className="m"+(nova?" nova":"")+(m.importante?" imp":"")+(m.afixada?" fix":"");
+  const men=mencaoPorVer(m);
+  const c=document.createElement("article");c.className="m"+(nova?" nova":"")+(men?" mencao":"")+(m.importante?" imp":"")+(m.afixada?" fix":"");
   const top=document.createElement("div");top.className="top";
   const q=document.createElement("span");q.className="quem";q.textContent=m.meu?"Você":m.autor||"?";
   const w=document.createElement("span");w.className="quando";w.textContent=(m.afixada?dataCurta(m.t)+" ":"")+hora(m.t);
   const tg=document.createElement("span");tg.className="tags";
   const tag=(t,cl)=>{const s=document.createElement("span");s.className="tag "+cl;s.textContent=t;tg.appendChild(s);};
-  if(nova)tag("NOVA","nova");if(m.importante)tag("IMPORTANTE","imp");if(m.afixada)tag("AFIXADA","fix");
+  if(men)tag("@ PARA SI","men");else if(nova)tag("NOVA","nova");if(m.importante)tag("IMPORTANTE","imp");if(m.afixada)tag("AFIXADA","fix");
   top.append(q,w,tg);c.appendChild(top);
-  const tx=document.createElement("div");tx.className="txt";tx.textContent=m.texto;c.appendChild(tx);
+  const tx=document.createElement("div");tx.className="txt";escreverTexto(tx,m.texto,m.mencoes);c.appendChild(tx);
   if((m.fotos||[]).length){
     const g=document.createElement("div");g.className="thumbs";
     m.fotos.forEach((fid,i)=>{const t=document.createElement("button");t.type="button";t.className="thumb";t.setAttribute("aria-label","Ver fotografia "+(i+1));
@@ -302,10 +389,10 @@ function cartao(m){
       const rq=document.createElement("div");rq.className="rq";const b=document.createElement("b");b.textContent=r.meu?"Você":r.autor||"?";
       rq.append(b,(diaDe(new Date(r.t))!==diaDe(new Date(m.t))?dataCurta(r.t)+" ":"")+hora(r.t));
       if(r.meu){const x=document.createElement("button");x.type="button";const conf=aConfirmar===r.id;x.className="rx"+(conf?" confirm":"");x.textContent=conf?"confirmar apagar":"apagar";x.onclick=()=>apagar(r,"Resposta apagada.");rq.appendChild(x);}
-      d.append(rq,r.texto);box.appendChild(d);});
+      d.appendChild(rq);escreverTexto(d,r.texto,r.mencoes);box.appendChild(d);});
     c.appendChild(box);
   }
-  const vs=Object.values(m.vistos||{}).filter(v=>v&&v.n).sort((a,b)=>String(a.t).localeCompare(String(b.t)));
+  const vs=Object.values(m.vistos||{}).filter(v=>v&&v.n&&v.n!==m.autor).sort((a,b)=>String(a.t).localeCompare(String(b.t)));
   if(vs.length){const v=document.createElement("div");v.className="meta visto";v.textContent="✓ Visto por "+vs.map(x=>x.n+(x.t?" ("+(diaDe(new Date(x.t))!==diaDe(new Date(m.t))?dataCurta(x.t)+" ":"")+hora(x.t)+")":"")).join(", ");c.appendChild(v);}
   else if(m.meu){const v=document.createElement("div");v.className="meta";v.textContent="Ainda ninguém marcou como visto.";c.appendChild(v);}
   if(m.afixada&&m.afixadoPor&&m.afixadoPor!==m.autor){const a=document.createElement("div");a.className="meta";a.textContent="Afixada por "+m.afixadoPor;c.appendChild(a);}
@@ -314,10 +401,12 @@ function cartao(m){
     const wr=document.createElement("div");wr.className="responder";
     const t=document.createElement("textarea");t.id="respTxt";t.placeholder="Resposta";t.value=textoResp;
     t.addEventListener("input",()=>{textoResp=t.value;});
-    const bs=document.createElement("div");
+    const sg=document.createElement("div");sg.className="sug";sg.hidden=true;ligarMencoes(t,sg);
+    const bs=document.createElement("div");bs.className="bts";
     const cn=document.createElement("button");cn.type="button";cn.textContent="Cancelar";cn.onclick=()=>{aResponder=null;textoResp="";assinatura="";render();};
     const ok=document.createElement("button");ok.type="button";ok.className="p";ok.textContent="Responder";ok.onclick=()=>responder(m);
-    bs.append(cn,ok);wr.append(t,bs);c.appendChild(wr);
+    const am=document.createElement("button");am.type="button";am.className="bmen";am.textContent="@ Mencionar";am.style.justifySelf="start";am.onclick=()=>inserirArroba(t);
+    bs.append(cn,ok);wr.append(t,sg,am,bs);c.appendChild(wr);
     return c;
   }
   const ac=document.createElement("div");ac.className="acoes";
@@ -350,7 +439,7 @@ function responder(m){
   const texto=textoResp.trim();
   if(!texto){const t=document.getElementById("respTxt");if(t)t.focus();return;}
   const agora=new Date();
-  if(!LIG.gravar(novoId("r"),diaDe(agora),{k:"r",t:agora.toISOString(),pai:m.id,texto})){msg("msgL","O telemóvel não deixou guardar.",false);return;}
+  if(!LIG.gravar(novoId("r"),diaDe(agora),{k:"r",t:agora.toISOString(),pai:m.id,texto,mencoes:mencoesDe(texto)})){msg("msgL","O telemóvel não deixou guardar.",false);return;}
   if(!vistoPorMim(m))LIG.mudar(m.id,{["vistos."+CHAVE]:{n:S.nome,t:agora.toISOString()}});
   aResponder=null;textoResp="";
   if(document.activeElement&&document.activeElement!==document.body)document.activeElement.blur();
