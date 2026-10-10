@@ -354,10 +354,8 @@ function gerarExcel(dia){
   if(!Object.keys(ch).length&&!Object.keys(sa).length)return null;
   const [y,m,d]=dia.split("-");
   const h=x=>{const r=reg(x);return r?hora(r.t):"";};
-  const quem=x=>{const r=reg(x);return r&&r.autor||"";};
-  const dif=v=>{const r=reg(ch[v]);if(!r)return "";const x=atraso(v,dia,r.t);return x==null?"":x;};
-  const linhas=VOLTAS_TODAS.map(v=>[/^\d+$/.test(v)?+v:v,PREV[v]||"",h(ch[v]),dif(v),h(sa[v]),quem(ch[v]),quem(sa[v])]);
-  return {bytes:criarXlsx({titulo:"CHEGADAS E SAÍDAS — "+d+"/"+m+"/"+y,folha:"Chegadas e saídas",cab:["Volta","Hora prevista","Hora de chegada","Atraso (min)","Hora de saída","Chegada registada por","Saída registada por"],linhas,larguras:[12,14,18,14,18,22,22]}),nome:`chegadas-saidas-${y}-${m}-${d}.xlsx`};
+  const linhas=VOLTAS_TODAS.map(v=>[/^\d+$/.test(v)?+v:v,h(ch[v]),h(sa[v])]);
+  return {bytes:criarXlsx({titulo:"CHEGADAS E SAÍDAS — "+d+"/"+m+"/"+y,folha:"Chegadas e saídas",cab:["Volta","Hora de chegada","Hora de saída"],linhas,larguras:[22,18,18]}),nome:`chegadas-saidas-${y}-${m}-${d}.xlsx`};
 }
 $("excel").onclick=()=>{
   try{
