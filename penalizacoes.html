@@ -52,6 +52,11 @@ h2 span{font:600 15px var(--mono);color:var(--muted)}
 .eur input{padding-right:38px}
 .eur::after{content:"€";position:absolute;right:14px;top:50%;transform:translateY(-50%);color:var(--muted);font:600 18px var(--body);pointer-events:none}
 .eur.txt::after{content:none}
+.cortes{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.corte{min-height:48px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--fg);font:700 15px var(--body);cursor:pointer;padding:8px}
+.corte[aria-pressed=true]{background:var(--danger);border-color:var(--danger);color:#fff}
+#valor:disabled{opacity:.55}
+#motivoTxt{margin-top:8px}
 .nota{font-size:13px;color:var(--muted)}
 select{appearance:none;-webkit-appearance:none;background-image:linear-gradient(45deg,transparent 50%,var(--green) 50%),linear-gradient(135deg,var(--green) 50%,transparent 50%);background-position:calc(100% - 20px) 50%,calc(100% - 14px) 50%;background-size:6px 6px;background-repeat:no-repeat;padding-right:40px!important}
 .aviso{font-size:14px;color:var(--muted);background:var(--bg);border-radius:8px;padding:10px 12px}
@@ -84,7 +89,9 @@ select{appearance:none;-webkit-appearance:none;background-image:linear-gradient(
 .sem-txt b{font:700 17px var(--display);letter-spacing:.05em;text-transform:uppercase}
 .sem-txt span{font:500 13px var(--mono);color:var(--muted)}
 .hoje-btn{background:none;border:0;color:var(--green);font:600 14px var(--body);cursor:pointer;padding:4px;justify-self:center}
-.sem-tot{display:flex;gap:12px}
+.sem-tot{display:flex;flex-wrap:wrap;gap:12px}
+.sem-tot b.peq{font-size:18px;line-height:1.5}
+.sem-tot div.inteira{flex-basis:100%}
 .sem-tot div{flex:1;border-left:3px solid var(--green);padding-left:10px}
 .sem-tot b{display:block;font:600 24px var(--mono)}
 .sem-tot span{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
@@ -142,6 +149,7 @@ select{appearance:none;-webkit-appearance:none;background-image:linear-gradient(
     <div class="campo" id="c-motivo">
       <label for="motivo">Motivo</label>
       <select id="motivo"><option value="">Escolha o motivo</option></select>
+      <input type="text" id="motivoTxt" autocomplete="off" autocapitalize="sentences" placeholder="Escreva o motivo" aria-label="Motivo escrito à mão" hidden>
     </div>
     <div class="campo" id="c-reemb" hidden>
       <label for="reemb">Valor do reembolso</label>
@@ -151,6 +159,11 @@ select{appearance:none;-webkit-appearance:none;background-image:linear-gradient(
     <div class="campo" id="c-valor">
       <label for="valor">Valor da penalização <span class="auto" id="a-valor" hidden>AUTO</span></label>
       <div class="eur" id="eur-valor"><input type="text" id="valor" class="mono" inputmode="decimal" autocomplete="off" placeholder="0,00"></div>
+      <div class="cortes" role="group" aria-label="Corte da diária (opcional)">
+        <button type="button" class="corte" data-v="Corte Diária" aria-pressed="false">Corte Diária</button>
+        <button type="button" class="corte" data-v="Corte Meia Diária" aria-pressed="false">Corte Meia Diária</button>
+      </div>
+      <div class="nota" id="nCorte">Opcional — por ex. quando o motorista não aparece e a volta é feita por outro carro.</div>
     </div>
     <div class="campo">
       <label for="obs">Observações <i>(opcional)</i></label>
@@ -242,6 +255,23 @@ function msg(id,t,ok){const m=$(id);m.textContent=t||"";m.className="msg "+(ok?"
 const opt=(dl,v,txt)=>{const o=document.createElement("option");o.value=v;if(txt)o.textContent=txt;dl.appendChild(o);};
 
 MOTIVOS.forEach(([m,v])=>opt($("motivo"),m,m));
+const OUTRO="__outro";
+opt($("motivo"),OUTRO,"✎ Outro motivo (escrever à mão)");
+const motivoEscolhido=()=>$("motivo").value===OUTRO?$("motivoTxt").value.trim().replace(/\s+/g," "):$("motivo").value;
+$("motivo").addEventListener("change",()=>{const o=$("motivo").value===OUTRO;$("motivoTxt").hidden=!o;if(o)$("motivoTxt").focus();});
+$("motivoTxt").addEventListener("input",()=>$("c-motivo").classList.remove("erro"));
+/* Corte da diária: opcional, só um dos dois; quando escolhido é esse o valor da penalização */
+let corte="";
+function pintarCorte(){
+  document.querySelectorAll(".corte").forEach(b=>b.setAttribute("aria-pressed",b.dataset.v===corte?"true":"false"));
+  $("valor").disabled=!!corte;$("eur-valor").classList.toggle("txt",!!corte||(num($("valor").value)===null&&$("valor").value.trim()!==""));
+}
+document.querySelectorAll(".corte").forEach(b=>b.onclick=()=>{
+  corte=corte===b.dataset.v?"":b.dataset.v;
+  if(corte){$("valor").value=corte;AUTO.valor="";marcarAuto("valor");$("c-valor").classList.remove("erro");}
+  else{$("valor").value="";AUTO.valor="";valorDoMotivo();}
+  pintarCorte();
+});
 Object.keys(MATRIZ).sort().forEach(v=>opt($("voltas"),v));
 [...new Set(Object.values(MATRIZ))].sort((a,b)=>a.localeCompare(b,"pt")).forEach(p=>opt($("prestadores"),p));
 function sugerirMotoristas(){
@@ -262,6 +292,7 @@ $("volta").addEventListener("input",()=>{autoPor("sub",MATRIZ[$("volta").value.t
 $("sub").addEventListener("input",()=>marcarAuto("sub"));
 $("valor").addEventListener("input",()=>{marcarAuto("valor");$("eur-valor").classList.toggle("txt",num($("valor").value)===null&&$("valor").value.trim()!=="");});
 function valorDoMotivo(){
+  if(corte)return;
   const m=motivoDe($("motivo").value),tipo=m?m[1]:null;
   $("c-reemb").hidden=tipo!=="reembolso";
   let v="";
@@ -288,10 +319,12 @@ function render(){
   $("semDatas").textContent=ddmm(semana)+" a "+ddmm(fim)+"/"+fim.slice(0,4);
   $("semSeg").disabled=semana>=atual;$("semHoje").hidden=semana===atual;
   const l=daSemana(semana);
-  const soma=l.reduce((a,r)=>a+(typeof r.valor==="number"?r.valor:0),0),naoPago=l.filter(r=>typeof r.valor!=="number").length;
+  const soma=l.reduce((a,r)=>a+(typeof r.valor==="number"?r.valor:0),0),cd=l.filter(r=>r.valor==="Corte Diária").length,cm=l.filter(r=>r.valor==="Corte Meia Diária").length,naoPago=l.filter(r=>typeof r.valor!=="number").length-cd-cm;
   $("total").textContent=l.length;
   $("semTot").innerHTML="";
-  [[l.length,"Penalizações"],[eur(soma),"Total"+(naoPago?" (+"+naoPago+" sem valor)":"")]].forEach(([v,t])=>{const d=document.createElement("div");const b=document.createElement("b");b.textContent=v;const s=document.createElement("span");s.textContent=t;d.append(b,s);$("semTot").appendChild(d);});
+  const tiles=[[l.length,"Penalizações"],[eur(soma),"Total"+(naoPago?" (+"+naoPago+" sem valor)":"")]];
+  if(cd||cm)tiles.push([[cd?cd+" inteira"+(cd>1?"s":""):"",cm?cm+" meia"+(cm>1?"s":""):""].filter(Boolean).join(" + "),"Cortes de diária"]);
+  tiles.forEach(([v,t])=>{const d=document.createElement("div");const b=document.createElement("b");b.textContent=v;if(String(v).length>9){b.className="peq";d.className="inteira";}const s=document.createElement("span");s.textContent=t;d.append(b,s);$("semTot").appendChild(d);});
   const el=$("lista");el.textContent="";
   if(!l.length){const p=document.createElement("div");p.className="vazio";p.textContent="Sem penalizações registadas nesta semana.";el.appendChild(p);return;}
   /* agrupadas por dia, do mais recente para o mais antigo */
@@ -325,17 +358,17 @@ function linha(r){
 /* 1.º passo: validar e mostrar o resumo */
 $("registar").onclick=()=>{
   const g=k=>$(k).value.trim();
-  const volta=g("volta"),sub=g("sub"),motorista=g("motorista").replace(/\s+/g," "),motivo=$("motivo").value,vTxt=g("valor"),obs=g("obs");
+  const volta=g("volta"),sub=g("sub"),motorista=g("motorista").replace(/\s+/g," "),motivo=motivoEscolhido(),vTxt=corte||g("valor"),obs=g("obs");
   const m=motivoDe(motivo),eReemb=m&&m[1]==="reembolso",reemb=eReemb?num(g("reemb")):null;
   const falta=[],marca=k=>$("c-"+k).classList.add("erro");
   if(!volta){falta.push("a volta");marca("volta");}
   if(!sub){falta.push("o subcontratado");marca("sub");}
   if(!motorista){falta.push("o motorista");marca("motorista");}
-  if(!motivo){falta.push("o motivo");marca("motivo");}
+  if(!motivo){falta.push($("motivo").value===OUTRO?"o motivo (escreva-o)":"o motivo");marca("motivo");}
   if(!vTxt){falta.push("o valor");marca("valor");}
   if(falta.length){msg("msg","Falta indicar "+falta.join(", ").replace(/, ([^,]*)$/," e $1")+".",false);return;}
   if(eReemb&&g("reemb")&&reemb===null){marca("reemb");msg("msg","O valor do reembolso não é um número válido.",false);return;}
-  const vNum=num(vTxt),valor=vNum!==null?vNum:vTxt;
+  const vNum=corte?null:num(vTxt),valor=vNum!==null?vNum:vTxt;
   pendente={volta,sub,motorista,motivo,valor,obs};if(reemb!==null)pendente.reemb=reemb;
   msg("msg","");
   const dl=$("resumo");dl.textContent="";
@@ -364,7 +397,7 @@ $("gravar").onclick=()=>{
   if(!LIG.gravar(r.id,dia,r)){fecharResumo();msg("msg","O telemóvel não deixou guardar (sem espaço ou armazenamento bloqueado).",false);return;}
   carregar();
   fecharResumo();pendente=null;
-  CAMPOS.forEach(k=>$(k).value="");AUTO.sub="";AUTO.valor="";marcarAuto("sub");marcarAuto("valor");
+  CAMPOS.forEach(k=>$(k).value="");$("motivoTxt").value="";$("motivoTxt").hidden=true;corte="";pintarCorte();AUTO.sub="";AUTO.valor="";marcarAuto("sub");marcarAuto("valor");
   $("c-reemb").hidden=true;$("eur-valor").classList.remove("txt");
   aConfirmar=null;msg("msg","Penalização registada: volta "+r.volta+", "+r.motivo+".",true);
   sugerirMotoristas();render();
@@ -464,7 +497,8 @@ function textoMail(s){
   const l=daSemana(s),soma=l.reduce((a,r)=>a+(typeof r.valor==="number"?r.valor:0),0);
   const assunto="Penalizações | "+nomeSemana(s)+" | "+S.polo.nome;
   const corpo=[saudacao()+",","","Segue em anexo o ficheiro com as penalizações registadas no polo de "+S.polo.nome+" na "+nomeSemana(s).replace("Semana","semana")+".","",
-    "Total de penalizações: "+l.length,"Valor total: "+eur(soma)+(l.some(r=>typeof r.valor!=="number")?" (há penalizações sem valor em euros, ver ficheiro)":""),""].join("\n");
+    "Total de penalizações: "+l.length,"Valor total: "+eur(soma)+(l.some(r=>typeof r.valor!=="number"&&!/^Corte /.test(r.valor))?" (há penalizações sem valor em euros, ver ficheiro)":""),
+    ...(()=>{const cd=l.filter(r=>r.valor==="Corte Diária").length,cm=l.filter(r=>r.valor==="Corte Meia Diária").length;return cd||cm?["Cortes de diária: "+[cd?cd+" diária"+(cd>1?"s":"")+" inteira"+(cd>1?"s":""):"",cm?cm+" meia"+(cm>1?"s":"")+" diária"+(cm>1?"s":""):""].filter(Boolean).join(" e ")]:[];})(),""].join("\n");
   return {assunto,corpo};
 }
 $("email").onclick=()=>{
