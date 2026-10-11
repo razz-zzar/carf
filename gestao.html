@@ -45,6 +45,8 @@ input:focus-visible,textarea:focus-visible,button:focus-visible{outline:2px soli
 .opcG b{font-size:16px;overflow-wrap:anywhere}.opcG small{display:block;color:var(--muted);font-size:12px}
 .opcG button{background:none;border:1px solid var(--line);color:var(--fg);border-radius:8px;padding:8px 12px;font:600 13px var(--body);cursor:pointer}
 .opcG button.confirm{border-color:var(--danger,#e0574f);color:var(--danger,#e0574f)}
+.campoL{display:flex;flex-direction:column;gap:8px}.rotL{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}.rotL small{text-transform:none;letter-spacing:0;font-weight:400}
+.btn.perigo{border-color:var(--danger,#e0574f);color:#fff;background:var(--danger,#e0574f)}
 .dica.alerta{color:var(--danger,#e0574f);font-weight:600}
 </style>
 <link rel="stylesheet" href="carf-tema.css">
@@ -70,11 +72,14 @@ input:focus-visible,textarea:focus-visible,button:focus-visible{outline:2px soli
   </section>
 
   <section class="card" id="sLimpar" hidden>
-    <h2>Limpar dados de teste</h2>
-    <p class="dica">Apaga todos os registos e fotografias dos armazéns escolhidos (incompletos, horários, penalizações, frota, ocorrências e mural). Os telemóveis esquecem a cópia que têm na próxima vez que abrirem a app. Os armazéns, códigos de entrada e configurações (voltas, horas previstas, emails, motivos) não são apagados.</p>
-    <div class="lista" id="limparPolos"></div>
-    <label class="chk"><input type="checkbox" id="limparCod"> Também os códigos e opções de pneus acrescentados (todos os armazéns)</label>
-    <button class="btn sec" type="button" id="limpar">Limpar dados</button>
+    <h2>Apagar dados</h2>
+    <p class="dica">Para limpar testes ou registos antigos. Os armazéns, códigos de entrada e configurações (voltas, horas previstas, emails, motivos) nunca são apagados. Os telemóveis esquecem a cópia apagada na próxima vez que abrirem a app.</p>
+    <div class="campoL"><span class="rotL">1. Armazéns</span><div class="lista" id="limparPolos"></div></div>
+    <div class="campoL"><span class="rotL">2. Dados</span><div class="lista" id="limparApps"></div></div>
+    <div class="campoL"><span class="rotL">3. Período <small>(pela data do registo; vazio = tudo)</small></span>
+      <div class="linha"><label>De<input type="date" id="limparDe"></label><label>Até<input type="date" id="limparAte"></label></div>
+      <div class="filtroO" id="limparAtalhos"></div></div>
+    <button class="btn sec" type="button" id="limpar">Ver o que vai ser apagado</button>
     <div class="msg" id="msgL" role="status"></div>
   </section>
 
@@ -142,28 +147,55 @@ function espaco(f){
   el.textContent="Fotografias: "+f.n+" ("+mb(f.bytes)+") · "+(f.r2?"guardadas no R2 (10 GB gratuitos)"+(f.naBaseDados?" · ainda "+mb(f.naBaseDados)+" na base de dados, passam para o R2 ao serem vistas":""):"guardadas na base de dados ("+mb(f.naBaseDados)+" de 500 MB) — ligue o R2 para não encher");
   el.className="dica"+(!f.r2&&f.naBaseDados>300*1048576?" alerta":"");
 }
-/* ---- Limpar dados de teste ---- */
-let confirmarLimpar=false;
+/* ---- Apagar dados (testes ou registos antigos) ---- */
+const APPS_L=[["pneus","Incompletos (pneus)"],["chegadas","Horários (chegadas e saídas)"],["penalizacoes","Penalizações"],["frota","Frota"],["ocorrencias","Ocorrências (com fotografias)"],["turno","Mural (com fotografias)"],["codigos","Códigos e opções de pneus (comuns a todos os armazéns)"]];
+let planoL=null;
+const chk=(cls,v,txt,el)=>{const l=document.createElement("label");l.className="chk";const c=document.createElement("input");c.type="checkbox";c.value=v;c.className=cls;c.onchange=()=>{planoL=null;botaoL();};l.append(c," "+txt);el.appendChild(l);return c;};
 function desenharLimpar(){
-  const el=$("limparPolos");el.textContent="";
-  POLOS.forEach(p=>{const l=document.createElement("label");l.className="chk";const c=document.createElement("input");c.type="checkbox";c.value=p.id;c.className="lp";
-    l.append(c," "+p.nome);el.appendChild(l);});
-  $("sLimpar").hidden=false;confirmarLimpar=false;$("limpar").textContent="Limpar dados";
+  const ep=$("limparPolos");ep.textContent="";
+  const todos=chk("lpT","*","Todos os armazéns",ep);todos.onchange=()=>{document.querySelectorAll(".lp").forEach(c=>c.checked=todos.checked);planoL=null;botaoL();};
+  POLOS.forEach(p=>chk("lp",p.id,p.nome,ep));
+  const ea=$("limparApps");ea.textContent="";APPS_L.forEach(([id,n])=>chk("la",id,n,ea));
+  const at=$("limparAtalhos");at.textContent="";
+  const dia=d=>d.toISOString().slice(0,10),menos=m=>{const d=new Date();d.setMonth(d.getMonth()-m);return d;};
+  [["Tudo","",""],["Mais de 3 meses","",dia(menos(3))],["Mais de 6 meses","",dia(menos(6))],["Mais de 1 ano","",dia(menos(12))]].forEach(([n,de,ate])=>{
+    const b=document.createElement("button");b.type="button";b.textContent=n;b.onclick=()=>{$("limparDe").value=de;$("limparAte").value=ate;planoL=null;botaoL();};at.appendChild(b);});
+  ["limparDe","limparAte"].forEach(k=>$(k).onchange=()=>{planoL=null;botaoL();});
+  $("sLimpar").hidden=false;planoL=null;botaoL();
+}
+function botaoL(manterMsg){$("limpar").textContent=planoL?"Confirmar: apagar "+planoL.registos+" registos e "+planoL.fotos+" fotografias":"Ver o que vai ser apagado";$("limpar").classList.toggle("perigo",!!planoL);if(!planoL&&!manterMsg)msg("msgL","");}
+function pedidosL(){
+  const polos=[...document.querySelectorAll(".lp:checked")].map(c=>c.value),apps=[...document.querySelectorAll(".la:checked")].map(c=>c.value);
+  const de=$("limparDe").value,ate=$("limparAte").value,locais=apps.filter(a=>a!=="codigos"),l=[];
+  polos.forEach(p=>{if(locais.length)l.push({polo:p,apps:locais,de,ate});});
+  if(apps.includes("codigos"))l.push({polo:"*",apps:["codigos"],de,ate});
+  return {l,polos,apps,de,ate};
 }
 $("limpar").onclick=async()=>{
-  const polos=[...document.querySelectorAll(".lp:checked")].map(c=>c.value),cod=$("limparCod").checked;
-  if(!polos.length&&!cod){msg("msgL","Escolha pelo menos um armazém (ou os códigos de pneus).",false);return;}
-  const nomes=POLOS.filter(p=>polos.includes(p.id)).map(p=>p.nome);
-  if(!confirmarLimpar){confirmarLimpar=true;$("limpar").textContent="Confirmar: apagar tudo de "+[...nomes,...(cod?["códigos de pneus"]:[])].join(", ");
-    msg("msgL","Isto não se pode desfazer. Carregue outra vez para confirmar.",false);
-    setTimeout(()=>{if(confirmarLimpar){confirmarLimpar=false;$("limpar").textContent="Limpar dados";msg("msgL","");}},8000);return;}
-  confirmarLimpar=false;$("limpar").disabled=true;$("limpar").textContent="A limpar…";msg("msgL","",true);
-  try{const j=await SJT.pedido("/gestao/limpar",{admin:ADMIN,metodo:"POST",corpo:{polos,codigos:cod},tempo:30000});
-    msg("msgL","Feito: "+j.registos+" registos e "+j.fotos+" fotografias apagados. Os telemóveis limpam a cópia ao abrir a app.",true);
-    document.querySelectorAll(".lp").forEach(c=>c.checked=false);$("limparCod").checked=false;carregarOpcoes();
-    try{const k=await SJT.pedido("/gestao/polos",{admin:ADMIN});espaco(k.fotos);}catch(e){}
-  }catch(e){msg("msgL",e.estado===404||/não encontrad/i.test(e.message)?"Atualize a API (cloudflare-api.js, versão 8) para usar a limpeza.":e.message,false);}
-  $("limpar").disabled=false;$("limpar").textContent="Limpar dados";
+  const {l,polos,apps,de,ate}=pedidosL();
+  if(!apps.length){msg("msgL","Escolha o tipo de dados a apagar.",false);return;}
+  if(!l.length){msg("msgL","Escolha pelo menos um armazém.",false);return;}
+  if(de&&ate&&de>ate){msg("msgL","A data \"De\" é depois da data \"Até\".",false);return;}
+  $("limpar").disabled=true;
+  try{
+    if(!planoL){
+      /* 1.º toque: conta o que vai ser apagado */
+      let registos=0,fotos=0;const det=[];
+      for(const c of l){const j=await SJT.pedido("/gestao/limpar",{admin:ADMIN,metodo:"POST",corpo:{...c,simular:true}});registos+=j.registos;fotos+=j.fotos;
+        const nome=c.polo==="*"?"Códigos de pneus":((POLOS.find(p=>p.id===c.polo)||{}).nome||c.polo);if(j.registos)det.push(nome+": "+j.registos);}
+      if(!registos){msg("msgL","Não há nada a apagar com estas escolhas.",true);}
+      else{planoL={registos,fotos};msg("msgL","Vai apagar "+det.join(" · ")+(de||ate?" (período "+(de||"início")+" a "+(ate||"hoje")+")":" (todas as datas)")+". Isto não se pode desfazer.",false);}
+    }else{
+      /* 2.º toque: apaga, um armazém de cada vez */
+      let registos=0,fotos=0;
+      for(const c of l){const j=await SJT.pedido("/gestao/limpar",{admin:ADMIN,metodo:"POST",corpo:c,tempo:30000});registos+=j.registos;fotos+=j.fotos;}
+      planoL=null;document.querySelectorAll(".lp,.lpT,.la").forEach(c=>c.checked=false);
+      msg("msgL","Feito: "+registos+" registos e "+fotos+" fotografias apagados.",true);
+      carregarOpcoes();try{const k=await SJT.pedido("/gestao/polos",{admin:ADMIN});espaco(k.fotos);}catch(e){}
+      $("limpar").disabled=false;$("limpar").textContent="Ver o que vai ser apagado";$("limpar").classList.remove("perigo");return;
+    }
+  }catch(e){planoL=null;msg("msgL",e.estado===404?"Atualize a API (cloudflare-api.js, versão 8) para usar esta função.":e.message,false);}
+  $("limpar").disabled=false;botaoL(true);
 };
 
 /* ---- Opções e códigos de pneus acrescentados pelos supervisores ---- */

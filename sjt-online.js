@@ -172,7 +172,11 @@
             if (j.limpeza && j.limpeza > (est.limpeza || 0)) {
               const primeira = !est.limpeza && est.cursor === 0 && !Object.keys(est.cache).length;
               est.limpeza = j.limpeza;
-              if (!primeira) { est.cache = {}; est.fila = {}; est.cursor = 0; guardar(); avisar({ remoto: true }); mais = true; continue; }
+              if (!primeira) {
+                /* mantém só o que ainda está por enviar (o servidor recusa os que estão no período limpo) */
+                const c = {}; for (const id of Object.keys(est.fila)) if (est.cache[id]) c[id] = est.cache[id];
+                est.cache = c; est.cursor = 0; guardar(); avisar({ remoto: true }); mais = true; continue;
+              }
             }
             /* só conta como novidade o que mudou desde a última vez (o servidor devolve sempre de novo o último registo) */
             if ((j.registos || []).some(r => r.alterado > antes)) ultimaNovidade = Date.now();

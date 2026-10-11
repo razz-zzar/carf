@@ -55,8 +55,9 @@ const SQL_TABELAS = [
      tipo TEXT NOT NULL DEFAULT 'image/jpeg', tamanho INTEGER NOT NULL DEFAULT 0,
      autor_disp TEXT NOT NULL DEFAULT '', criado INTEGER NOT NULL, PRIMARY KEY (polo, id))`,
   `CREATE INDEX IF NOT EXISTS tentativas_chave ON tentativas (chave, t)`,
-  // última limpeza de dados de teste por polo ("*" = códigos/opções partilhados): os telemóveis esquecem a cópia local
-  `CREATE TABLE IF NOT EXISTS limpezas (polo TEXT PRIMARY KEY, t INTEGER NOT NULL)`,
+  // limpezas feitas na gestão, por polo ("*" = códigos/opções partilhados): {app: {t, de, ate}}
+  // os telemóveis esquecem a cópia local dessa app e o servidor recusa registos antigos desse período por enviar
+  `CREATE TABLE IF NOT EXISTS limpezas_app (polo TEXT PRIMARY KEY, dados TEXT NOT NULL DEFAULT '{}')`,
 ];
 let tabelasProntas = null;
 function prepararTabelas(db) {
@@ -165,7 +166,7 @@ async function listar(url, env, cors, s) {
   ).bind(poloDe(app, s), app, desde, PAGINA + 1).all();
   const linhas = r.results || [];
   const mais = linhas.length > PAGINA;
-  const lp = await env.DB.prepare("SELECT t FROM limpezas WHERE polo = ?").bind(poloDe(app, s)).first();
+  const lp = await limpezaDe(env, poloDe(app, s), app);
   return resposta(cors, { registos: linhas.slice(0, PAGINA).map(x => paraCliente(x, s.disp)), mais, agora: Date.now(), limpeza: lp ? lp.t : 0 });
 }
 
@@ -183,8 +184,7 @@ async function gravar(request, env, cors, s) {
   }
   const resultados = [];
   let agora = Date.now();
-  const lp = await env.DB.prepare("SELECT t FROM limpezas WHERE polo = ?").bind(poloDe(app, s)).first();
-  const limpeza = lp ? lp.t : 0;
+  const limpeza = await limpezaDe(env, poloDe(app, s), app);
   for (const it of itens) {
     const id = String(it && it.id || "");
     if (!id || id.length > 100) { resultados.push({ id, ok: false, codigo: "id" }); continue; }
@@ -192,8 +192,9 @@ async function gravar(request, env, cors, s) {
     const t = agora++;
     let depois;
     // registo feito antes de uma limpeza de dados de teste e que já não existe: não volta a aparecer
-    if (limpeza && !it.apagado && (!atual || atual.apagado) && Number(it.criado) > 0 && Number(it.criado) < limpeza) {
-      resultados.push({ id, ok: false, codigo: "limpo" }); continue;
+    if (limpeza && !it.apagado && (!atual || atual.apagado) && Number(it.criado) > 0 && Number(it.criado) < limpeza.t) {
+      const d = diaDoRegisto(it.dia, it.criado);
+      if ((!limpeza.de || d >= limpeza.de) && (!limpeza.ate || d <= limpeza.ate)) { resultados.push({ id, ok: false, codigo: "limpo" }); continue; }
     }
     if (it.campos && typeof it.campos === "object" && !it.apagado) {
       // Altera só alguns campos (ex. "visto por", afixar), sem reescrever o resto: duas pessoas
@@ -240,6 +241,14 @@ async function gravar(request, env, cors, s) {
   }
   return resposta(cors, { resultados, agora: Date.now() });
 }
+
+/* ---------- limpezas (ver gestaoLimpar) ---------- */
+async function limpezaDe(env, polo, app) {
+  const r = await env.DB.prepare("SELECT dados FROM limpezas_app WHERE polo = ?").bind(polo).first();
+  if (!r) return null;
+  try { return JSON.parse(r.dados)[app] || null; } catch (e) { return null; }
+}
+const diaDoRegisto = (dia, criado) => /^\d{4}-\d{2}-\d{2}$/.test(dia || "") ? dia : new Date(Number(criado) || 0).toISOString().slice(0, 10);
 
 /* ---------- fotografias ----------
    Com o R2 ligado (binding FOTOS) os ficheiros ficam no R2 e a tabela "fotos" guarda só os dados da fotografia
@@ -298,32 +307,55 @@ async function apagarFotos(request, env, cors, s) {
 }
 
 /* ---------- gestão (só com o código de administrador) ---------- */
-// Limpar dados de teste: {polos: ["sjt", ...], codigos: true|false}
-// Marca os registos como apagados (os telemóveis recebem a limpeza), apaga as fotografias e regista a hora da limpeza.
+// Limpar dados antigos ou de teste, um polo de cada vez (limite de consultas do plano gratuito):
+// {polo: "sjt" | "*", apps: ["pneus", ...], de: "AAAA-MM-DD"?, ate: "AAAA-MM-DD"?, simular: true?}
+// O dia de cada registo é o seu campo "dia" (ou a data em que foi criado). "simular" só conta o que seria apagado.
+// Marca os registos como apagados (os telemóveis recebem a limpeza) e apaga as fotografias desses registos.
 async function gestaoLimpar(request, env, cors) {
   if (!env.ADMIN || !iguais(request.headers.get("X-Admin") || "", env.ADMIN)) {
     await pausa(600);
     return erro(cors, 403, "admin", "Código de administrador errado.");
   }
   let b; try { b = await request.json(); } catch (e) { return erro(cors, 400, "pedido", "Pedido inválido."); }
-  const polos = (Array.isArray(b.polos) ? b.polos : []).map(String).filter(idPolo).slice(0, 8);
-  const alvos = [...polos, ...(b.codigos ? ["*"] : [])];
-  if (!alvos.length) return erro(cors, 400, "pedido", "Escolha o que limpar.");
-  const t = Date.now(); let registos = 0, fotos = 0;
-  for (const polo of alvos) {
-    const r = await env.DB.prepare("UPDATE registos SET apagado = 1, alterado = ?, alterado_por = 'Limpeza' WHERE polo = ? AND apagado = 0" + (polo === "*" ? " AND app = 'codigos'" : ""))
-      .bind(t, polo).run();
-    registos += (r.meta && r.meta.changes) || 0;
-    if (polo !== "*") {
-      const f = await env.DB.prepare("SELECT id FROM fotos WHERE polo = ?").bind(polo).all();
-      const ids = (f.results || []).map(x => chaveR2(polo, x.id));
-      if (env.FOTOS) for (let i = 0; i < ids.length; i += 1000) await env.FOTOS.delete(ids.slice(i, i + 1000));
-      await env.DB.prepare("DELETE FROM fotos WHERE polo = ?").bind(polo).run();
-      fotos += ids.length;
+  const polo = b.polo === "*" ? "*" : String(b.polo || "");
+  if (polo !== "*" && !idPolo(polo)) return erro(cors, 400, "polo", "Armazém inválido.");
+  const apps = (Array.isArray(b.apps) ? b.apps : []).filter(a => APPS.has(a) && (polo === "*") === GLOBAIS.has(a));
+  if (!apps.length) return erro(cors, 400, "apps", "Escolha o tipo de dados a apagar.");
+  const dt = x => /^\d{4}-\d{2}-\d{2}$/.test(x || "") ? x : "";
+  const de = dt(b.de), ate = dt(b.ate);
+  const DIA = "(CASE WHEN dia GLOB '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]' THEN dia ELSE date(criado / 1000, 'unixepoch') END)";
+  const cond = "polo = ? AND apagado = 0 AND app IN (" + apps.map(() => "?").join(",") + ")" + (de ? " AND " + DIA + " >= ?" : "") + (ate ? " AND " + DIA + " <= ?" : "");
+  const args = [polo, ...apps, ...(de ? [de] : []), ...(ate ? [ate] : [])];
+  if (b.simular) {
+    const r = await env.DB.prepare("SELECT app, COUNT(*) AS n FROM registos WHERE " + cond + " GROUP BY app").bind(...args).all();
+    const porApp = {}; let registos = 0;
+    for (const x of r.results || []) { porApp[x.app] = x.n; registos += x.n; }
+    let fotos = 0;
+    if (polo !== "*" && registos) {
+      const f = await env.DB.prepare("SELECT COUNT(*) AS n FROM fotos WHERE polo = ? AND registo IN (SELECT id FROM registos WHERE " + cond + ")").bind(polo, ...args).first();
+      fotos = (f && f.n) || 0;
     }
-    await env.DB.prepare("INSERT INTO limpezas (polo, t) VALUES (?, ?) ON CONFLICT (polo) DO UPDATE SET t = excluded.t").bind(polo, t).run();
+    return resposta(cors, { ok: true, simulado: true, registos, fotos, porApp });
   }
-  return resposta(cors, { ok: true, registos, fotos });
+  const t = Date.now();
+  // fotografias dos registos que vão ser apagados
+  let fotos = 0;
+  if (polo !== "*") {
+    const f = await env.DB.prepare("SELECT id FROM fotos WHERE polo = ? AND registo IN (SELECT id FROM registos WHERE " + cond + ")").bind(polo, ...args).all();
+    const ids = (f.results || []).map(x => x.id);
+    if (ids.length) {
+      if (env.FOTOS) for (let i = 0; i < ids.length; i += 1000) await env.FOTOS.delete(ids.slice(i, i + 1000).map(x => chaveR2(polo, x)));
+      await env.DB.prepare("DELETE FROM fotos WHERE polo = ? AND registo IN (SELECT id FROM registos WHERE " + cond + ")").bind(polo, ...args).run();
+      fotos = ids.length;
+    }
+  }
+  const r = await env.DB.prepare("UPDATE registos SET apagado = 1, alterado = ?, alterado_por = 'Limpeza' WHERE " + cond).bind(t, ...args).run();
+  // regista a limpeza para os telemóveis esquecerem a cópia destas apps
+  const ant = await env.DB.prepare("SELECT dados FROM limpezas_app WHERE polo = ?").bind(polo).first();
+  let marcas = {}; try { marcas = ant ? JSON.parse(ant.dados) : {}; } catch (e) {}
+  for (const a of apps) marcas[a] = { t, de, ate };
+  await env.DB.prepare("INSERT INTO limpezas_app (polo, dados) VALUES (?, ?) ON CONFLICT (polo) DO UPDATE SET dados = excluded.dados").bind(polo, JSON.stringify(marcas)).run();
+  return resposta(cors, { ok: true, registos: (r.meta && r.meta.changes) || 0, fotos });
 }
 
 // Opções e códigos de pneus acrescentados pelos supervisores (partilhados por todos os armazéns):
