@@ -190,27 +190,30 @@
     }
     const pendentes = () => Object.keys(est.fila).length;
 
-    /* Atualiza sozinho: ao abrir, ao voltar à app, quando a rede volta e com um ritmo que se adapta:
-       - de 5 em 5 s enquanto alguém mexe na app (últimos 3 min) ou chegam registos novos (últimos 2 min);
-       - de 30 em 30 s quando a app está aberta mas parada;
-       - nada com a app em segundo plano (atualiza logo ao voltar).
-       Assim quem está a trabalhar vê as alterações dos outros em poucos segundos, sem gastar
-       os pedidos diários do plano gratuito da Cloudflare com telemóveis parados. */
-    let ultimoToque = Date.now(), ultimaNovidade = 0;
-    const RAPIDO = 5000, LENTO = 30000;
-    const ativo = () => Date.now() - ultimoToque < 180000 || Date.now() - ultimaNovidade < 120000;
+    /* Atualiza sozinho enquanto alguém está a usar a app:
+       - de 3 em 3 s enquanto alguém mexe (últimos 2 min) ou chegam registos novos (últimos 2 min);
+       - parada há 2 min, em segundo plano ou sem rede: fica em pausa (não gasta pedidos);
+       - ao tocar no ecrã, voltar à app ou a rede voltar: atualiza logo e retoma o ritmo.
+       Assim quem está a trabalhar vê as alterações dos outros em segundos e os telemóveis parados
+       não gastam os pedidos diários do plano gratuito da Cloudflare. */
+    let ultimoToque = Date.now(), ultimaNovidade = 0, parado = true;
+    const RAPIDO = 3000, COM_ERRO = 15000, JANELA = 120000;
+    const ativo = () => Date.now() - ultimoToque < JANELA || Date.now() - ultimaNovidade < JANELA;
+    const visivel = () => document.visibilityState === "visible" && navigator.onLine !== false;
+    const ciclo = async () => {
+      if (!visivel() || !ativo()) { parado = true; estado.pausa = visivel(); avisar({ estado: true }); return; }
+      parado = false; if (estado.pausa) { estado.pausa = false; avisar({ estado: true }); }
+      try { await sincronizar(); } catch (e) {}
+      setTimeout(ciclo, estado.erro ? COM_ERRO : (ritmoFixo || RAPIDO)); /* ritmoFixo: dados que mudam pouco (ex. códigos de pneus) */
+    };
+    const acordar = () => { ultimoToque = Date.now(); if (parado) { parado = false; setTimeout(ciclo, 0); } };
     if (s.token) {
-      const toque = () => { const estavaParado = !ativo(); ultimoToque = Date.now(); if (estavaParado) agendar(0); };
-      ["pointerdown", "keydown", "touchstart"].forEach(ev => window.addEventListener(ev, toque, { passive: true, capture: true }));
-      window.addEventListener("online", () => agendar(0));
+      ["pointerdown", "keydown", "touchstart"].forEach(ev => window.addEventListener(ev, acordar, { passive: true, capture: true }));
+      window.addEventListener("online", acordar);
       window.addEventListener("offline", () => { estado.rede = false; avisar({ estado: true }); });
-      document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") { ultimoToque = Date.now(); agendar(0); } });
+      document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") acordar(); });
       /* arranca depois de a app acabar de se preparar (a app ainda não tem a ligação quando ligar() corre) */
-      const ciclo = async () => {
-        if (document.visibilityState === "visible" && navigator.onLine !== false) { try { await sincronizar(); } catch (e) {} }
-        setTimeout(ciclo, ritmoFixo || (ativo() && !estado.erro ? RAPIDO : LENTO)); /* ritmoFixo: dados que mudam pouco (ex. códigos de pneus) */
-      };
-      setTimeout(ciclo, 0);
+      parado = false; setTimeout(ciclo, 0);
     }
     return { app, sessao: s, registos, obter, gravar, mudar, apagar, podeApagar, sincronizar, pendentes, estado: () => ({ ...estado, pendentes: pendentes() }),
              ouvir: f => ouvintes.add(f), primeiraVez: () => est.cursor === 0 };
@@ -250,6 +253,7 @@
       else if (e.erro) { cls = "err"; txt = "Erro: " + e.erro; }
       else if (e.pendentes) txt = "A enviar " + e.pendentes + "…";
       else if (e.aSincronizar && !e.ultima) txt = "A carregar…";
+      else if (e.pausa) txt = "Online · em pausa, toque para atualizar";
       else txt = "Online";
       el.className = "sjt-barra" + (cls ? " " + cls : "");
       dir.textContent = ""; const p = document.createElement("span"); p.className = "sjt-ponto"; dir.append(p, txt);
