@@ -16,7 +16,7 @@
 // 7. Testar: https://ops-carf-api.<conta>.workers.dev/ deve mostrar {"ok":true,...} ("fotos":"r2" se o R2 estiver ligado)
 // As tabelas da base de dados criam-se sozinhas no primeiro pedido.
 
-const VERSAO = 8;
+const VERSAO = 9;
 const ORIGENS = [
   "https://razz-zzar.github.io",
   "https://raw.githack.com",
@@ -24,7 +24,7 @@ const ORIGENS = [
   "http://localhost:8000",
   "http://127.0.0.1:8000",
 ];
-const APPS = new Set(["pneus", "chegadas", "penalizacoes", "frota", "ocorrencias", "turno", "codigos"]);
+const APPS = new Set(["pneus", "chegadas", "penalizacoes", "frota", "ocorrencias", "contactos", "turno", "codigos"]);
 // Apps partilhadas por TODOS os armazéns (ex. códigos de pneus aprendidos): guardadas no polo "*"
 const GLOBAIS = new Set(["codigos"]);
 const poloDe = (app, s) => GLOBAIS.has(app) ? "*" : s.polo.id;

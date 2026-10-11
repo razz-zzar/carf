@@ -114,6 +114,7 @@ input:focus-visible,textarea:focus-visible,button:focus-visible{outline:2px soli
     <label for="lMatriz">Subcontratados por volta <small>— uma linha por volta: volta = subcontratado (ex. 1201 = LG)</small><textarea id="lMatriz" spellcheck="false" style="min-height:180px"></textarea></label>
     <label for="pEmailPen">Email para penalizações <small>— para onde se envia o ficheiro semanal (opcional; vários separados por vírgula)</small><input id="pEmailPen" type="email" inputmode="email" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="ex. operacoes@empresa.pt" multiple></label>
     <label for="pEmail">Email para ocorrências <small>— para onde se enviam os volumes danificados (opcional; vários separados por vírgula)</small><input id="pEmail" type="email" inputmode="email" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="ex. apoio.cliente@empresa.pt" multiple></label>
+    <label for="pEmailCont">Email para pedidos de contacto <small>— para onde se pedem os contactos dos particulares (opcional; vários separados por vírgula)</small><input id="pEmailCont" type="email" inputmode="email" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="ex. apoio.cliente@empresa.pt" multiple></label>
     <label for="lMotivos">Motivos de penalização <small>— motivo = valor em € (ou nao_pago, ou reembolso). Vazio = lista comum.</small><textarea id="lMotivos" spellcheck="false" style="min-height:160px"></textarea></label>
     <div class="btns">
       <button class="btn sec" type="button" id="usarSJT">Auto Preencher com dados Base</button>
@@ -148,7 +149,7 @@ function espaco(f){
   el.className="dica"+(!f.r2&&f.naBaseDados>300*1048576?" alerta":"");
 }
 /* ---- Apagar dados (testes ou registos antigos) ---- */
-const APPS_L=[["pneus","Incompletos (pneus)"],["chegadas","Horários (chegadas e saídas)"],["penalizacoes","Penalizações"],["frota","Frota"],["ocorrencias","Ocorrências (com fotografias)"],["turno","Mural (com fotografias)"],["codigos","Códigos e opções de pneus (comuns a todos os armazéns)"]];
+const APPS_L=[["pneus","Incompletos (pneus)"],["chegadas","Horários (chegadas e saídas)"],["penalizacoes","Penalizações"],["frota","Frota"],["ocorrencias","Ocorrências (com fotografias)"],["contactos","Pedidos de contacto"],["turno","Mural (com fotografias)"],["codigos","Códigos e opções de pneus (comuns a todos os armazéns)"]];
 let planoL=null;
 const chk=(cls,v,txt,el)=>{const l=document.createElement("label");l.className="chk";const c=document.createElement("input");c.type="checkbox";c.value=v;c.className=cls;c.onchange=()=>{planoL=null;botaoL();};l.append(c," "+txt);el.appendChild(l);return c;};
 function desenharLimpar(){
@@ -264,6 +265,7 @@ function preencher(c){
   $("lMotivos").value=(c.motivos||[]).map(([m,v])=>m+" = "+v).join("\n");
   $("pEmail").value=c.emailOcorrencias||"";
   $("pEmailPen").value=c.emailPenalizacoes||"";
+  $("pEmailCont").value=c.emailContactos||"";
 }
 function abrir(p){
   editar=p||null;$("fPolo").hidden=false;msg("msgP","");
@@ -295,6 +297,9 @@ function lerConfig(){
   const ep=$("pEmailPen").value.split(/[,;\s]+/).map(x=>x.trim()).filter(Boolean);
   ep.forEach(x=>{if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(x))erros.push("Email para penalizações inválido: “"+x+"”");});
   if(ep.length)c.emailPenalizacoes=ep.join(", ");
+  const ec=$("pEmailCont").value.split(/[,;\s]+/).map(x=>x.trim()).filter(Boolean);
+  ec.forEach(x=>{if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(x))erros.push("Email para pedidos de contacto inválido: “"+x+"”");});
+  if(ec.length)c.emailContactos=ec.join(", ");
   return {c,erros};
 }
 $("fAdmin").addEventListener("submit",e=>{e.preventDefault();ADMIN=$("admin").value.trim();if(!ADMIN){msg("msgA","Escreva o código.",false);return;}msg("msgA","A verificar…",true);carregar();});

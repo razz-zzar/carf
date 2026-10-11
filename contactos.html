@@ -1,0 +1,451 @@
+<!doctype html>
+<html lang="pt-PT">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0c0f0d">
+<meta name="application-name" content="OPS CARF">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Contactos</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="carf-icon-192.png">
+<link rel="apple-touch-icon" href="carf-icon-192.png">
+<style>
+/* Layout (Pedidos de contacto, baseado nas Ocorrências): novo pedido (tipo, guia lida com a câmara, expedidor, volumes, descrição, fotografias), lista contínua de ocorrências (sem divisão por dia) com pesquisa e estado aberta/resolvida, email com as fotografias em anexo e Excel do dia */
+:root{
+  --bg:#0c0f0d; --panel:#151a17; --line:#26302a; --fg:#eef3ef; --muted:#93a39a;
+  --green:#B9D406; --green-dk:#94aa05; --green-ink:#0a0a0a; --danger:#e0574f;
+  --display:"Roboto Condensed","sans-serif-condensed","Arial Narrow",Arial,sans-serif;
+  --body:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --mono:"Roboto Mono",ui-monospace,Menlo,Consolas,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+button{-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--fg)}
+body{font-family:var(--body);font-size:16px;line-height:1.4;padding-inline:16px;padding-block:0 40px}
+body.preso{overflow:hidden}
+.wrap{max-width:560px;margin:0 auto;display:flex;flex-direction:column;gap:20px}
+header{padding-block:calc(14px + env(safe-area-inset-top,0px)) 12px;border-bottom:2px solid var(--green);display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:10px;min-width:0}
+.logo{height:40px;width:auto;max-width:42%;background:#fff;border-radius:8px;padding:5px 8px;flex:none}
+h1{font-family:var(--display);font-weight:700;font-size:24px;letter-spacing:.02em;text-transform:uppercase;margin:0;line-height:1}
+.voltar{display:inline-flex;align-items:center;min-height:36px;color:var(--green);font:600 15px var(--body);text-decoration:none;letter-spacing:.02em}
+.datebox input{background:var(--panel);color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:8px;font:500 14px var(--mono)}
+:focus-visible{outline:2px solid var(--green);outline-offset:2px}
+section.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:14px}
+h2{font-family:var(--display);font-size:20px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;margin:0;color:var(--green);display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+h2 span{font:600 15px var(--mono);color:var(--muted)}
+.par{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.3fr);gap:12px}
+.campo{display:flex;flex-direction:column;gap:6px;min-width:0}
+.campo label{font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.campo label i{font-style:normal;text-transform:none;letter-spacing:0;font-weight:400}
+.auto{font:700 10px var(--body);letter-spacing:.08em;background:var(--green);color:var(--green-ink);border-radius:4px;padding:2px 5px}
+.campo input,.campo select,.campo textarea{width:100%;background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:12px;font:500 18px var(--body);min-height:50px}
+.campo textarea{font-size:17px;min-height:84px;resize:vertical}
+.campo input:focus,.campo select:focus,.campo textarea:focus{border-color:var(--green);outline:none}
+.campo input.mono{font-family:var(--mono);font-weight:600}
+.campo.erro input,.campo.erro select,.campo.erro textarea{border-color:var(--danger)}
+.eur{position:relative}
+.eur input{padding-right:38px}
+.eur::after{content:"€";position:absolute;right:14px;top:50%;transform:translateY(-50%);color:var(--muted);font:600 18px var(--body);pointer-events:none}
+.eur.txt::after{content:none}
+.nota{font-size:13px;color:var(--muted)}
+select{appearance:none;-webkit-appearance:none;background-image:linear-gradient(45deg,transparent 50%,var(--green) 50%),linear-gradient(135deg,var(--green) 50%,transparent 50%);background-position:calc(100% - 20px) 50%,calc(100% - 14px) 50%;background-size:6px 6px;background-repeat:no-repeat;padding-right:40px!important}
+.aviso{font-size:14px;color:var(--muted);background:var(--bg);border-radius:8px;padding:10px 12px}
+.registar{border:0;border-radius:10px;padding:16px;font:700 21px var(--display);letter-spacing:.06em;text-transform:uppercase;cursor:pointer;background:var(--green);color:var(--green-ink)}
+.registar:active{background:var(--green-dk)}
+.registar:disabled{background:var(--line);color:var(--muted);cursor:default}
+#lista{display:flex;flex-direction:column;gap:8px}
+.r{display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:12px;row-gap:4px;align-items:center;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 10px 10px 14px}
+.r .top{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;min-width:0}
+.r .vol{font:700 22px/1 var(--display);letter-spacing:.03em;overflow-wrap:anywhere}
+.r .vol small{font:600 11px var(--body);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-right:4px}
+.r .sub{font:600 13px var(--body);color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.r .val{font:600 15px var(--mono);color:var(--green)}
+.r .mot{font-size:15px;overflow-wrap:anywhere}
+.r .mtr{font-size:14px;color:var(--muted);overflow-wrap:anywhere}
+.r .obs{font-size:14px;border-left:2px solid var(--line);padding-left:8px;white-space:pre-wrap;overflow-wrap:anywhere}
+.r .info{min-width:0;display:flex;flex-direction:column;gap:4px}
+.anular{background:none;border:1px solid var(--line);color:var(--muted);border-radius:8px;padding:10px 12px;font:600 13px var(--body);cursor:pointer}
+.anular.confirm{border-color:var(--danger);color:var(--danger)}
+.vazio{font-size:14px;color:var(--muted)}
+.btn{border-radius:10px;padding:16px;font:700 20px var(--display);letter-spacing:.06em;text-transform:uppercase;cursor:pointer;background:transparent;color:var(--green);border:2px solid var(--green)}
+.msg{font-size:14px;min-height:20px}
+.msg.ok{color:var(--green)} .msg.err{color:var(--danger)}
+.hint{font-size:13px;color:var(--muted)}
+/* Resumo antes de gravar */
+.veu{position:fixed;inset:0;background:rgba(0,0,0,.7);display:flex;align-items:flex-end;justify-content:center;z-index:10;padding:16px 16px calc(16px + env(safe-area-inset-bottom,0px))}
+.resumo{width:100%;max-width:560px;max-height:calc(100dvh - 32px);overflow:auto;background:var(--panel);border:1px solid var(--green);border-radius:14px;padding:18px 16px;display:flex;flex-direction:column;gap:14px}
+.resumo dl{margin:0;display:grid;grid-template-columns:auto minmax(0,1fr);gap:8px 14px;align-items:baseline}
+.resumo dt{font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.resumo dd{margin:0;font-size:17px;overflow-wrap:anywhere;white-space:pre-wrap}
+.resumo dd.forte{font:700 22px var(--display);letter-spacing:.03em}
+.resumo dd.din{font:600 18px var(--mono);color:var(--green)}
+.resumo .acoes{display:grid;grid-template-columns:1fr 1.4fr;gap:10px}
+.resumo .btn{padding:14px 10px;font-size:18px}
+.resumo .registar{padding:14px 10px;font-size:18px}
+
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:999px;padding:12px 16px;font:600 15px var(--body);cursor:pointer}
+.chip[aria-pressed=true]{background:var(--green);border-color:var(--green);color:var(--green-ink)}
+.campo.erro .chips .chip{border-color:var(--danger)}
+.com-scan{display:grid;grid-template-columns:minmax(0,1fr) 50px;gap:6px}
+.scan-mini{display:grid;place-items:center;border:2px dashed var(--green);background:transparent;color:var(--green);border-radius:8px;cursor:pointer;padding:0}
+.stepper{display:grid;grid-template-columns:50px minmax(0,1fr) 50px;gap:6px}
+.stepper button{background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:8px;font:700 24px var(--display);cursor:pointer}
+.stepper input{text-align:center;font-family:var(--mono)!important;font-weight:600!important}
+.fbtns{display:grid;grid-template-columns:1.3fr 1fr;gap:8px}
+.fbtn{display:flex;align-items:center;justify-content:center;gap:8px;min-height:50px;border-radius:10px;border:2px dashed var(--green);background:transparent;color:var(--green);font:700 16px var(--display);letter-spacing:.05em;text-transform:uppercase;cursor:pointer}
+.fbtn.sec{border-style:solid;border-width:1px;border-color:var(--line);color:var(--fg)}
+.thumbs{display:grid;grid-template-columns:repeat(auto-fill,minmax(84px,1fr));gap:8px}
+.thumb{position:relative;aspect-ratio:1;border-radius:8px;overflow:hidden;background:#000;border:1px solid var(--line);padding:0;cursor:pointer}
+.thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.thumb .x{position:absolute;top:4px;right:4px;width:28px;height:28px;border-radius:50%;border:0;background:rgba(0,0,0,.75);color:#fff;font:700 16px/28px var(--body);cursor:pointer;padding:0}
+.thumb .pend{position:absolute;left:4px;bottom:4px;font:700 10px var(--body);letter-spacing:.06em;background:rgba(0,0,0,.75);color:#e0a84f;border-radius:4px;padding:2px 5px}
+.thumb .falta{position:absolute;inset:0;display:grid;place-items:center;text-align:center;font-size:11px;color:var(--muted);padding:6px}
+.filtro{display:flex;gap:6px}
+.filtro .chip{padding:8px 12px;font-size:14px}
+#lista{display:flex;flex-direction:column;gap:10px}
+.procura{width:100%;background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:12px;font:500 16px var(--body)}
+.procura:focus{border-color:var(--green);outline:none}
+.btn.mais{padding:12px;font-size:16px}
+.oc{background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:12px 12px 12px 14px;display:flex;flex-direction:column;gap:8px;border-left:4px solid var(--danger)}
+.oc.resolvida{border-left-color:var(--green)}
+.oc .top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.oc .tipo{font:700 17px/1.15 var(--display);letter-spacing:.03em;text-transform:uppercase;overflow-wrap:anywhere}
+.est{font:700 11px var(--body);letter-spacing:.08em;border-radius:4px;padding:3px 7px;white-space:nowrap;flex:none}
+.est.aberta{background:var(--danger);color:#fff}.est.resolvida{background:var(--green);color:var(--green-ink)}
+.oc .ref{font:600 14px var(--mono);color:var(--fg);overflow-wrap:anywhere}
+.oc .ref small{font:600 11px var(--body);letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.oc .cli{font-size:15px;overflow-wrap:anywhere}
+.oc .cli .rot{font:600 11px var(--body);letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.oc .desc{font-size:15px;white-space:pre-wrap;overflow-wrap:anywhere;border-left:2px solid var(--line);padding-left:8px}
+.oc .res{font-size:14px;background:rgba(185,212,6,.08);border-radius:8px;padding:8px 10px;white-space:pre-wrap;overflow-wrap:anywhere}
+.oc .res b{color:var(--green)}
+.oc .meta{font-size:13px;color:var(--muted)}
+.oc .meta.mail{color:var(--green)}
+.oc .acoes{display:flex;flex-wrap:wrap;gap:8px}
+.oc .acoes button{background:none;border:1px solid var(--line);color:var(--fg);border-radius:8px;padding:10px 12px;font:600 14px var(--body);cursor:pointer;min-height:42px}
+.oc .acoes button.p{border-color:var(--green);color:var(--green)}
+.oc .acoes button.confirm{border-color:var(--danger);color:var(--danger)}
+.oc .acoes .dir{margin-left:auto}
+.resolver{display:flex;flex-direction:column;gap:8px}
+.resolver textarea{width:100%;background:var(--panel);color:var(--fg);border:1px solid var(--green);border-radius:8px;padding:10px;font:500 16px var(--body);min-height:70px;resize:vertical}
+.resolver div{display:grid;grid-template-columns:1fr 1.4fr;gap:8px}
+.resolver button{border-radius:8px;padding:12px;font:700 15px var(--display);letter-spacing:.05em;text-transform:uppercase;cursor:pointer;border:1px solid var(--line);background:none;color:var(--fg)}
+.resolver button.p{background:var(--green);border-color:var(--green);color:var(--green-ink)}
+.grupo-h{font:700 15px var(--display);letter-spacing:.06em;text-transform:uppercase;color:var(--danger);margin-top:6px}
+.grupo-h.res{color:var(--green);border-top:1px solid var(--line);padding-top:14px;margin-top:10px}
+.mcampo{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"rot btn" "val btn";column-gap:10px;align-items:center;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 10px 10px 12px}
+.mrot{grid-area:rot;font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.mval{grid-area:val;font-size:15px;overflow-wrap:anywhere;user-select:all}
+.mcop{grid-area:btn;background:none;border:1px solid var(--green);color:var(--green);border-radius:8px;padding:10px 14px;font:600 14px var(--body);cursor:pointer;min-width:84px}
+.mcop.ok{background:var(--green);color:var(--green-ink)}
+.mnota{font-size:13px;color:var(--muted)}
+.ver{position:fixed;inset:0;z-index:40;background:rgba(0,0,0,.94);display:flex;flex-direction:column;padding:calc(10px + env(safe-area-inset-top,0px)) 12px calc(12px + env(safe-area-inset-bottom,0px));gap:10px}
+.ver .vtop{display:flex;justify-content:space-between;align-items:center;color:var(--muted);font-size:14px}
+.ver .vtop button,.ver .nav button{background:none;border:1px solid var(--line);color:var(--fg);border-radius:8px;padding:10px 16px;font:600 15px var(--body);cursor:pointer}
+.ver .vimg{flex:1;min-height:0;display:grid;place-items:center}
+.ver img{max-width:100%;max-height:100%;object-fit:contain}
+.ver .nav{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.tel{display:inline-flex;align-items:center;gap:6px;font:700 17px var(--mono);color:var(--green);text-decoration:none}
+.oc .mot{font:600 13px var(--body);color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.resolver input{width:100%;background:var(--panel);color:var(--fg);border:1px solid var(--green);border-radius:8px;padding:10px;font:600 18px var(--mono)}
+</style>
+<link rel="stylesheet" href="carf-tema.css">
+<script src="carf-tema.js"></script>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brand">
+      <img class="logo" alt="Logotipo" src="data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0idXRmLTgiPz4KPCEtLSBHZW5lcmF0b3I6IEFkb2JlIElsbHVzdHJhdG9yIDI3LjAuMCwgU1ZHIEV4cG9ydCBQbHVnLUluIC4gU1ZHIFZlcnNpb246IDYuMDAgQnVpbGQgMCkgIC0tPgo8c3ZnIHZlcnNpb249IjEuMSIgaWQ9IkxheWVyXzEiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgeG1sbnM6eGxpbms9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkveGxpbmsiIHg9IjBweCIgeT0iMHB4IgoJIHZpZXdCb3g9IjAgMCA0NTYgMTg0LjMiIHN0eWxlPSJlbmFibGUtYmFja2dyb3VuZDpuZXcgMCAwIDQ1NiAxODQuMzsiIHhtbDpzcGFjZT0icHJlc2VydmUiPgo8c3R5bGUgdHlwZT0idGV4dC9jc3MiPgoJLnN0MHtmaWxsOiNCOUQ0MDY7fQoJLnN0MXtmaWxsOiMwMDdCN0Y7fQoJLnN0MntmaWxsOiMzRjlCOUU7fQo8L3N0eWxlPgo8Zz4KCTxwYXRoIGNsYXNzPSJzdDAiIGQ9Ik00NDQuMiw3Mi43Yy0yMy40LDcuNi00Ni41LDE1LjEtNjkuNywyMi43Yy0zLTMuNC00LjItNy40LTUuNi0xMS4yYy0zLjQtOS4xLTQuOS0xOC42LTUuMS0yOC4zCgkJYy0wLjMtMTcuOCwxMC4zLTI5LjksMjMuOC0zNC4yYzIyLjMtNy4xLDQ0LjUtMTQuMyw2Ni43LTIxLjVjMC41LTAuMSwxLTAuMSwxLjUtMC4yQzQ1Ni41LDMuNiw0NDguNSw1My41LDQ0NC4yLDcyLjd6Ii8+Cgk8cGF0aCBjbGFzcz0ic3QxIiBkPSJNNDU1LDE0Ny4xYy04LjcsNi43LTE4LjEsMTIuMy0yNy4xLDE4LjZjLTguMyw1LjgtMTYuOSwxMS4zLTI1LjMsMTdjLTEuNiwxLjEtMywxLjktNSwxLjQKCQljLTE2LjItNC4xLTMwLjYtMTEuMS00MS0yNC43Yy01LjEtNi43LTguMy0xNC40LTkuNy0yMi43Yy0wLjQtMi4xLTAuNC00LjQtMC4xLTYuNWMyLTE0LDQuMi0yNy45LDYuMy00MS45CgkJYzEuMy04LjYsMi42LTE3LjMsNC4xLTI1LjljMS40LDcuNCwxLjksMTQuOCw0LjMsMjJjMTEuMiwzMi43LDMzLjIsNTMuMyw2Ny4yLDYwLjhjNi45LDEuNSwxMy44LDEuOCwyMC44LDEuOAoJCUM0NTEuMywxNDYuNSw0NTMuMiwxNDYuMiw0NTUsMTQ3LjF6Ii8+Cgk8cGF0aCBjbGFzcz0ic3QyIiBkPSJNNDU1LDE0Ny4xYy0xLjgtMC4xLTMuNy0wLjEtNS41LTAuMmMyLTEuNCw0LjMtMC43LDYuNS0wLjljMCwwLjQsMCwwLjgtMC4xLDAuOQoJCUM0NTUuNywxNDcuMSw0NTUuMywxNDcuMSw0NTUsMTQ3LjF6Ii8+Cgk8cGF0aCBkPSJNMzMzLjIsNTMuNmMtMTUuMywwLTMwLjctMC40LTQ2LDAuMWMtMTQuMywwLjQtMjUuOSwxMC43LTI4LjQsMjQuM2MtMS41LDgtMi44LDE2LjEtNC4zLDI0LjFjLTEuNyw5LjItMy41LDE4LjQtNS4zLDI4LjIKCQljLTYuNS00LjctMTIuNi05LjEtMTkuMS0xMy44YzEuOS0xLjMsMy4zLTIuMiw0LjYtMy4xYzguMi01LjgsMTMuOC0xMy40LDE2LjMtMjMuMWM1LTE5LjItNy4xLTM1LjYtMjQuOS0zNi4zCgkJYy05LjMtMC40LTE4LjcsMC0yOC0wLjNjLTE2LjMtMC41LTI5LDExLTMxLjUsMjYuMmMtMi4yLDEzLjEtNC45LDI2LjEtNy4zLDM5LjFjLTAuMywwLTAuNiwwLjEtMC45LDAuMQoJCWMtMy44LTIxLjYtNy42LTQzLjMtMTEuNS02NC45Yy04LjMsMC0xNi4xLDAtMjQuMywwYy03LjksMTEuMS0xNiwyMi4zLTI0LDMzLjZjLTgsMTEuMi0xNiwyMi40LTI0LDMzLjZjLTExLjUsMC0yMi42LDAuMS0zMy44LDAKCQljLTE0LjEtMC4xLTIyLjUtMTEuNS0xOC44LTI1LjFjMy4yLTExLjgsMTUuNC0yMS44LDI4LjEtMjEuNWMxMi4zLDAuMiwyNC43LDAuMSwzNywwYzEuNiwwLDMuMywwLjQsNC42LTEuMgoJCWM1LjEtNi4zLDEwLjMtMTIuNiwxNS43LTE5LjJjLTEuNC0wLjEtMi4yLTAuMi0zLTAuMmMtMTksMC0zOCwwLTU3LDBjLTIuMiwwLTQuMywwLjEtNi40LDAuNmMtMTUuMywzLjQtMjYuMywxMi4zLTM0LDI1LjYKCQljLTYsMTAuNC04LjcsMjEuNi02LjIsMzMuNmMzLjQsMTYuOSwxNy43LDI4LjIsMzUuNiwyOC41YzEwLjMsMC4yLDIwLjcsMCwzMSwwYzYuMiwwLDEyLjMsMCwxOC40LDBjNS4yLTcuMiwxMC4yLTE0LjIsMTUuMi0yMS4yCgkJYzUuOC0wLjEsMTEuMSwxLjQsMTYuMiwzLjRjOS4zLDMuOCwxNi44LDkuOSwyMi44LDE3LjRjMTIuNCwwLDI0LjMsMCwzNi4yLDBjMi40LTEyLjgsNC44LTI1LjMsNy4zLTM4LjNjMS45LDEuNCwzLjIsMi40LDQuNSwzLjQKCQljMTMuOSwxMC45LDI3LjgsMjEuOCw0MS42LDMyLjhjMi4yLDEuOCw0LjQsMi42LDcuMiwyLjZjOS4yLTAuMiwxOC4zLDAsMjcuNS0wLjFjMS4zLDAsMi43LDAuNCwzLjktMC44CgkJYzIuMi0xMS42LDQuNC0yMy4zLDYuNy0zNS41YzE0LDAsMjcuNywwLDQxLjYsMGMxLjYtNi44LDMuMS0xMy4yLDQuNy0yMC4yYy0xNC41LDAtMjguNCwwLTQyLjYsMGMwLjMtMS41LDAuNi0yLjUsMC43LTMuNAoJCWMxLjMtNy41LDIuMy04LjQsOS42LTguNGMxMi43LDAsMjUuMywwLDM4LDBjMS40LDAsMywwLjUsNC40LTAuOGMwLjktNi4yLDIuOC0xMi41LDMuMy0xOC45QzMzNC4xLDUzLjksMzMzLjcsNTMuNiwzMzMuMiw1My42egoJCSBNMTA4LjIsMTExLjJjNy05LjksMTMuNy0xOS4yLDIxLTI5LjVjMi4xLDExLjcsMy45LDIyLjQsNS45LDMzLjVDMTI2LjMsMTEyLjEsMTE3LjcsMTExLjIsMTA4LjIsMTExLjJ6IE0yMTcuMiwxMDAuMgoJCWMtMi44LDAuNC01LjYsMC4zLTguNSwwLjNjLTcuOCwwLTE1LjYsMC0yMy43LDBjLTEtMi43LDAuMi00LjcsMC41LTYuOGMwLjgtNC42LDEuNi05LjIsMi42LTEzLjdjMS00LjgsMi42LTYuMSw3LjUtNi4xCgkJYzguMywwLDE2LjcsMCwyNSwwYzguNCwwLDEzLjMsNi41LDEwLjYsMTQuNEMyMjksOTUsMjI0LjMsOTkuMiwyMTcuMiwxMDAuMnoiLz4KPC9nPgo8L3N2Zz4K">
+      <div style="min-width:0"><h1>Pedidos de Contacto</h1><a class="voltar" href="./">‹ Início</a></div>
+    </div>
+  </header>
+
+  <section class="card" aria-labelledby="t-novo">
+    <h2 id="t-novo">Novo pedido de contacto</h2>
+    <div class="campo" id="c-motivo">
+      <label id="l-motivo">Motivo</label>
+      <div class="chips" id="motivos" role="group" aria-labelledby="l-motivo"></div>
+    </div>
+    <div class="campo" id="c-guia">
+      <label for="guia">Nº da guia</label>
+      <div class="com-scan"><input type="text" id="guia" class="mono" inputmode="numeric" autocomplete="off" placeholder="Ler ou escrever"><button type="button" class="scan-mini" id="lerGuia" aria-label="Ler código da guia com a câmara"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 8V5a1 1 0 0 1 1-1h3M16 4h3a1 1 0 0 1 1 1v3M20 16v3a1 1 0 0 1-1 1h-3M8 20H5a1 1 0 0 1-1-1v-3M7 9v6M10 9v6M13 9v6M17 9v6"/></svg></button></div>
+    </div>
+    <div class="campo" id="c-cliente">
+      <label for="cliente">Expedidor</label>
+      <input type="text" id="cliente" autocomplete="off" autocapitalize="words" list="clientes" placeholder="Nome do expedidor">
+      <datalist id="clientes"></datalist>
+    </div>
+    <div class="campo" id="c-dest">
+      <label for="dest">Destinatário</label>
+      <input type="text" id="dest" autocomplete="off" autocapitalize="words" placeholder="Nome do particular">
+    </div>
+    <div class="par">
+      <div class="campo">
+        <label for="local">Localidade</label>
+        <input type="text" id="local" autocomplete="off" autocapitalize="words" placeholder="Opcional">
+      </div>
+      <div class="campo">
+        <label id="l-vol">Volumes</label>
+        <div class="stepper" role="group" aria-labelledby="l-vol">
+          <button type="button" id="menos" aria-label="Menos um">−</button>
+          <input type="number" id="volumes" min="1" value="1" inputmode="numeric" aria-labelledby="l-vol">
+          <button type="button" id="mais" aria-label="Mais um">+</button>
+        </div>
+      </div>
+    </div>
+    <div class="campo">
+      <label for="obs">Observações <i>(opcional)</i></label>
+      <textarea id="obs" rows="2" placeholder="ex. morada sem número de porta, prédio sem campainha"></textarea>
+    </div>
+    <button class="registar" id="registar" type="button">Registar e enviar email</button>
+    <div class="msg" id="msg" role="status"></div>
+  </section>
+
+  <section class="card" aria-labelledby="t-lista">
+    <h2 id="t-lista">Pedidos <span id="total">0</span></h2>
+    <input type="search" id="procura" class="procura" placeholder="Procurar guia, destinatário ou expedidor" autocomplete="off" aria-label="Procurar pedidos">
+    <div class="filtro" role="group" aria-label="Mostrar"><button type="button" class="chip" id="fTodas" aria-pressed="true">Todos</button><button type="button" class="chip" id="fAbertas" aria-pressed="false">Só pendentes</button></div>
+    <div id="lista"></div>
+    <button type="button" class="btn mais" id="maisOc" hidden>Mostrar mais</button>
+    <div class="msg" id="msgL" role="status"></div>
+    <div class="hint">Os pedidos são partilhados com todo o armazém. Quando receber o contacto, carregue em "Contacto recebido" e escreva o número: fica visível para todos, com um toque para ligar. Só quem registou um pedido o pode apagar.</div>
+  </section>
+
+  <section class="card">
+    <button class="btn" id="excel" type="button">Exportar Excel</button>
+    <div class="hint">Exporta os pedidos que estão na lista (com a pesquisa e o filtro aplicados).</div>
+    <div class="msg" id="msgX" role="status"></div>
+  </section>
+</div>
+
+<script src="sjt-listas.js"></script>
+<script src="sjt-online.js"></script>
+<script src="sjt-leitor.js"></script>
+<script>
+const S=SJT.exigirSessao();
+const $=id=>document.getElementById(id);
+const pad=n=>String(n).padStart(2,"0");
+const diaDe=d=>d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate());
+const hora=iso=>{const d=new Date(iso);return pad(d.getHours())+":"+pad(d.getMinutes());};
+const dataPT=iso=>{const d=new Date(iso);return pad(d.getDate())+"/"+pad(d.getMonth()+1)+"/"+d.getFullYear();};
+function msg(id,t,ok){const m=$(id);m.textContent=t||"";m.className="msg "+(ok?"ok":"err");}
+const MOTIVOS=["Sem contacto do destinatário","Destinatário não atende","Morada incompleta ou errada","Agendar entrega"];
+
+/* ---- Dados partilhados pelo armazém ---- */
+let BD=[],assinatura="";
+const LIG=SJT.ligar("contactos",{diasLocais:0,aoMudar:()=>{carregar();render();}});
+function carregar(){BD=LIG.registos().map(r=>({...r.dados,id:r.id,dia:r.dia,autor:r.autor,meu:r.meu,alteradoPor:r.alteradoPor,pendente:!!r.pendente}));}
+carregar();
+
+/* ---- Formulário ---- */
+let motivo="",aConfirmar=null,aResolver=null,telResolver="",notaResolver="",filtroPend=false,procura="",limite=30;
+const POR_PAGINA=30;
+const gM=$("motivos");
+MOTIVOS.forEach(t=>{const b=document.createElement("button");b.type="button";b.className="chip";b.textContent=t;b.setAttribute("aria-pressed","false");
+  b.onclick=()=>{motivo=t;gM.querySelectorAll(".chip").forEach(c=>c.setAttribute("aria-pressed",c===b?"true":"false"));$("c-motivo").classList.remove("erro");};gM.appendChild(b);});
+const opt=(dl,v)=>{const o=document.createElement("option");o.value=v;dl.appendChild(o);};
+function sugerirClientes(){const dl=$("clientes");dl.textContent="";[...new Set(BD.map(r=>r.cliente).filter(Boolean))].sort((a,b)=>a.localeCompare(b,"pt")).forEach(c=>opt(dl,c));}
+const vol=()=>Math.max(1,parseInt($("volumes").value,10)||1);
+$("menos").onclick=()=>{$("volumes").value=Math.max(1,vol()-1);};
+$("mais").onclick=()=>{$("volumes").value=vol()+1;};
+[["guia","guia"],["cliente","cliente"],["dest","dest"]].forEach(([k,c])=>$(k).addEventListener("input",()=>$("c-"+c).classList.remove("erro")));
+$("lerGuia").onclick=async()=>{
+  const txt=await SJT_LEITOR.abrir({titulo:"Ler guia",texto:"Aponte para o código de barras da guia de transporte.",preferir:"barras"});
+  if(!txt)return;
+  const r=SJT_LEITOR.numeroGuia(txt);
+  if(!r){msg("msg","O código lido não tem um número de guia. Escreva-o à mão.",false);return;}
+  $("guia").value=r.num;$("c-guia").classList.remove("erro");
+  msg("msg","Nº da guia preenchido pelo "+r.origem+": "+r.num+"."+(r.curto?" Atenção: o código só tinha "+r.todos+" algarismos — confirme.":""),!r.curto);
+};
+$("registar").onclick=()=>{
+  const g=k=>$(k).value.replace(/\s+/g," ").trim(),falta=[];
+  if(!motivo){falta.push("o motivo");$("c-motivo").classList.add("erro");}
+  if(!g("guia")){falta.push("a guia");$("c-guia").classList.add("erro");}
+  if(!g("cliente")){falta.push("o expedidor");$("c-cliente").classList.add("erro");}
+  if(!g("dest")){falta.push("o destinatário");$("c-dest").classList.add("erro");}
+  if(falta.length){msg("msg","Falta indicar "+falta.join(", ").replace(/, ([^,]*)$/," e $1")+".",false);return;}
+  const agora=new Date(),id="c"+agora.getTime().toString(36)+Math.random().toString(36).slice(2,6)+SJT.dispositivo().replace(/[^a-z0-9]/gi,"").slice(0,4);
+  const r={t:agora.toISOString(),motivo,guia:g("guia"),cliente:g("cliente"),destinatario:g("dest"),localidade:g("local"),volumes:vol(),obs:$("obs").value.trim(),estado:"pendente",telefone:"",nota:"",resolvidoPor:"",resolvidoEm:""};
+  if(!LIG.gravar(id,diaDe(agora),r)){msg("msg","O telemóvel não deixou guardar (sem espaço ou armazenamento bloqueado).",false);return;}
+  motivo="";gM.querySelectorAll(".chip").forEach(c=>c.setAttribute("aria-pressed","false"));
+  ["guia","cliente","dest","local","obs"].forEach(k=>$(k).value="");$("volumes").value=1;
+  if(document.activeElement&&document.activeElement!==document.body)document.activeElement.blur();
+  carregar();sugerirClientes();assinatura="";render();
+  msg("msg","Pedido registado: guia "+r.guia+". A abrir o email…",true);
+  enviarEmail({...r,id});
+};
+
+/* ---- Email (sem anexos: abre a app de email com destinatário, assunto e texto) ---- */
+function saudacao(){const h=new Date().getHours();return h<13?"Bom dia":h<20?"Boa tarde":"Boa noite";}
+const destinoEmail=()=>((S.config||{}).emailContactos||"").trim();
+function textoEmail(r){
+  const assunto="Pedido de contacto | "+(r.guia||"sem guia")+" | "+(r.destinatario||"sem destinatário");
+  const l=[saudacao()+",","",
+    "Solicitamos o contacto telefónico do destinatário abaixo indicado, para podermos efetuar a entrega do volume.","",
+    "Guia de transporte: "+(r.guia||"—"),"Expedidor: "+(r.cliente||"—"),"Destinatário: "+(r.destinatario||"—")];
+  if(r.localidade)l.push("Localidade: "+r.localidade);
+  l.push("Volumes: "+(r.volumes||1),"Motivo: "+(r.motivo||"—"));
+  if(r.obs)l.push("Observações: "+String(r.obs).replace(/\s*\n\s*/g," "));
+  l.push("","Pedimos o envio do contacto com a maior brevidade possível.","");
+  return {assunto,corpo:l.join("\n")};
+}
+function enviarEmail(r){
+  const {assunto,corpo}=textoEmail(r),para=destinoEmail();
+  const href="mailto:"+encodeURIComponent(para).replace(/%2C/gi,",").replace(/%40/g,"@")+"?subject="+encodeURIComponent(assunto)+"&body="+encodeURIComponent(corpo);
+  const a=document.createElement("a");a.href=href;document.body.appendChild(a);a.click();a.remove();
+  const atual=BD.find(x=>x.id===r.id)||r;
+  LIG.mudar(r.id,{emailPor:S.nome,emailEm:new Date().toISOString()});
+  carregar();assinatura="";render();
+  if(!para)msg("msgL","Este armazém ainda não tem email para pedidos de contacto definido na gestão — escreva o destinatário no email.",false);
+}
+
+/* ---- Lista ---- */
+const semAcentos=t=>String(t||"").normalize("NFD").replace(/[̀-ͯ]/g,"").toLowerCase();
+$("procura").addEventListener("input",()=>{procura=semAcentos($("procura").value.trim());limite=POR_PAGINA;assinatura="";render();});
+$("maisOc").onclick=()=>{limite+=POR_PAGINA;assinatura="";render();};
+$("fTodas").onclick=()=>{filtroPend=false;$("fTodas").setAttribute("aria-pressed","true");$("fAbertas").setAttribute("aria-pressed","false");assinatura="";render();};
+$("fAbertas").onclick=()=>{filtroPend=true;$("fTodas").setAttribute("aria-pressed","false");$("fAbertas").setAttribute("aria-pressed","true");assinatura="";render();};
+const pendente=r=>r.estado!=="resolvido";
+function visiveis(){
+  const o=BD.slice().sort((a,b)=>String(b.t).localeCompare(String(a.t)));let l=[...o.filter(pendente),...o.filter(r=>!pendente(r))];
+  if(filtroPend)l=l.filter(pendente);
+  if(procura)l=l.filter(r=>semAcentos([r.guia,r.cliente,r.destinatario,r.localidade,r.obs,r.telefone,r.autor].join(" ")).includes(procura));
+  return l;
+}
+function render(){
+  const todas=visiveis(),mostrar=todas.slice(0,limite);
+  const sig=JSON.stringify([filtroPend,procura,limite,aConfirmar,aResolver,BD.length,mostrar.map(r=>[r.id,r.estado,r.pendente,r.telefone,r.emailEm])]);
+  if(sig===assinatura)return;assinatura=sig;
+  const nPend=BD.filter(pendente).length;
+  $("total").textContent=BD.length?BD.length+(nPend?" · "+nPend+" pendente"+(nPend===1?"":"s"):""):"0";
+  const el=$("lista");el.textContent="";
+  if(!mostrar.length){const p=document.createElement("div");p.className="vazio";p.textContent=procura?"Nenhum pedido corresponde à procura.":filtroPend?"Não há pedidos pendentes.":"Ainda não há pedidos de contacto.";el.appendChild(p);}
+  const nA=todas.filter(pendente).length,nR=todas.length-nA;let grupo=null;
+  mostrar.forEach(r=>{const g=pendente(r)?"a":"r";
+    if(g!==grupo){grupo=g;const h=document.createElement("div");h.className="grupo-h"+(g==="r"?" res":"");h.textContent=g==="a"?"Pendentes ("+nA+")":"Contacto recebido ("+nR+")";el.appendChild(h);}
+    el.appendChild(cartao(r));});
+  $("maisOc").hidden=todas.length<=limite;$("maisOc").textContent="Mostrar mais ("+(todas.length-limite)+")";
+  if(aResolver){const t=document.getElementById("resTel");if(t&&document.activeElement!==t&&document.activeElement!==document.getElementById("resNota")){t.value=telResolver;}}
+}
+function cartao(r){
+  const ok=!pendente(r);
+  const c=document.createElement("article");c.className="oc"+(ok?" resolvida":"");
+  const top=document.createElement("div");top.className="top";
+  const tp=document.createElement("div");tp.className="tipo";tp.textContent=r.destinatario||"—";
+  const es=document.createElement("span");es.className="est "+(ok?"resolvida":"aberta");es.textContent=ok?"RECEBIDO":"PENDENTE";
+  top.append(tp,es);c.appendChild(top);
+  const mo=document.createElement("div");mo.className="mot";mo.textContent=r.motivo||"";c.appendChild(mo);
+  const ref=document.createElement("div");ref.className="ref";
+  const parte=(rot,val)=>{if(!val&&val!==0)return;if(ref.childNodes.length)ref.append("  ·  ");const s=document.createElement("small");s.textContent=rot+" ";ref.append(s,String(val));};
+  parte("Guia",r.guia);parte("Vol.",r.volumes);c.appendChild(ref);
+  const cl=document.createElement("div");cl.className="cli";const s1=document.createElement("small");s1.className="rot";s1.textContent="Expedidor ";cl.append(s1,r.cliente||"—");
+  if(r.localidade){const s2=document.createElement("small");s2.className="rot";s2.textContent="  ·  Localidade ";cl.append(s2,r.localidade);}
+  c.appendChild(cl);
+  if(r.obs){const d=document.createElement("div");d.className="desc";d.textContent=r.obs;c.appendChild(d);}
+  if(ok){const d=document.createElement("div");d.className="res";
+    if(r.telefone){const a=document.createElement("a");a.className="tel";a.href="tel:"+r.telefone.replace(/[^\d+]/g,"");a.textContent="📞 "+r.telefone;d.appendChild(a);d.append("\n");}
+    const b=document.createElement("b");b.textContent="Contacto recebido";d.append(b," por "+(r.resolvidoPor||"?")+(r.resolvidoEm?" em "+dataPT(r.resolvidoEm)+" às "+hora(r.resolvidoEm):"")+(r.nota?"\n"+r.nota:""));c.appendChild(d);}
+  if(r.emailPor){const e=document.createElement("div");e.className="meta mail";e.textContent="✉ Email enviado por "+r.emailPor+(r.emailEm?" em "+dataPT(r.emailEm)+" às "+hora(r.emailEm):"");c.appendChild(e);}
+  const m=document.createElement("div");m.className="meta";m.textContent="Registado por "+SJT.autorTxt(r)+" · "+dataPT(r.t)+" às "+hora(r.t)+(r.pendente?" · a enviar":"");c.appendChild(m);
+  if(aResolver===r.id){
+    const w=document.createElement("div");w.className="resolver";
+    const t=document.createElement("input");t.id="resTel";t.type="tel";t.inputMode="tel";t.autocomplete="off";t.placeholder="Número de telefone do destinatário";t.value=telResolver;t.addEventListener("input",()=>{telResolver=t.value;});
+    const n=document.createElement("textarea");n.id="resNota";n.placeholder="Nota (opcional) — ex. entregar depois das 18h";n.value=notaResolver;n.addEventListener("input",()=>{notaResolver=n.value;});
+    const bs=document.createElement("div");
+    const cn=document.createElement("button");cn.type="button";cn.textContent="Cancelar";cn.onclick=()=>{aResolver=null;telResolver=notaResolver="";assinatura="";render();};
+    const okb=document.createElement("button");okb.type="button";okb.className="p";okb.textContent="Guardar contacto";okb.onclick=()=>resolver(r);
+    bs.append(cn,okb);w.append(t,n,bs);c.appendChild(w);setTimeout(()=>t.focus(),50);return c;
+  }
+  const ac=document.createElement("div");ac.className="acoes";
+  const bt=(txt,fn,cls)=>{const b=document.createElement("button");b.type="button";b.textContent=txt;if(cls)b.className=cls;b.onclick=fn;ac.appendChild(b);return b;};
+  if(ok)bt(aConfirmar==="re"+r.id?"Confirmar reabrir":"Reabrir",()=>reabrir(r),aConfirmar==="re"+r.id?"confirm":"");
+  else bt("Contacto recebido",()=>{aResolver=r.id;telResolver=notaResolver="";aConfirmar=null;assinatura="";render();},"p");
+  bt(r.emailPor?"Enviar email de novo":"Enviar email",()=>enviarEmail(r),r.emailPor||ok?"":"p");
+  if(r.meu)bt(aConfirmar===r.id?"Confirmar apagar":"Apagar",()=>apagar(r),"dir"+(aConfirmar===r.id?" confirm":""));
+  c.appendChild(ac);return c;
+}
+function resolver(r){
+  const tel=telResolver.trim();
+  if(!tel&&!notaResolver.trim()){msg("msgL","Escreva o número de telefone (ou uma nota).",false);return;}
+  if(!LIG.mudar(r.id,{estado:"resolvido",telefone:tel,nota:notaResolver.trim(),resolvidoPor:S.nome,resolvidoEm:new Date().toISOString()})){msg("msgL","O telemóvel não deixou guardar.",false);return;}
+  aResolver=null;telResolver=notaResolver="";carregar();assinatura="";render();msg("msgL","Contacto guardado: guia "+(r.guia||"—")+".",true);
+}
+function reabrir(r){
+  const k="re"+r.id;
+  if(aConfirmar!==k){aConfirmar=k;assinatura="";render();setTimeout(()=>{if(aConfirmar===k){aConfirmar=null;assinatura="";render();}},4000);return;}
+  aConfirmar=null;LIG.mudar(r.id,{estado:"pendente",telefone:"",nota:"",resolvidoPor:"",resolvidoEm:""});carregar();assinatura="";render();
+}
+function apagar(r){
+  if(aConfirmar!==r.id){aConfirmar=r.id;assinatura="";render();setTimeout(()=>{if(aConfirmar===r.id){aConfirmar=null;assinatura="";render();}},4000);return;}
+  aConfirmar=null;if(!LIG.apagar(r.id)){msg("msgL","Só quem registou o pedido o pode apagar.",false);return;}
+  carregar();assinatura="";render();msg("msgL","Pedido apagado.",true);
+}
+
+/* ---- Excel ---- */
+const MIME_XLSX="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+const CRC_T=(()=>{const t=new Uint32Array(256);for(let n=0;n<256;n++){let c=n;for(let k=0;k<8;k++)c=c&1?0xEDB88320^(c>>>1):c>>>1;t[n]=c>>>0;}return t;})();
+function crc32(b){let c=0xFFFFFFFF;for(let i=0;i<b.length;i++)c=CRC_T[(c^b[i])&255]^(c>>>8);return (c^0xFFFFFFFF)>>>0;}
+function zipStore(files){
+  const enc=new TextEncoder(),parts=[],central=[];let off=0;
+  const u16=n=>[n&255,(n>>8)&255],u32=n=>[n&255,(n>>8)&255,(n>>16)&255,(n>>>24)&255];
+  for(const [name,data] of files){
+    const nb=enc.encode(name),crc=crc32(data);
+    const lh=new Uint8Array([0x50,0x4b,3,4,...u16(20),...u16(0x0800),...u16(0),...u16(0),...u16(0x21),...u32(crc),...u32(data.length),...u32(data.length),...u16(nb.length),...u16(0)]);
+    parts.push(lh,nb,data);
+    central.push(new Uint8Array([0x50,0x4b,1,2,...u16(20),...u16(20),...u16(0x0800),...u16(0),...u16(0),...u16(0x21),...u32(crc),...u32(data.length),...u32(data.length),...u16(nb.length),...u16(0),...u16(0),...u16(0),...u16(0),...u32(0),...u32(off)]),nb);
+    off+=lh.length+nb.length+data.length;
+  }
+  const cdSize=central.reduce((a,p)=>a+p.length,0);
+  const end=new Uint8Array([0x50,0x4b,5,6,...u16(0),...u16(0),...u16(files.length),...u16(files.length),...u32(cdSize),...u32(off),...u16(0)]);
+  const all=[...parts,...central,end],out=new Uint8Array(all.reduce((a,p)=>a+p.length,0));let o=0;
+  for(const p of all){out.set(p,o);o+=p.length;}return out;
+}
+function criarXlsx({titulo,folha,cab,linhas,larguras}){
+  const X=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+  const L="ABCDEFGHIJKLMN",nc=cab.length,ult=3+linhas.length;
+  const cel=(r,c,v,s)=>v===""||v==null?`<c r="${L[c]}${r}" s="${s}"/>`:typeof v==="number"?`<c r="${L[c]}${r}" s="${s}"><v>${v}</v></c>`:`<c r="${L[c]}${r}" s="${s}" t="inlineStr"><is><t xml:space="preserve">${X(v)}</t></is></c>`;
+  let rows=`<row r="1" ht="26" customHeight="1">`+cab.map((_,c)=>cel(1,c,c?"":titulo,1)).join("")+`</row><row r="2"/>`;
+  rows+=`<row r="3" ht="24" customHeight="1">`+cab.map((v,c)=>cel(3,c,v,2)).join("")+`</row>`;
+  linhas.forEach((l,i)=>{const r=4+i;rows+=`<row r="${r}">`+l.map((v,c)=>cel(r,c,v,i%2?4:3)).join("")+`</row>`;});
+  const NS='xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"',H='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>';
+  const W=larguras.map((w,i)=>`<col min="${i+1}" max="${i+1}" width="${w}" customWidth="1"/>`).join("");
+  const sheet=`${H}<worksheet ${NS}><sheetViews><sheetView workbookViewId="0" showGridLines="0"><pane ySplit="3" topLeftCell="A4" activePane="bottomLeft" state="frozen"/><selection pane="bottomLeft"/></sheetView></sheetViews><sheetFormatPr defaultRowHeight="15"/><cols>${W}</cols><sheetData>${rows}</sheetData><autoFilter ref="A3:${L[nc-1]}${ult}"/><mergeCells count="1"><mergeCell ref="A1:${L[nc-1]}1"/></mergeCells></worksheet>`;
+  const fill=c=>`<fill><patternFill patternType="solid"><fgColor rgb="FF${c}"/><bgColor indexed="64"/></patternFill></fill>`;
+  const bd=`<border><left style="thin"><color rgb="FFC3CCBD"/></left><right style="thin"><color rgb="FFC3CCBD"/></right><top style="thin"><color rgb="FFC3CCBD"/></top><bottom style="thin"><color rgb="FFC3CCBD"/></bottom><diagonal/></border>`;
+  const xf=(f,fi,b,h)=>`<xf numFmtId="0" fontId="${f}" fillId="${fi}" borderId="${b}" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="${h}" vertical="center"/></xf>`;
+  const styles=`${H}<styleSheet ${NS}><fonts count="3"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="14"/><color rgb="FF1F3B2A"/><name val="Calibri"/></font><font><b/><sz val="11"/><color rgb="FF1F3B2A"/><name val="Calibri"/></font></fonts><fills count="5"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill>${fill("E2EBD5")}${fill("FFFFFF")}${fill("F4F7EF")}</fills><borders count="2"><border><left/><right/><top/><bottom/><diagonal/></border>${bd}</borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="5"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>${xf(1,2,0,"left")}${xf(2,2,1,"center")}${xf(0,3,1,"center")}${xf(0,4,1,"center")}</cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>`;
+  const wb=`${H}<workbook ${NS} xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="${X(folha)}" sheetId="1" r:id="rId1"/></sheets><definedNames><definedName name="_xlnm._FilterDatabase" localSheetId="0" hidden="1">'${X(folha)}'!$A$3:$${L[nc-1]}$${ult}</definedName></definedNames></workbook>`;
+  const R="http://schemas.openxmlformats.org/officeDocument/2006/relationships",P="http://schemas.openxmlformats.org/package/2006/relationships";
+  const ct=`${H}<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>`;
+  const rels=`${H}<Relationships xmlns="${P}"><Relationship Id="rId1" Type="${R}/officeDocument" Target="xl/workbook.xml"/></Relationships>`;
+  const wrels=`${H}<Relationships xmlns="${P}"><Relationship Id="rId1" Type="${R}/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="${R}/styles" Target="styles.xml"/></Relationships>`;
+  const e=new TextEncoder();
+  return zipStore([["[Content_Types].xml",e.encode(ct)],["_rels/.rels",e.encode(rels)],["xl/workbook.xml",e.encode(wb)],["xl/_rels/workbook.xml.rels",e.encode(wrels)],["xl/styles.xml",e.encode(styles)],["xl/worksheets/sheet1.xml",e.encode(sheet)]]);
+}
+
+function gerarExcel(){
+  const l=visiveis();if(!l.length)return null;
+  const hj=new Date(),[y,m,d]=[hj.getFullYear(),pad(hj.getMonth()+1),pad(hj.getDate())];
+  const linhas=l.map(r=>[dataPT(r.t),hora(r.t),r.guia||"",r.cliente||"",r.destinatario||"",r.localidade||"",+r.volumes||"",r.motivo||"",pendente(r)?"Pendente":"Recebido",r.telefone||"",[r.obs,r.nota].filter(Boolean).join(" | ").replace(/\s*\n\s*/g," "),r.autor||""]);
+  return {bytes:criarXlsx({titulo:"PEDIDOS DE CONTACTO — "+S.polo.nome+" — exportado a "+d+"/"+m+"/"+y,folha:"Pedidos de contacto",cab:["Data","Hora","Guia","Expedidor","Destinatário","Localidade","Volumes","Motivo","Estado","Telefone","Notas","Registado por"],linhas,larguras:[12,8,24,24,26,16,10,28,12,16,40,20]}),nome:`pedidos-contacto-${y}-${m}-${d}.xlsx`};
+}
+$("excel").onclick=()=>{
+  try{const x=gerarExcel();if(!x){msg("msgX","Não há pedidos na lista para exportar.",false);return;}
+    const url=URL.createObjectURL(new Blob([x.bytes],{type:MIME_XLSX}));const a=document.createElement("a");a.href=url;a.download=x.nome;document.body.appendChild(a);a.click();a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),15000);msg("msgX","Excel gerado: "+x.nome+" (ver em Transferências).",true);
+  }catch(err){msg("msgX","Não foi possível gerar o Excel.",false);}
+};
+
+SJT.barra(LIG,document.querySelector("header"));
+sugerirClientes();render();
+if("serviceWorker" in navigator&&location.protocol!=="file:"){navigator.serviceWorker.register("sw.js").catch(()=>{});}
+</script>
+</body>
+</html>
