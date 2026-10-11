@@ -591,6 +591,8 @@ function itensGuardados(){const l=[];
   CUST.refs.forEach(v=>l.push({tipo:"XL / TL / outro",txt:v,ref:["ref",v]}));
   return l;}
 function renderGuardados(){
+  /* painel escondido: as opções acrescentadas aparecem diretamente nos botões de marca, modelo, medida e índices */
+  $("guardados").hidden=true;return;
   const l=itensGuardados();$("guardados").hidden=!l.length;if(!l.length)return;
   $("guardadosTit").textContent=`Opções acrescentadas, partilhadas por todos os armazéns (${l.length})`;
   $("guardadosLista").innerHTML=l.map((i,n)=>{const m=OPC_META[chaveOpc(i.ref)],pode=!m||m.meu;
