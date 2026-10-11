@@ -79,7 +79,7 @@
   }
 
   /* ---------- ligação de uma app ---------- */
-  function ligar(app, { aoMudar, diasLocais = 62, todosApagam = false } = {}) {
+  function ligar(app, { aoMudar, diasLocais = 62, todosApagam = false, ritmoFixo = 0 } = {}) {
     const s = sessao() || { token: "", polo: { id: "" }, nome: "" };
     const chave = "sjt_dados_" + s.polo.id + "_" + app;
     const est = ler(chave, null) || { cache: {}, fila: {}, cursor: 0 };
@@ -168,7 +168,8 @@
           while (mais && voltas++ < 50) {
             const antes = est.cursor;
             const j = await pedido("/registos?app=" + encodeURIComponent(app) + "&desde=" + est.cursor, { token: s.token });
-            if ((j.registos || []).length) ultimaNovidade = Date.now();
+            /* só conta como novidade o que mudou desde a última vez (o servidor devolve sempre de novo o último registo) */
+            if ((j.registos || []).some(r => r.alterado > antes)) ultimaNovidade = Date.now();
             for (const r of j.registos || []) {
               if (!est.fila[r.id]) { if (r.apagado) delete est.cache[r.id]; else est.cache[r.id] = r; }
               if (r.alterado > est.cursor) est.cursor = r.alterado;
@@ -207,7 +208,7 @@
       /* arranca depois de a app acabar de se preparar (a app ainda não tem a ligação quando ligar() corre) */
       const ciclo = async () => {
         if (document.visibilityState === "visible" && navigator.onLine !== false) { try { await sincronizar(); } catch (e) {} }
-        setTimeout(ciclo, ativo() && !estado.erro ? RAPIDO : LENTO);
+        setTimeout(ciclo, ritmoFixo || (ativo() && !estado.erro ? RAPIDO : LENTO)); /* ritmoFixo: dados que mudam pouco (ex. códigos de pneus) */
       };
       setTimeout(ciclo, 0);
     }

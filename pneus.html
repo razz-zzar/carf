@@ -368,7 +368,7 @@ const LIG=SJT.ligar("pneus",{aoMudar:()=>{carregarRegistos();render();}});
 /* Os códigos aprendidos (pneu preenchido à mão a partir de um código) ficam no servidor, partilhados por
    TODOS os armazéns (app "codigos" da API): quem ler o mesmo código em qualquer polo vê o pneu preenchido. */
 let CODIGOS_POLO={};
-const LIGC=SJT.ligar("codigos",{diasLocais:0,aoMudar:()=>carregarCodigos()});
+const LIGC=SJT.ligar("codigos",{diasLocais:0,ritmoFixo:60000,aoMudar:()=>carregarCodigos()});
 function carregarCodigos(){
   CODIGOS_POLO={};
   LIGC.registos().forEach(r=>{const d=r.dados||{};if(d.chave)CODIGOS_POLO[d.chave]={marca:d.marca,modelo:d.modelo,medida:d.medida,carga:d.carga,vel:d.vel,ref:d.ref,_id:r.id,_autor:r.autor,_polo:d.polo||"",_meu:r.meu};});
@@ -724,6 +724,10 @@ async function tratarCodigo(cod){
   cod=String(cod||"").trim();if(!cod)return;
   const chave=chaveCodigo(cod),ep=idEprel(cod),fichaUE=ep?"https://eprel.ec.europa.eu/screen/product/tyres/"+ep:"";
   let d=null,origem="";
+  /* código que este telemóvel ainda não conhece: pergunta logo ao servidor (pode ter sido aprendido há instantes noutro armazém) */
+  if(!CODIGOS_POLO[chave]&&!CODIGOS[chave]&&navigator.onLine!==false){
+    try{await Promise.race([LIGC.sincronizar(),new Promise(ok=>setTimeout(ok,4000))]);carregarCodigos();}catch(e){}
+  }
   const pol=CODIGOS_POLO[chave];
   if(pol){d=pol;origem=" · já conhecido"+(pol._autor?" (registado por "+(pol._meu?"si":pol._autor)+(pol._polo&&pol._polo!==S.polo.nome?", "+pol._polo:"")+")":"");}
   else if(CODIGOS[chave]){d=CODIGOS[chave];origem=" · conhecido neste telemóvel";}
