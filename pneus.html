@@ -365,7 +365,13 @@ let marca="", registos=[], aConfirmar=null;
 /* Registos partilhados pelo armazém (ver sjt-online.js) */
 const S=SJT.exigirSessao();
 const LIG=SJT.ligar("pneus",{aoMudar:()=>{carregarRegistos();render();}});
-function carregarRegistos(){registos=LIG.registos().map(r=>({...r.dados,id:r.id,dia:r.dia||r.dados.dia,autor:r.autor,meu:r.meu,alteradoPor:r.alteradoPor,pendente:!!r.pendente}));}
+/* Os códigos aprendidos (pneu preenchido à mão a partir de um código) também ficam no servidor, partilhados
+   por todo o armazém: registos {k:"cod"} que não aparecem na lista de pneus. */
+let CODIGOS_POLO={};
+function carregarRegistos(){
+  CODIGOS_POLO={};
+  LIG.registos().forEach(r=>{const d=r.dados||{};if(d.k==="cod"&&d.chave)CODIGOS_POLO[d.chave]={marca:d.marca,modelo:d.modelo,medida:d.medida,carga:d.carga,vel:d.vel,ref:d.ref,_id:r.id,_autor:r.autor,_meu:r.meu};});
+  registos=LIG.registos().filter(r=>!(r.dados&&r.dados.k==="cod")).map(r=>({...r.dados,id:r.id,dia:r.dia||r.dados.dia,autor:r.autor,meu:r.meu,alteradoPor:r.alteradoPor,pendente:!!r.pendente}));}
 carregarRegistos();
 const novoId=i=>"p"+(Date.now()+i).toString(36)+SJT.dispositivo().replace(/[^a-z0-9]/gi,"").slice(0,6);
 
@@ -602,7 +608,27 @@ let codigoAtual="",stream=null,detetor=null,aLer=false,luz=false,lido=false,modo
 function gravarCodigos(){try{localStorage.setItem("pneus_codigos",JSON.stringify(CODIGOS));}catch(e){}}
 function chaveCodigo(c){c=String(c||"").trim();const ep=idEprel(c);return ep?"EPREL:"+ep:c;}
 function idEprel(c){const m=String(c).match(/eprel\.ec\.europa\.eu\/(?:qr|screen\/product\/tyres)\/(\d+)/i);return m?m[1]:"";}
-function aprenderCodigo(p){if(!codigoAtual||!p||!p.marca||!p.medida)return;CODIGOS[codigoAtual]={marca:p.marca,modelo:p.modelo,medida:p.medida,carga:p.carga,vel:p.vel,ref:p.ref};gravarCodigos();}
+/* Códigos que este telemóvel já tinha aprendido antes da partilha: enviados uma vez para o armazém */
+LIG.ouvir(info=>{
+  if(!info.remoto||LIG.estado().erro)return;
+  try{if(localStorage.getItem("pneus_codigos_partilhados"))return;}catch(e){return;}
+  let n=0;
+  for(const [chave,v] of Object.entries(CODIGOS)){
+    if(CODIGOS_POLO[chave]||!v||!v.marca||!v.medida||chave.length>500)continue;
+    LIG.gravar(idCodigo(chave),"",{k:"cod",chave,marca:v.marca,modelo:v.modelo||"",medida:v.medida,carga:v.carga||"",vel:v.vel||"",ref:v.ref||""});n++;
+  }
+  try{localStorage.setItem("pneus_codigos_partilhados","1");}catch(e){}
+  if(n)carregarRegistos();
+});
+function idCodigo(chave){let h=5381;for(let i=0;i<chave.length;i++)h=((h<<5)+h+chave.charCodeAt(i))>>>0;return "cod-"+h.toString(36)+"-"+chave.length.toString(36);}
+function aprenderCodigo(p){
+  if(!codigoAtual||!p||!p.marca||!p.medida)return;
+  const v={marca:p.marca,modelo:p.modelo||"",medida:p.medida,carga:p.carga||"",vel:p.vel||"",ref:p.ref||""};
+  CODIGOS[codigoAtual]=v;gravarCodigos();
+  /* partilha com o armazém (só grava se for novo ou diferente do que já lá está) */
+  const ant=CODIGOS_POLO[codigoAtual],igual=ant&&["marca","modelo","medida","carga","vel","ref"].every(k=>(ant[k]||"")===(v[k]||""));
+  if(!igual&&codigoAtual.length<=500){LIG.gravar(ant?ant._id:idCodigo(codigoAtual),"",{k:"cod",chave:codigoAtual,...v});carregarRegistos();}
+}
 function largarCodigo(){codigoAtual="";$("lido").hidden=true;}
 
 /* ---- Leitura de texto: medida, índices, XL e marca ---- */
@@ -686,15 +712,17 @@ function mostrarLido(cod,origem,link){
   const t=document.createElement("div");const b=document.createElement("b");b.textContent=cod.length>48?cod.slice(0,45)+"…":cod;
   t.append(b,document.createTextNode(origem));
   if(link){t.append(" · ");const a=document.createElement("a");a.href=link;a.target="_blank";a.rel="noopener";a.textContent="ver ficha UE";t.append(a);}
-  const x=document.createElement("button");x.type="button";x.className="del";x.textContent=CODIGOS[codigoAtual]?"Esquecer":"Limpar";
-  x.onclick=()=>{if(CODIGOS[codigoAtual]){delete CODIGOS[codigoAtual];gravarCodigos();}largarCodigo();};
+  const x=document.createElement("button");x.type="button";x.className="del";const pol=CODIGOS_POLO[codigoAtual];x.textContent=CODIGOS[codigoAtual]||(pol&&pol._meu)?"Esquecer":"Limpar";
+  x.onclick=()=>{if(CODIGOS[codigoAtual]){delete CODIGOS[codigoAtual];gravarCodigos();}if(pol&&pol._meu){LIG.apagar(pol._id);carregarRegistos();}largarCodigo();};
   l.append(t,x);
 }
 async function tratarCodigo(cod){
   cod=String(cod||"").trim();if(!cod)return;
   const chave=chaveCodigo(cod),ep=idEprel(cod),fichaUE=ep?"https://eprel.ec.europa.eu/screen/product/tyres/"+ep:"";
-  let d=CODIGOS[chave],origem="";
-  if(d){origem=" · conhecido neste telemóvel";}
+  let d=null,origem="";
+  const pol=CODIGOS_POLO[chave];
+  if(pol){d=pol;origem=" · conhecido no armazém"+(pol._autor?" (registado por "+(pol._meu?"si":pol._autor)+")":"");}
+  else if(CODIGOS[chave]){d=CODIGOS[chave];origem=" · conhecido neste telemóvel";}
   else if(ep){msg("msg","Etiqueta europeia lida. A procurar os dados do pneu…",true);d=await doEprel(ep);origem=d?" · dados da etiqueta UE":" · etiqueta UE (sem dados)";if(d&&d.marca&&d.medida){CODIGOS[chave]={marca:d.marca,modelo:d.modelo||"",medida:normMedida(d.medida),carga:d.carga||"",vel:d.vel||"",ref:d.ref||""};gravarCodigos();}}
   if(!d){const t=doTexto(cod);if(t.marca||t.medida){d=t;origem=origem||" · lido do texto do código";}}
   if(!d){
