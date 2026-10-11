@@ -221,8 +221,9 @@
     const st = document.createElement("style"); st.id = "sjt-estilos";
     st.textContent = `.sjt-barra{display:flex;align-items:center;justify-content:space-between;gap:10px;font:500 13px system-ui,sans-serif;color:var(--muted,#93a39a);padding:8px 2px 0;flex-wrap:wrap}
 .sjt-barra b{color:var(--fg,#eef3ef);font-weight:600}
-.sjt-ponto{display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--green,#B9D406);margin-right:6px;vertical-align:1px}
-.sjt-barra.off .sjt-ponto{background:#e0a84f}.sjt-barra.err .sjt-ponto{background:var(--danger,#e0574f)}
+/* bolinha do estado: sempre verde néon com rede e vermelho sem rede (igual em todos os temas) */
+.sjt-ponto{display:inline-block;width:9px;height:9px;border-radius:50%;background:#39ff14;box-shadow:0 0 0 1px rgba(0,0,0,.25),0 0 6px rgba(57,255,20,.8);margin-right:6px;vertical-align:1px}
+.sjt-barra.off .sjt-ponto,.sjt-barra.err .sjt-ponto{background:#ff3b30;box-shadow:0 0 0 1px rgba(0,0,0,.25),0 0 6px rgba(255,59,48,.7)}
 .sjt-barra a{color:var(--green,#B9D406);text-decoration:none;font-weight:600}
 .sjt-aviso{border:1px solid var(--green,#B9D406);border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:10px;font-size:14px;color:var(--fg,#eef3ef)}
 .sjt-aviso div{display:flex;gap:8px;flex-wrap:wrap}
