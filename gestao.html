@@ -38,6 +38,13 @@ input:focus-visible,textarea:focus-visible,button:focus-visible{outline:2px soli
 .dica{font-size:13px;color:var(--muted);margin:0}
 .chk{flex-direction:row;align-items:center;gap:10px;text-transform:none;letter-spacing:0;font-size:15px;color:var(--fg)}
 .chk input{width:22px;height:22px}
+.filtroO{display:flex;flex-wrap:wrap;gap:6px}
+.filtroO button{background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:999px;padding:8px 12px;font:600 13px var(--body);cursor:pointer}
+.filtroO button[aria-pressed=true]{background:var(--green);border-color:var(--green);color:var(--green-ink,#0a0a0a)}
+.opcG{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 10px;align-items:center;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+.opcG b{font-size:16px;overflow-wrap:anywhere}.opcG small{display:block;color:var(--muted);font-size:12px}
+.opcG button{background:none;border:1px solid var(--line);color:var(--fg);border-radius:8px;padding:8px 12px;font:600 13px var(--body);cursor:pointer}
+.opcG button.confirm{border-color:var(--danger,#e0574f);color:var(--danger,#e0574f)}
 .dica.alerta{color:var(--danger,#e0574f);font-weight:600}
 </style>
 <link rel="stylesheet" href="carf-tema.css">
@@ -60,6 +67,15 @@ input:focus-visible,textarea:focus-visible,button:focus-visible{outline:2px soli
     <div class="lista" id="polos"></div>
     <button class="btn sec" type="button" id="novo">+ Novo armazém</button>
     <p class="dica" id="espaco"></p>
+  </section>
+
+  <section class="card" id="sOpc" hidden>
+    <h2>Pneus: opções e códigos acrescentados</h2>
+    <p class="dica">O que os supervisores acrescentaram em "Outra" (marcas, modelos, medidas, índices) e os códigos de pneus preenchidos à mão. É partilhado por todos os armazéns: apague o que estiver mal e desaparece em todos os telemóveis.</p>
+    <div class="filtroO" id="filtroO" role="group" aria-label="Mostrar"></div>
+    <input type="search" id="procuraO" placeholder="Procurar (texto, nome ou armazém)" autocomplete="off" aria-label="Procurar">
+    <div class="lista" id="opcoes"></div>
+    <div class="msg" id="msgO" role="status"></div>
   </section>
 
   <form class="card" id="fPolo" hidden novalidate>
@@ -106,7 +122,7 @@ const linhas=t=>[...new Set(String(t).split(/\r?\n/).map(x=>x.replace(/\s+/g," "
 async function carregar(){
   try{
     const j=await SJT.pedido("/gestao/polos",{admin:ADMIN});
-    POLOS=j.polos;$("admin").value="";espaco(j.fotos);
+    POLOS=j.polos;$("admin").value="";espaco(j.fotos);carregarOpcoes();
     $("fAdmin").hidden=true;$("sPolos").hidden=false;desenhar();
   }catch(e){ADMIN="";$("fAdmin").hidden=false;$("sPolos").hidden=true;$("fPolo").hidden=true;msg("msgA",e.message,false);}
 }
@@ -116,6 +132,51 @@ function espaco(f){
   const mb=b=>(b/1048576).toFixed(b<10485760?1:0).replace(".",",")+" MB";
   el.textContent="Fotografias: "+f.n+" ("+mb(f.bytes)+") · "+(f.r2?"guardadas no R2 (10 GB gratuitos)"+(f.naBaseDados?" · ainda "+mb(f.naBaseDados)+" na base de dados, passam para o R2 ao serem vistas":""):"guardadas na base de dados ("+mb(f.naBaseDados)+" de 500 MB) — ligue o R2 para não encher");
   el.className="dica"+(!f.r2&&f.naBaseDados>300*1048576?" alerta":"");
+}
+/* ---- Opções e códigos de pneus acrescentados pelos supervisores ---- */
+let OPCOES=[],filtroO="todos",apagarO=null;
+const TIPO_O={marca:"Marca",modelo:"Modelo",medida:"Medida",carga:"Índice de carga",vel:"Índice de velocidade",ref:"XL / TL / outro",codigo:"Código de pneu"};
+const GRUPOS_O=[["todos","Tudo"],["marca","Marcas"],["modelo","Modelos"],["medida","Medidas"],["indices","Índices"],["codigo","Códigos"]];
+function descO(o){
+  const d=o.dados||{};
+  if(d.k==="opt"&&Array.isArray(d.ref)){const [t,a,b]=d.ref;
+    return {tipo:t,txt:t==="modelo"||t==="carga"?b:a,sub:t==="modelo"?a:t==="carga"?"medida "+a:""};}
+  return {tipo:"codigo",txt:d.chave||"?",sub:[d.marca,d.modelo,d.medida,(d.carga||"")+(d.vel||""),d.ref].filter(Boolean).join(" ")};
+}
+async function carregarOpcoes(){
+  try{const j=await SJT.pedido("/gestao/opcoes",{admin:ADMIN});OPCOES=j.itens||[];$("sOpc").hidden=false;desenharOpcoes();}
+  catch(e){$("sOpc").hidden=false;$("opcoes").textContent="";msg("msgO",e.estado===404||/não encontrad|desconhecid/i.test(e.message)?"Atualize a API (cloudflare-api.js, versão 7) para ver esta lista.":e.message,false);}
+}
+function desenharOpcoes(){
+  const f=$("filtroO");f.textContent="";
+  GRUPOS_O.forEach(([id,nome])=>{const b=document.createElement("button");b.type="button";b.textContent=nome;b.setAttribute("aria-pressed",filtroO===id?"true":"false");b.onclick=()=>{filtroO=id;apagarO=null;desenharOpcoes();};f.appendChild(b);});
+  const q=$("procuraO").value.trim().toLowerCase();
+  const l=OPCOES.map(o=>({o,d:descO(o)})).filter(({o,d})=>(filtroO==="todos"||(filtroO==="indices"?["carga","vel","ref"].includes(d.tipo):d.tipo===filtroO))&&
+    (!q||[d.txt,d.sub,o.autor,(o.dados||{}).polo].join(" ").toLowerCase().includes(q)));
+  const el=$("opcoes");el.textContent="";
+  if(!l.length){const p=document.createElement("p");p.className="dica";p.textContent=OPCOES.length?"Nada corresponde ao filtro.":"Ainda ninguém acrescentou opções nem códigos.";el.appendChild(p);return;}
+  l.forEach(({o,d})=>{
+    const r=document.createElement("div");r.className="opcG";
+    const i=document.createElement("div");const b=document.createElement("b");b.textContent=d.txt;
+    const s1=document.createElement("small");s1.textContent=TIPO_O[d.tipo]+(d.sub?" · "+d.sub:"");
+    const s2=document.createElement("small");const dt=new Date(o.criado);
+    s2.textContent="por "+(o.autor||"?")+((o.dados||{}).polo?", "+o.dados.polo:"")+" · "+dt.toLocaleDateString("pt-PT");
+    i.append(b,s1,s2);
+    const x=document.createElement("button");x.type="button";const conf=apagarO===o.id;x.className=conf?"confirm":"";x.textContent=conf?"Confirmar":"Apagar";
+    x.onclick=()=>apagarOpcao(o);
+    r.append(i,x);el.appendChild(r);
+  });
+}
+$("procuraO").addEventListener("input",()=>{apagarO=null;desenharOpcoes();});
+async function apagarOpcao(o){
+  if(apagarO!==o.id){apagarO=o.id;desenharOpcoes();setTimeout(()=>{if(apagarO===o.id){apagarO=null;desenharOpcoes();}},4000);return;}
+  apagarO=null;
+  /* ao apagar uma marca apaga também os modelos dessa marca */
+  const d=descO(o),ids=[o.id];
+  if(d.tipo==="marca")OPCOES.forEach(x=>{const r=(x.dados||{}).ref;if(Array.isArray(r)&&r[0]==="modelo"&&String(r[1]).toLowerCase()===String(d.txt).toLowerCase())ids.push(x.id);});
+  try{await SJT.pedido("/gestao/opcoes",{admin:ADMIN,metodo:"POST",corpo:{ids}});
+    OPCOES=OPCOES.filter(x=>!ids.includes(x.id));desenharOpcoes();msg("msgO","Apagado: "+d.txt+(ids.length>1?" (e "+(ids.length-1)+" modelo"+(ids.length>2?"s":"")+" dessa marca)":"")+".",true);}
+  catch(e){msg("msgO",e.message,false);}
 }
 function desenhar(){
   const el=$("polos");el.textContent="";
@@ -196,7 +257,7 @@ $("fPolo").addEventListener("submit",async e=>{
 let saiuEm=0;
 document.addEventListener("visibilitychange",()=>{if(document.hidden){saiuEm=Date.now();}else if(ADMIN&&Date.now()-saiuEm>300000){sairGestao();}});
 window.addEventListener("pagehide",()=>{ADMIN="";});
-function sairGestao(){ADMIN="";POLOS=[];editar=null;$("fPolo").hidden=true;$("sPolos").hidden=true;$("fAdmin").hidden=false;msg("msgA","");$("admin").focus();}
+function sairGestao(){ADMIN="";POLOS=[];OPCOES=[];editar=null;$("fPolo").hidden=true;$("sPolos").hidden=true;$("sOpc").hidden=true;$("fAdmin").hidden=false;msg("msgA","");$("admin").focus();}
 $("sairG").onclick=sairGestao;
 </script>
 </body>

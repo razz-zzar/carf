@@ -195,7 +195,7 @@ input.mono{font-family:var(--mono);letter-spacing:.02em}
       <button class="btn btn-main" id="guardar" type="button">Guardar guia</button>
     </div>
     <div class="msg" id="msg" role="status"></div>
-    <details class="guardados" id="guardados" hidden><summary id="guardadosTit">Opções acrescentadas</summary><div id="guardadosLista"></div></details>
+    <details class="guardados" id="guardados" hidden><summary id="guardadosTit">As suas opções acrescentadas</summary><div id="guardadosLista"></div></details>
     <div class="hint">Com mais de 1 pneu em falta, se não forem todos iguais, carregue em “Adicionar outro pneu diferente” e escolha o seguinte. No fim, “Guardar guia”.</div>
   </section>
 
@@ -590,17 +590,15 @@ function itensGuardados(){const l=[];
   CUST.vels.forEach(v=>l.push({tipo:"Índice de velocidade",txt:v,ref:["vel",v]}));
   CUST.refs.forEach(v=>l.push({tipo:"XL / TL / outro",txt:v,ref:["ref",v]}));
   return l;}
+/* Painel com as opções que ESTA pessoa acrescentou (para corrigir/apagar as suas); as dos outros só se gerem na página de gestão */
+const minhas=()=>itensGuardados().filter(i=>{const m=OPC_META[chaveOpc(i.ref)];return !m||m.meu;});
 function renderGuardados(){
-  /* painel escondido: as opções acrescentadas aparecem diretamente nos botões de marca, modelo, medida e índices */
-  $("guardados").hidden=true;return;
-  const l=itensGuardados();$("guardados").hidden=!l.length;if(!l.length)return;
-  $("guardadosTit").textContent=`Opções acrescentadas, partilhadas por todos os armazéns (${l.length})`;
-  $("guardadosLista").innerHTML=l.map((i,n)=>{const m=OPC_META[chaveOpc(i.ref)],pode=!m||m.meu;
-    const quem=m?(m.meu?"por si":"por "+esc(m.autor||"?")+(m.polo&&m.polo!==S.polo.nome?", "+esc(m.polo):"")):"a enviar";
-    return `<div class="opc"><div><b>${esc(i.txt)}</b><small>${esc(i.tipo)}${i.sub?" · "+esc(i.sub):""} · ${quem}</small></div>${pode?`<button type="button" class="del${apagarOpc===n?" confirm":""}" data-n="${n}">${apagarOpc===n?"Confirmar":"Apagar"}</button>`:""}</div>`;}).join("");
+  const l=minhas();$("guardados").hidden=!l.length;if(!l.length)return;
+  $("guardadosTit").textContent=`As suas opções acrescentadas (${l.length})`;
+  $("guardadosLista").innerHTML=l.map((i,n)=>`<div class="opc"><div><b>${esc(i.txt)}</b><small>${esc(i.tipo)}${i.sub?" · "+esc(i.sub):""}</small></div><button type="button" class="del${apagarOpc===n?" confirm":""}" data-n="${n}">${apagarOpc===n?"Confirmar":"Apagar"}</button></div>`).join("");
 }
 $("guardadosLista").addEventListener("click",e=>{
-  const b=e.target.closest(".del");if(!b)return;const n=+b.dataset.n,l=itensGuardados();
+  const b=e.target.closest(".del");if(!b)return;const n=+b.dataset.n,l=minhas();
   if(apagarOpc!==n){apagarOpc=n;renderGuardados();setTimeout(()=>{if(apagarOpc===n){apagarOpc=null;renderGuardados();}},4000);return;}
   apagarOpc=null;const r=l[n].ref,m=OPC_META[chaveOpc(r)];
   if(m){if(!m.meu)return;LIGC.apagar(m.id);

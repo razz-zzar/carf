@@ -16,7 +16,7 @@
 // 7. Testar: https://ops-carf-api.<conta>.workers.dev/ deve mostrar {"ok":true,...} ("fotos":"r2" se o R2 estiver ligado)
 // As tabelas da base de dados criam-se sozinhas no primeiro pedido.
 
-const VERSAO = 6;
+const VERSAO = 7;
 const ORIGENS = [
   "https://razz-zzar.github.io",
   "https://raw.githack.com",
@@ -289,6 +289,26 @@ async function apagarFotos(request, env, cors, s) {
 }
 
 /* ---------- gestão (só com o código de administrador) ---------- */
+// Opções e códigos de pneus acrescentados pelos supervisores (partilhados por todos os armazéns):
+// GET lista tudo; POST {ids:[...]} apaga (para corrigir o que alguém pôs mal).
+async function gestaoOpcoes(request, env, cors) {
+  if (!env.ADMIN || !iguais(request.headers.get("X-Admin") || "", env.ADMIN)) {
+    await pausa(600);
+    return erro(cors, 403, "admin", "Código de administrador errado.");
+  }
+  if (request.method === "GET") {
+    const r = await env.DB.prepare("SELECT id, dados, autor, criado FROM registos WHERE polo = '*' AND app = 'codigos' AND apagado = 0 ORDER BY criado DESC LIMIT 2000").all();
+    return resposta(cors, { itens: (r.results || []).map(x => { let d = {}; try { d = JSON.parse(x.dados); } catch (e) {} return { id: x.id, dados: d, autor: x.autor, criado: x.criado }; }) });
+  }
+  let b; try { b = await request.json(); } catch (e) { return erro(cors, 400, "pedido", "Pedido inválido."); }
+  const ids = (Array.isArray(b.ids) ? b.ids : []).map(String).filter(x => x && x.length <= 100).slice(0, 40);
+  if (!ids.length) return resposta(cors, { ok: true, apagados: 0 });
+  const t = Date.now();
+  const r = await env.DB.prepare("UPDATE registos SET apagado = 1, alterado = ?, alterado_por = 'Gestão' WHERE polo = '*' AND app = 'codigos' AND apagado = 0 AND id IN (" + ids.map(() => "?").join(",") + ")")
+    .bind(t, ...ids).run();
+  return resposta(cors, { ok: true, apagados: (r.meta && r.meta.changes) || 0 });
+}
+
 async function gestao(request, url, env, cors) {
   if (!env.ADMIN || !iguais(request.headers.get("X-Admin") || "", env.ADMIN)) {
     await pausa(600);
@@ -343,6 +363,7 @@ export default {
       }
       if (caminho === "/entrar" && request.method === "POST") return await entrar(request, env, cors);
       if (caminho === "/gestao/polos" && (request.method === "GET" || request.method === "POST")) return await gestao(request, url, env, cors);
+      if (caminho === "/gestao/opcoes" && (request.method === "GET" || request.method === "POST")) return await gestaoOpcoes(request, env, cors);
       const s = await sessaoDe(request, env);
       if (!s) return erro(cors, 401, "sessao", "Sessão expirada ou código do armazém alterado. Entre de novo.");
       if (caminho === "/sessao" && request.method === "GET")
