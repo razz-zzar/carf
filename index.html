@@ -28,16 +28,16 @@ h1{font:700 34px/1.1 var(--display);letter-spacing:.06em;text-transform:uppercas
 .app:active{background:var(--panel-hi)}
 .app:focus-visible{outline:2px solid var(--green);outline-offset:2px}
 .app{position:relative}
-.badge{position:absolute;top:10px;right:10px;min-width:26px;height:26px;border-radius:13px;background:var(--green);color:#0a0a0a;font:700 14px/26px system-ui,sans-serif;padding:0 7px;text-align:center}
+.badge{position:absolute;top:10px;right:10px;min-width:26px;height:26px;border-radius:13px;background:var(--green);color:var(--green-ink,#0a0a0a);font:700 14px/26px system-ui,sans-serif;padding:0 7px;text-align:center}
 .badge[hidden]{display:none}
-.badge.men{background:#e0574f;color:#fff}
+.badge.men{background:var(--danger,#e0574f);color:#fff}
 .app.tem-novas{border-color:var(--green);box-shadow:0 0 0 1px var(--green) inset}
-.app.tem-men{border-color:#e0574f;box-shadow:0 0 0 1px #e0574f inset}
+.app.tem-men{border-color:var(--danger,#e0574f);box-shadow:0 0 0 1px var(--danger,#e0574f) inset}
 .app.tem-novas .ico{border-color:var(--green)}
 .ico .ponto{transform-origin:40px 9px;animation:pisca 1.6s ease-in-out infinite}
 @keyframes pisca{0%,100%{transform:scale(1)}50%{transform:scale(1.25)}}
 @media (prefers-reduced-motion:reduce){.ico .ponto{animation:none}}
-.ico{width:72px;height:72px;border-radius:18px;background:#0a0a0a;border:1px solid var(--line);display:grid;place-items:center;flex:none}
+.ico{width:72px;height:72px;border-radius:18px;background:var(--ico-bg,#0a0a0a);color:var(--icon,#B9D406);border:1px solid var(--line);display:grid;place-items:center;flex:none}
 .app b{font:700 19px/1.15 var(--display);letter-spacing:.03em;text-transform:uppercase;overflow-wrap:normal;max-width:100%}
 .app small{color:var(--muted);font-size:12px;line-height:1.3}
 .sessao{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:18px;padding:10px 12px;background:var(--panel);border:1px solid var(--line);border-radius:12px;font-size:14px;color:var(--muted)}
@@ -51,17 +51,36 @@ h1{font:700 34px/1.1 var(--display);letter-spacing:.06em;text-transform:uppercas
 .entrar input:focus-visible,.entrar select:focus-visible,.entrar button:focus-visible,.sessao button:focus-visible{outline:2px solid var(--green);outline-offset:2px}
 .polos{display:flex;flex-wrap:wrap;gap:8px}
 .polos button{background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:999px;padding:11px 16px;font:600 16px var(--body);cursor:pointer}
-.polos button[aria-pressed=true]{background:var(--green);border-color:var(--green);color:#0a0a0a}
-.entrar .ok{border:0;border-radius:10px;padding:15px;font:700 19px var(--display);letter-spacing:.06em;text-transform:uppercase;background:var(--green);color:#0a0a0a;cursor:pointer}
+.polos button[aria-pressed=true]{background:var(--green);border-color:var(--green);color:var(--green-ink,#0a0a0a)}
+.entrar .ok{border:0;border-radius:10px;padding:15px;font:700 19px var(--display);letter-spacing:.06em;text-transform:uppercase;background:var(--green);color:var(--green-ink,#0a0a0a);cursor:pointer}
 .entrar .ok:disabled{opacity:.6}
-.msgE{min-height:20px;font-size:14px;color:#e0574f}.msgE.info{color:var(--muted)}
+.msgE{min-height:20px;font-size:14px;color:var(--danger,#e0574f)}.msgE.info{color:var(--muted)}
 .rodape{max-width:560px;margin:0 auto;padding:10px 12px calc(16px + env(safe-area-inset-bottom,0px));border-top:1px solid var(--line);display:grid;grid-template-columns:44px minmax(0,1fr) 44px;align-items:center;color:var(--muted);font-size:12px;line-height:1.5}
 .rod-txt{text-align:center;white-space:nowrap;overflow:hidden}
 /* Acesso discreto à gestão (pede sempre o código de administrador) */
+button.engr{background:none;border:0;cursor:pointer;padding:0}
+.veuD{position:fixed;inset:0;z-index:30;background:rgba(0,0,0,.5);display:flex;align-items:flex-end;justify-content:center;padding:16px 16px calc(16px + env(safe-area-inset-bottom,0px))}
+.folha{width:100%;max-width:520px;max-height:calc(100dvh - 32px);overflow:auto;background:var(--panel);color:var(--fg);border:1px solid var(--line);border-radius:18px;padding:18px 16px 20px;display:flex;flex-direction:column;gap:12px;box-shadow:0 12px 40px rgba(0,0,0,.25)}
+.folha-top{display:flex;justify-content:space-between;align-items:center}
+.folha h2{margin:0;font:700 19px var(--body);color:var(--fg)}
+.fechar{width:40px;height:40px;border-radius:10px;border:1px solid var(--line);background:none;color:var(--fg);font:400 24px/1 var(--body);cursor:pointer}
+.sec-t{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-top:6px}
+.temas{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.tema{display:flex;flex-direction:column;gap:8px;text-align:left;padding:10px;border-radius:12px;border:1px solid var(--line);background:var(--bg);color:var(--fg);cursor:pointer;font:inherit}
+.tema[aria-checked=true]{border-color:var(--green);box-shadow:0 0 0 2px var(--green) inset}
+.tema b{font-size:15px}.tema small{font-size:12px;color:var(--muted);line-height:1.3}
+.amostra{height:58px;border-radius:8px;overflow:hidden;display:flex;border:1px solid rgba(0,0,0,.12)}
+.amostra>div{flex:1;padding:8px;display:flex;flex-direction:column;gap:5px}
+.amostra i{display:block;border-radius:3px;height:8px}
+.nota-d{font-size:13px;color:var(--muted)}
+.lnk{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:14px;border-radius:12px;border:1px solid var(--line);background:var(--bg);color:var(--fg);text-decoration:none;font-size:22px}
+.lnk b{display:block;font-size:15px}.lnk small{display:block;font-size:12px;color:var(--muted)}
 .engr{grid-column:3;justify-self:end;display:grid;place-items:center;width:44px;height:44px;border-radius:10px;color:var(--muted);opacity:.7}
 .engr:hover,.engr:active{color:var(--green);opacity:1}
 .engr:focus-visible{outline:2px solid var(--green);outline-offset:2px;opacity:1}
 </style>
+<link rel="stylesheet" href="carf-tema.css">
+<script src="carf-tema.js"></script>
 </head>
 <body>
 <header class="top"><img alt="CARF" src="data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0idXRmLTgiPz4KPCEtLSBHZW5lcmF0b3I6IEFkb2JlIElsbHVzdHJhdG9yIDI3LjAuMCwgU1ZHIEV4cG9ydCBQbHVnLUluIC4gU1ZHIFZlcnNpb246IDYuMDAgQnVpbGQgMCkgIC0tPgo8c3ZnIHZlcnNpb249IjEuMSIgaWQ9IkxheWVyXzEiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgeG1sbnM6eGxpbms9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkveGxpbmsiIHg9IjBweCIgeT0iMHB4IgoJIHZpZXdCb3g9IjAgMCA0NTYgMTg0LjMiIHN0eWxlPSJlbmFibGUtYmFja2dyb3VuZDpuZXcgMCAwIDQ1NiAxODQuMzsiIHhtbDpzcGFjZT0icHJlc2VydmUiPgo8c3R5bGUgdHlwZT0idGV4dC9jc3MiPgoJLnN0MHtmaWxsOiNCOUQ0MDY7fQoJLnN0MXtmaWxsOiMwMDdCN0Y7fQoJLnN0MntmaWxsOiMzRjlCOUU7fQo8L3N0eWxlPgo8Zz4KCTxwYXRoIGNsYXNzPSJzdDAiIGQ9Ik00NDQuMiw3Mi43Yy0yMy40LDcuNi00Ni41LDE1LjEtNjkuNywyMi43Yy0zLTMuNC00LjItNy40LTUuNi0xMS4yYy0zLjQtOS4xLTQuOS0xOC42LTUuMS0yOC4zCgkJYy0wLjMtMTcuOCwxMC4zLTI5LjksMjMuOC0zNC4yYzIyLjMtNy4xLDQ0LjUtMTQuMyw2Ni43LTIxLjVjMC41LTAuMSwxLTAuMSwxLjUtMC4yQzQ1Ni41LDMuNiw0NDguNSw1My41LDQ0NC4yLDcyLjd6Ii8+Cgk8cGF0aCBjbGFzcz0ic3QxIiBkPSJNNDU1LDE0Ny4xYy04LjcsNi43LTE4LjEsMTIuMy0yNy4xLDE4LjZjLTguMyw1LjgtMTYuOSwxMS4zLTI1LjMsMTdjLTEuNiwxLjEtMywxLjktNSwxLjQKCQljLTE2LjItNC4xLTMwLjYtMTEuMS00MS0yNC43Yy01LjEtNi43LTguMy0xNC40LTkuNy0yMi43Yy0wLjQtMi4xLTAuNC00LjQtMC4xLTYuNWMyLTE0LDQuMi0yNy45LDYuMy00MS45CgkJYzEuMy04LjYsMi42LTE3LjMsNC4xLTI1LjljMS40LDcuNCwxLjksMTQuOCw0LjMsMjJjMTEuMiwzMi43LDMzLjIsNTMuMyw2Ny4yLDYwLjhjNi45LDEuNSwxMy44LDEuOCwyMC44LDEuOAoJCUM0NTEuMywxNDYuNSw0NTMuMiwxNDYuMiw0NTUsMTQ3LjF6Ii8+Cgk8cGF0aCBjbGFzcz0ic3QyIiBkPSJNNDU1LDE0Ny4xYy0xLjgtMC4xLTMuNy0wLjEtNS41LTAuMmMyLTEuNCw0LjMtMC43LDYuNS0wLjljMCwwLjQsMCwwLjgtMC4xLDAuOQoJCUM0NTUuNywxNDcuMSw0NTUuMywxNDcuMSw0NTUsMTQ3LjF6Ii8+Cgk8cGF0aCBkPSJNMzMzLjIsNTMuNmMtMTUuMywwLTMwLjctMC40LTQ2LDAuMWMtMTQuMywwLjQtMjUuOSwxMC43LTI4LjQsMjQuM2MtMS41LDgtMi44LDE2LjEtNC4zLDI0LjFjLTEuNyw5LjItMy41LDE4LjQtNS4zLDI4LjIKCQljLTYuNS00LjctMTIuNi05LjEtMTkuMS0xMy44YzEuOS0xLjMsMy4zLTIuMiw0LjYtMy4xYzguMi01LjgsMTMuOC0xMy40LDE2LjMtMjMuMWM1LTE5LjItNy4xLTM1LjYtMjQuOS0zNi4zCgkJYy05LjMtMC40LTE4LjcsMC0yOC0wLjNjLTE2LjMtMC41LTI5LDExLTMxLjUsMjYuMmMtMi4yLDEzLjEtNC45LDI2LjEtNy4zLDM5LjFjLTAuMywwLTAuNiwwLjEtMC45LDAuMQoJCWMtMy44LTIxLjYtNy42LTQzLjMtMTEuNS02NC45Yy04LjMsMC0xNi4xLDAtMjQuMywwYy03LjksMTEuMS0xNiwyMi4zLTI0LDMzLjZjLTgsMTEuMi0xNiwyMi40LTI0LDMzLjZjLTExLjUsMC0yMi42LDAuMS0zMy44LDAKCQljLTE0LjEtMC4xLTIyLjUtMTEuNS0xOC44LTI1LjFjMy4yLTExLjgsMTUuNC0yMS44LDI4LjEtMjEuNWMxMi4zLDAuMiwyNC43LDAuMSwzNywwYzEuNiwwLDMuMywwLjQsNC42LTEuMgoJCWM1LjEtNi4zLDEwLjMtMTIuNiwxNS43LTE5LjJjLTEuNC0wLjEtMi4yLTAuMi0zLTAuMmMtMTksMC0zOCwwLTU3LDBjLTIuMiwwLTQuMywwLjEtNi40LDAuNmMtMTUuMywzLjQtMjYuMywxMi4zLTM0LDI1LjYKCQljLTYsMTAuNC04LjcsMjEuNi02LjIsMzMuNmMzLjQsMTYuOSwxNy43LDI4LjIsMzUuNiwyOC41YzEwLjMsMC4yLDIwLjcsMCwzMSwwYzYuMiwwLDEyLjMsMCwxOC40LDBjNS4yLTcuMiwxMC4yLTE0LjIsMTUuMi0yMS4yCgkJYzUuOC0wLjEsMTEuMSwxLjQsMTYuMiwzLjRjOS4zLDMuOCwxNi44LDkuOSwyMi44LDE3LjRjMTIuNCwwLDI0LjMsMCwzNi4yLDBjMi40LTEyLjgsNC44LTI1LjMsNy4zLTM4LjNjMS45LDEuNCwzLjIsMi40LDQuNSwzLjQKCQljMTMuOSwxMC45LDI3LjgsMjEuOCw0MS42LDMyLjhjMi4yLDEuOCw0LjQsMi42LDcuMiwyLjZjOS4yLTAuMiwxOC4zLDAsMjcuNS0wLjFjMS4zLDAsMi43LDAuNCwzLjktMC44CgkJYzIuMi0xMS42LDQuNC0yMy4zLDYuNy0zNS41YzE0LDAsMjcuNywwLDQxLjYsMGMxLjYtNi44LDMuMS0xMy4yLDQuNy0yMC4yYy0xNC41LDAtMjguNCwwLTQyLjYsMGMwLjMtMS41LDAuNi0yLjUsMC43LTMuNAoJCWMxLjMtNy41LDIuMy04LjQsOS42LTguNGMxMi43LDAsMjUuMywwLDM4LDBjMS40LDAsMywwLjUsNC40LTAuOGMwLjktNi4yLDIuOC0xMi41LDMuMy0xOC45QzMzNC4xLDUzLjksMzMzLjcsNTMuNiwzMzMuMiw1My42egoJCSBNMTA4LjIsMTExLjJjNy05LjksMTMuNy0xOS4yLDIxLTI5LjVjMi4xLDExLjcsMy45LDIyLjQsNS45LDMzLjVDMTI2LjMsMTEyLjEsMTE3LjcsMTExLjIsMTA4LjIsMTExLjJ6IE0yMTcuMiwxMDAuMgoJCWMtMi44LDAuNC01LjYsMC4zLTguNSwwLjNjLTcuOCwwLTE1LjYsMC0yMy43LDBjLTEtMi43LDAuMi00LjcsMC41LTYuOGMwLjgtNC42LDEuNi05LjIsMi42LTEzLjdjMS00LjgsMi42LTYuMSw3LjUtNi4xCgkJYzguMywwLDE2LjcsMCwyNSwwYzguNCwwLDEzLjMsNi41LDEwLjYsMTQuNEMyMjksOTUsMjI0LjMsOTkuMiwyMTcuMiwxMDAuMnoiLz4KPC9nPgo8L3N2Zz4K"></header>
@@ -80,16 +99,26 @@ h1{font:700 34px/1.1 var(--display);letter-spacing:.06em;text-transform:uppercas
   </form>
   <nav class="apps" id="apps" aria-label="Aplicações"></nav>
 </main>
-<footer class="rodape"><span></span><span class="rod-txt">© <span id="ano">2026</span> OPS CARF · Aplicação em desenvolvimento</span><a class="engr" href="gestao.html" aria-label="Gestão" title="Gestão"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></a></footer>
+<footer class="rodape"><span></span><span class="rod-txt">© <span id="ano">2026</span> OPS CARF · Aplicação em desenvolvimento</span><button type="button" class="engr" id="abrirDefs" aria-label="Definições" title="Definições"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button></footer>
+<div class="veuD" id="defs" hidden>
+  <div class="folha" role="dialog" aria-modal="true" aria-labelledby="t-defs">
+    <div class="folha-top"><h2 id="t-defs">Definições</h2><button type="button" class="fechar" id="fecharDefs" aria-label="Fechar">×</button></div>
+    <div class="sec-t" id="l-temas">Aspeto</div>
+    <div class="temas" id="temas" role="radiogroup" aria-labelledby="l-temas"></div>
+    <div class="nota-d">O aspeto fica guardado neste telemóvel e vale para todas as apps.</div>
+    <div class="sec-t">Administração</div>
+    <a class="lnk" href="gestao.html"><span><b>Gestão de armazéns</b><small>Pede o código de administrador</small></span><span aria-hidden="true">›</span></a>
+  </div>
+</div>
 <script src="sjt-online.js"></script>
 <script>
 /* Para juntar uma nova aplicação ao hub, acrescentar uma linha a esta lista. */
-const ICONE_PNEU='<svg width="48" height="48" viewBox="0 0 48 48" aria-hidden="true" fill="none" stroke="#B9D406" stroke-linecap="round"><circle cx="24" cy="24" r="18" stroke-width="7"/><circle cx="24" cy="24" r="9.5" stroke-width="2.5"/><path stroke-width="2.2" d="M24 24V14.5M24 24l9-2.8M24 24l5.3 7.3M24 24l-5.3 7.3M24 24l-9-2.8"/><circle cx="24" cy="24" r="2.6" fill="#B9D406" stroke="none"/></svg>';
-const ICONE_CHEGADA='<svg width="48" height="48" viewBox="0 0 48 48" aria-hidden="true" fill="none" stroke="#B9D406" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14h22v18H4zM26 20h8l6 6v6H26z"/><circle cx="12" cy="34" r="3.5" fill="#0a0a0a"/><circle cx="33" cy="34" r="3.5" fill="#0a0a0a"/><path d="M10 23l4 4 7-8"/></svg>';
-const ICONE_PENAL='<svg width="48" height="48" viewBox="0 0 48 48" aria-hidden="true" fill="none" stroke="#B9D406" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M24 6L44 40H4z"/><path d="M24 18v11" stroke-width="3.4"/><circle cx="24" cy="34.5" r="2" fill="#B9D406" stroke="none"/></svg>';
-const ICONE_FROTA='<svg width="48" height="48" viewBox="0 0 48 48" aria-hidden="true" fill="none" stroke="#B9D406" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 34V12.5Q3 10 5.5 10H30.5L37.5 20.5L43 22.8Q45 23.6 45 25.8V34Z"/><path d="M31.5 13.5L35.7 20.3H30.8V13.5Z" stroke-width="1.8"/><path d="M28.5 13.5V30.5M17 13.5V30.5" stroke-width="1.8"/><path d="M40.5 26.5h3" stroke-width="2.2"/><circle cx="11.5" cy="34" r="4.6" fill="#0a0a0a"/><circle cx="11.5" cy="34" r="1.4" fill="#B9D406" stroke="none"/><circle cx="36" cy="34" r="4.6" fill="#0a0a0a"/><circle cx="36" cy="34" r="1.4" fill="#B9D406" stroke="none"/></svg>';
-const ICONE_OCORR='<svg width="48" height="48" viewBox="0 0 48 48" aria-hidden="true" fill="none" stroke="#B9D406" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 15l18-9 18 9v18l-18 9-18-9z"/><path d="M6 15l18 9 18-9M24 24v18"/><path d="M33 26l-3 4 3 3-3 4" stroke-width="2.2"/></svg>';
-const ICONE_TURNO='<svg width="48" height="48" viewBox="0 0 48 48" aria-hidden="true" fill="none" stroke="#B9D406" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9h26a3 3 0 0 1 3 3v14a3 3 0 0 1-3 3H17l-7 6v-6H6a3 3 0 0 1-3-3V12a3 3 0 0 1 3-3z"/><path d="M10 16h18M10 22h12"/><path d="M39 17h3a3 3 0 0 1 3 3v12a3 3 0 0 1-3 3h-2v5l-6-5H24" stroke-width="2.2"/></svg>';
+const ICONE_PNEU='<svg width="48" height="48" viewBox="0 0 48 48" aria-hidden="true" fill="none" stroke="currentColor" stroke-linecap="round"><circle cx="24" cy="24" r="18" stroke-width="7"/><circle cx="24" cy="24" r="9.5" stroke-width="2.5"/><path stroke-width="2.2" d="M24 24V14.5M24 24l9-2.8M24 24l5.3 7.3M24 24l-5.3 7.3M24 24l-9-2.8"/><circle cx="24" cy="24" r="2.6" fill="currentColor" stroke="none"/></svg>';
+const ICONE_CHEGADA='<svg width="48" height="48" viewBox="0 0 48 48" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14h22v18H4zM26 20h8l6 6v6H26z"/><circle cx="12" cy="34" r="3.5" style="fill:var(--ico-bg,#0a0a0a)"/><circle cx="33" cy="34" r="3.5" style="fill:var(--ico-bg,#0a0a0a)"/><path d="M10 23l4 4 7-8"/></svg>';
+const ICONE_PENAL='<svg width="48" height="48" viewBox="0 0 48 48" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M24 6L44 40H4z"/><path d="M24 18v11" stroke-width="3.4"/><circle cx="24" cy="34.5" r="2" fill="currentColor" stroke="none"/></svg>';
+const ICONE_FROTA='<svg width="48" height="48" viewBox="0 0 48 48" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 34V12.5Q3 10 5.5 10H30.5L37.5 20.5L43 22.8Q45 23.6 45 25.8V34Z"/><path d="M31.5 13.5L35.7 20.3H30.8V13.5Z" stroke-width="1.8"/><path d="M28.5 13.5V30.5M17 13.5V30.5" stroke-width="1.8"/><path d="M40.5 26.5h3" stroke-width="2.2"/><circle cx="11.5" cy="34" r="4.6" style="fill:var(--ico-bg,#0a0a0a)"/><circle cx="11.5" cy="34" r="1.4" fill="currentColor" stroke="none"/><circle cx="36" cy="34" r="4.6" style="fill:var(--ico-bg,#0a0a0a)"/><circle cx="36" cy="34" r="1.4" fill="currentColor" stroke="none"/></svg>';
+const ICONE_OCORR='<svg width="48" height="48" viewBox="0 0 48 48" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 15l18-9 18 9v18l-18 9-18-9z"/><path d="M6 15l18 9 18-9M24 24v18"/><path d="M33 26l-3 4 3 3-3 4" stroke-width="2.2"/></svg>';
+const ICONE_TURNO='<svg width="48" height="48" viewBox="0 0 48 48" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9h26a3 3 0 0 1 3 3v14a3 3 0 0 1-3 3H17l-7 6v-6H6a3 3 0 0 1-3-3V12a3 3 0 0 1 3-3z"/><path d="M10 16h18M10 22h12"/><path d="M39 17h3a3 3 0 0 1 3 3v12a3 3 0 0 1-3 3h-2v5l-6-5H24" stroke-width="2.2"/></svg>';
 const APPS=[
   {nome:"Incompletos",desc:"Registo de pneus em falta nos despachos em armazém",href:"pneus.html",icone:ICONE_PNEU},
   {nome:"Horários",desc:"Horas de chegada e saída de cada volta",href:"chegadas.html",icone:ICONE_CHEGADA},
@@ -114,7 +143,7 @@ APPS.forEach(a=>{
 /* Mural: com mensagens por ver o ícone ganha um ponto de notificação, o cartão fica destacado
    e mostra o número (vermelho se houver menções). Na app instalada, o número também aparece no ícone do telemóvel. */
 let LIG_TURNO=null;
-const ICONE_TURNO_NOVO=ICONE_TURNO.replace('</svg>','<circle cx="40" cy="9" r="7" fill="#e0574f" stroke="#0a0a0a" stroke-width="2.5" class="ponto"/></svg>');
+const ICONE_TURNO_NOVO=ICONE_TURNO.replace('</svg>','<circle cx="40" cy="9" r="7" style="fill:var(--danger,#e0574f);stroke:var(--ico-bg,#0a0a0a)" stroke-width="2.5" class="ponto"/></svg>');
 function contarTurno(){
   const b=document.querySelector('.badge[data-app="turno"]');if(!b||!LIG_TURNO)return;
   const s=SJT.sessao()||{},ch=String(s.nome||"").normalize("NFD").replace(/[̀-ͯ]/g,"").toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"").slice(0,60)||"sem-nome";
@@ -193,6 +222,27 @@ $("mudar").onclick=()=>{
   if(!confirmarSair){confirmarSair=true;$("mudar").textContent="Sair?";setTimeout(()=>{confirmarSair=false;$("mudar").textContent="Mudar";},4000);return;}
   SJT.sair();confirmarSair=false;$("mudar").textContent="Mudar";mostrarSessao();
 };
+/* ---- Definições: tema (qualquer pessoa) e acesso à gestão (com código) ---- */
+const AMOSTRA={claro:["#f2f4f1","#ffffff","#4d7a17","#1d2822"],escuro:["#1b211e","#242b27","#a7c34f","#e3e9e5"],classico:["#0c0f0d","#151a17","#B9D406","#eef3ef"]};
+function amostra(id){
+  const a=document.createElement("div");a.className="amostra";
+  (id==="auto"?["claro","escuro"]:[id]).forEach(t=>{const [bg,pn,ac,fg]=AMOSTRA[t];const d=document.createElement("div");d.style.background=bg;
+    const l1=document.createElement("i");l1.style.cssText="background:"+pn+";height:18px;border:1px solid rgba(127,127,127,.25)";
+    const l2=document.createElement("i");l2.style.cssText="background:"+fg+";width:60%;opacity:.7";
+    const l3=document.createElement("i");l3.style.cssText="background:"+ac+";width:45%";d.append(l1,l2,l3);a.appendChild(d);});
+  return a;
+}
+function desenharTemas(){
+  const g=$("temas");g.textContent="";const at=CARF_TEMA.atual();
+  CARF_TEMA.lista.forEach(t=>{const b=document.createElement("button");b.type="button";b.className="tema";b.setAttribute("role","radio");b.setAttribute("aria-checked",t.id===at?"true":"false");
+    const n=document.createElement("b");n.textContent=t.nome;const d=document.createElement("small");d.textContent=t.desc;
+    b.append(amostra(t.id),n,d);b.onclick=()=>{CARF_TEMA.mudar(t.id);desenharTemas();};g.appendChild(b);});
+}
+function abrirDefs(){desenharTemas();$("defs").hidden=false;document.body.style.overflow="hidden";const s=$("temas").querySelector('[aria-checked="true"]');(s||$("fecharDefs")).focus();}
+function fecharDefs(){$("defs").hidden=true;document.body.style.overflow="";$("abrirDefs").focus();}
+$("abrirDefs").onclick=abrirDefs;$("fecharDefs").onclick=fecharDefs;
+$("defs").addEventListener("click",e=>{if(e.target===$("defs"))fecharDefs();});
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("defs").hidden)fecharDefs();});
 mostrarSessao();
 SJT.atualizarSessao().then(s=>{if(s)mostrarSessao();});
 if("serviceWorker" in navigator&&location.protocol!=="file:"){navigator.serviceWorker.register("sw.js").catch(()=>{});}

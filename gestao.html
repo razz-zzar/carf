@@ -27,7 +27,7 @@ textarea{font:14px/1.45 var(--mono);min-height:120px;resize:vertical}
 input:focus-visible,textarea:focus-visible,button:focus-visible{outline:2px solid var(--green);outline-offset:2px}
 .linha{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 @media (max-width:520px){.linha{grid-template-columns:1fr}}
-.btn{border:0;border-radius:10px;padding:13px 16px;font:700 17px var(--display);letter-spacing:.06em;text-transform:uppercase;cursor:pointer;background:var(--green);color:#0a0a0a}
+.btn{border:0;border-radius:10px;padding:13px 16px;font:700 17px var(--display);letter-spacing:.06em;text-transform:uppercase;cursor:pointer;background:var(--green);color:var(--green-ink,#0a0a0a)}
 .btn.sec{background:transparent;color:var(--green);border:2px solid var(--green)}
 .btns{display:flex;gap:10px;flex-wrap:wrap}.btns .btn{flex:1}
 .lista{display:flex;flex-direction:column;gap:8px}
@@ -39,6 +39,8 @@ input:focus-visible,textarea:focus-visible,button:focus-visible{outline:2px soli
 .chk{flex-direction:row;align-items:center;gap:10px;text-transform:none;letter-spacing:0;font-size:15px;color:var(--fg)}
 .chk input{width:22px;height:22px}
 </style>
+<link rel="stylesheet" href="carf-tema.css">
+<script src="carf-tema.js"></script>
 </head>
 <body>
 <main>

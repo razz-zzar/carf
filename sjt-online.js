@@ -227,7 +227,7 @@
 .sjt-aviso{border:1px solid var(--green,#B9D406);border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:10px;font-size:14px;color:var(--fg,#eef3ef)}
 .sjt-aviso div{display:flex;gap:8px;flex-wrap:wrap}
 .sjt-aviso button{flex:1;min-height:42px;border-radius:8px;font:700 15px system-ui,sans-serif;cursor:pointer;border:2px solid var(--green,#B9D406);background:transparent;color:var(--green,#B9D406)}
-.sjt-aviso button.p{background:var(--green,#B9D406);color:#0a0a0a}
+.sjt-aviso button.p{background:var(--green,#B9D406);color:var(--green-ink,#0a0a0a)}
 .sjt-autor{color:var(--muted,#93a39a);font-size:12px}`;
     document.head.appendChild(st);
   }
