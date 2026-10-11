@@ -6,9 +6,9 @@
 // O "?sjt=4" no pedido à UE evita reaproveitar recusas guardadas em cache pelas versões anteriores.
 //
 // Como publicar (uma vez, conta gratuita da Cloudflare):
-// 1. dash.cloudflare.com → Workers & Pages → Create → Start with Hello World! → nome "eprel-sjt" → Deploy
+// 1. dash.cloudflare.com → Workers & Pages → Create → Start with Hello World! → nome "eprel-carf" → Deploy
 // 2. Edit code → apagar tudo → colar este ficheiro → Deploy
-// 3. Testar: https://eprel-sjt.<conta>.workers.dev/909522?v=4 deve mostrar os dados de um Michelin Pilot Sport 5
+// 3. Testar: https://eprel-carf.<conta>.workers.dev/909522?v=4 deve mostrar os dados de um Michelin Pilot Sport 5
 
 const ORIGENS = [
   "https://razz-zzar.github.io",
@@ -45,7 +45,7 @@ export default {
     if (request.method === "OPTIONS") return new Response(null, { headers: cors });
     if (request.method !== "GET") return json({ erro: "Método não permitido" }, 405);
 
-    // Endereço esperado: https://eprel-sjt.<conta>.workers.dev/909522
+    // Endereço esperado: https://eprel-carf.<conta>.workers.dev/909522
     const id = new URL(request.url).pathname.replace(/\//g, "");
     if (!/^\d{1,10}$/.test(id)) return json({ erro: "Número EPREL inválido" }, 400);
 

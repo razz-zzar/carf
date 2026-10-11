@@ -2,7 +2,7 @@
 // Guarda os registos das apps por armazém (polo), para todos os supervisores
 // do mesmo armazém verem o que cada um regista.
 //
-// Como publicar (uma vez, na mesma conta da Cloudflare do eprel-sjt):
+// Como publicar (uma vez, na mesma conta da Cloudflare do eprel-carf):
 // 1. Storage & Databases → D1 → Create database → nome "ops-carf" → Create
 // 2. Workers & Pages → Create → Start with Hello World! → nome "ops-carf-api" → Deploy
 // 3. Edit code → apagar tudo → colar este ficheiro → Deploy

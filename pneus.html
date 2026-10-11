@@ -655,11 +655,14 @@ function procurar(o,re,prof){if(!o||typeof o!=="object"||prof>4)return "";
 /* A UE não deixa páginas de outros sites lerem a ficha diretamente (CORS).
    A ficha é pedida ao intermediário próprio do OPS CARF (cloudflare-worker.js no repositório),
    que só recebe o número EPREL do pneu. */
-const INTERMEDIARIO="https://eprel-sjt.frplopes91.workers.dev";
+const INTERMEDIARIO="https://eprel-carf.frplopes91.workers.dev";
+/* nome antigo do intermediário: só é usado se o novo não responder (pode ser apagado da Cloudflare quando o novo estiver a funcionar) */
+const INTERMEDIARIO_ANTIGO="https://eprel-sjt.frplopes91.workers.dev";
 const EPREL_API=id=>"https://eprel.ec.europa.eu/api/products/tyres/"+id;
 let ultimoDiag="";
 async function obterFicha(id){
   const vias=[["direto",EPREL_API(id)]];
+  if(INTERMEDIARIO_ANTIGO)vias.unshift(["intermediário antigo",INTERMEDIARIO_ANTIGO.replace(/\/+$/,"")+"/"+id+"?v=4"]);
   if(INTERMEDIARIO)vias.unshift(["intermediário",INTERMEDIARIO.replace(/\/+$/,"")+"/"+id+"?v=4"]);
   const diag=[];
   for(const [nome,url] of vias){
