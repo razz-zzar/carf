@@ -13,7 +13,7 @@
 // 6. Testar: https://ops-carf-api.<conta>.workers.dev/ deve mostrar {"ok":true,...}
 // As tabelas da base de dados criam-se sozinhas no primeiro pedido.
 
-const VERSAO = 4;
+const VERSAO = 5;
 const ORIGENS = [
   "https://razz-zzar.github.io",
   "https://raw.githack.com",
@@ -21,7 +21,10 @@ const ORIGENS = [
   "http://localhost:8000",
   "http://127.0.0.1:8000",
 ];
-const APPS = new Set(["pneus", "chegadas", "penalizacoes", "frota", "ocorrencias", "turno"]);
+const APPS = new Set(["pneus", "chegadas", "penalizacoes", "frota", "ocorrencias", "turno", "codigos"]);
+// Apps partilhadas por TODOS os armazéns (ex. códigos de pneus aprendidos): guardadas no polo "*"
+const GLOBAIS = new Set(["codigos"]);
+const poloDe = (app, s) => GLOBAIS.has(app) ? "*" : s.polo.id;
 // Apps em que qualquer supervisor do polo pode apagar (nas outras só quem registou)
 const TODOS_APAGAM = new Set(["frota"]);
 const DIAS_SESSAO = 180;
@@ -154,7 +157,7 @@ async function listar(url, env, cors, s) {
   const desde = Math.max(0, parseInt(url.searchParams.get("desde") || "0", 10) || 0);
   const r = await env.DB.prepare(
     "SELECT * FROM registos WHERE polo = ? AND app = ? AND alterado >= ? ORDER BY alterado, id LIMIT ?"
-  ).bind(s.polo.id, app, desde, PAGINA + 1).all();
+  ).bind(poloDe(app, s), app, desde, PAGINA + 1).all();
   const linhas = r.results || [];
   const mais = linhas.length > PAGINA;
   return resposta(cors, { registos: linhas.slice(0, PAGINA).map(x => paraCliente(x, s.disp)), mais, agora: Date.now() });
@@ -169,7 +172,7 @@ async function gravar(request, env, cors, s) {
   const atuais = new Map();
   if (ids.length) {
     const r = await env.DB.prepare("SELECT * FROM registos WHERE polo = ? AND app = ? AND id IN (" + ids.map(() => "?").join(",") + ")")
-      .bind(s.polo.id, app, ...ids).all();
+      .bind(poloDe(app, s), app, ...ids).all();
     for (const x of r.results || []) atuais.set(x.id, x);
   }
   const resultados = [];
@@ -194,12 +197,12 @@ async function gravar(request, env, cors, s) {
       }
       if (args.reduce((n, a) => n + String(a).length, 0) + String(atual.dados).length > MAX_DADOS) { resultados.push({ id, ok: false, codigo: "grande" }); continue; }
       depois = await env.DB.prepare("UPDATE registos SET dados = " + expr + ", alterado = ?, alterado_por = ? WHERE polo = ? AND app = ? AND id = ? AND apagado = 0 RETURNING *")
-        .bind(...args, t, atual.alterado_por, s.polo.id, app, id).first();
+        .bind(...args, t, atual.alterado_por, poloDe(app, s), app, id).first();
     } else if (it.apagado) {
       if (!atual || atual.apagado) { resultados.push({ id, ok: true, registo: atual ? paraCliente(atual, s.disp) : null }); continue; }
       if (atual.autor_disp !== s.disp && !TODOS_APAGAM.has(app)) { resultados.push({ id, ok: false, codigo: "so_autor", registo: paraCliente(atual, s.disp) }); continue; }
       depois = await env.DB.prepare("UPDATE registos SET apagado = 1, alterado = ?, alterado_por = ? WHERE polo = ? AND app = ? AND id = ? RETURNING *")
-        .bind(t, s.nome, s.polo.id, app, id).first();
+        .bind(t, s.nome, poloDe(app, s), app, id).first();
     } else {
       const dados = JSON.stringify(it.dados && typeof it.dados === "object" ? it.dados : {});
       const dia = /^\d{4}-\d{2}-\d{2}$/.test(it.dia || "") ? it.dia : "";
@@ -213,11 +216,11 @@ async function gravar(request, env, cors, s) {
            ON CONFLICT (polo, app, id) DO UPDATE SET dia = excluded.dia, dados = excluded.dados, autor = excluded.autor,
              autor_disp = excluded.autor_disp, criado = excluded.criado, alterado = excluded.alterado, alterado_por = '', apagado = 0
            RETURNING *`
-        ).bind(s.polo.id, app, id, dia, dados, s.nome, s.disp, criado, t).first();
+        ).bind(poloDe(app, s), app, id, dia, dados, s.nome, s.disp, criado, t).first();
       } else {
         // Alteração de um registo que já existe (ex. km da viatura, ocorrência resolvida): mantém o autor
         depois = await env.DB.prepare("UPDATE registos SET dia = ?, dados = ?, alterado = ?, alterado_por = ? WHERE polo = ? AND app = ? AND id = ? RETURNING *")
-          .bind(dia, dados, t, atual.autor_disp === s.disp ? "" : s.nome, s.polo.id, app, id).first();
+          .bind(dia, dados, t, atual.autor_disp === s.disp ? "" : s.nome, poloDe(app, s), app, id).first();
       }
     }
     if (depois) atuais.set(id, depois);
