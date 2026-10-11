@@ -191,7 +191,7 @@
     const pendentes = () => Object.keys(est.fila).length;
 
     /* Atualiza sozinho enquanto alguém está a usar a app:
-       - de 3 em 3 s enquanto a pessoa mexe na app (último minuto);
+       - de 3 em 3 s enquanto a pessoa mexe na app no último minuto (tocar, escrever, scroll ou rato);
        - parada há 1 min, em segundo plano ou sem rede: fica em pausa (não gasta pedidos);
        - ao tocar no ecrã, voltar à app ou a rede voltar: atualiza logo e retoma o ritmo.
        Assim quem está a trabalhar vê as alterações dos outros em segundos e os telemóveis parados
@@ -209,6 +209,10 @@
     const acordar = () => { ultimoToque = Date.now(); if (parado) { parado = false; setTimeout(ciclo, 0); } };
     if (s.token) {
       ["pointerdown", "keydown", "touchstart"].forEach(ev => window.addEventListener(ev, acordar, { passive: true, capture: true }));
+      /* ler a lista também conta: scroll, roda do rato e mexer o rato (no máximo 1 vez por segundo) */
+      let ultimoMov = 0;
+      const mexeu = () => { const t = Date.now(); if (t - ultimoMov < 1000) return; ultimoMov = t; acordar(); };
+      ["scroll", "wheel", "mousemove", "touchmove"].forEach(ev => window.addEventListener(ev, mexeu, { passive: true, capture: true }));
       window.addEventListener("online", acordar);
       window.addEventListener("offline", () => { estado.rede = false; avisar({ estado: true }); });
       document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") acordar(); });
