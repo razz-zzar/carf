@@ -9,7 +9,7 @@
     { id: "classico", nome: "Clássico", desc: "O aspeto original: preto e verde CARF" },
     { id: "auto", nome: "Automático", desc: "Claro ou escuro conforme o telemóvel" }
   ];
-  var PADRAO = "claro", CHAVE = "carf_tema";
+  var PADRAO = "classico", CHAVE = "carf_tema";
   var COR_BARRA = { claro: "#ffffff", escuro: "#1b211e", classico: "#0c0f0d" };
   var escuroSistema = window.matchMedia ? window.matchMedia("(prefers-color-scheme: dark)") : null;
 
