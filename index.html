@@ -65,21 +65,13 @@ button.engr{background:none;border:0;cursor:pointer;padding:0}
 .folha h2{margin:0;font:700 19px var(--body);color:var(--fg)}
 .fechar{width:40px;height:40px;border-radius:10px;border:1px solid var(--line);background:none;color:var(--fg);font:400 24px/1 var(--body);cursor:pointer}
 .sec-t{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-top:6px}
-.temas{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.temas{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
 .tema{display:flex;flex-direction:column;gap:8px;text-align:left;padding:10px;border-radius:12px;border:1px solid var(--line);background:var(--bg);color:var(--fg);cursor:pointer;font:inherit}
 .tema[aria-checked=true]{border-color:var(--green);box-shadow:0 0 0 2px var(--green) inset}
 .tema b{font-size:15px}.tema small{font-size:12px;color:var(--muted);line-height:1.3}
 .amostra{height:58px;border-radius:8px;overflow:hidden;display:flex;border:1px solid rgba(0,0,0,.12)}
 .amostra>div{flex:1;padding:8px;display:flex;flex-direction:column;gap:5px}
 .amostra i{display:block;border-radius:3px;height:8px}
-.fontes{display:flex;flex-direction:column;gap:8px}
-.fonte{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:4px 10px;text-align:left;padding:12px;border-radius:12px;border:1px solid var(--line);background:var(--bg);color:var(--fg);cursor:pointer;font:inherit}
-.fonte[aria-checked=true]{border-color:var(--green);box-shadow:0 0 0 2px var(--green) inset}
-.fonte .am{font-size:19px;font-weight:700;line-height:1.2;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
-.fonte .am2{grid-column:1;font-size:14px;font-weight:400;color:var(--fg);opacity:.85}
-.fonte .nm{grid-column:2;grid-row:1;font:600 12px system-ui,sans-serif;color:var(--muted);text-align:right}
-.fonte small{grid-column:1/-1;font:400 12px system-ui,sans-serif;color:var(--muted)}
-.fonte .vis{grid-column:2;grid-row:2;color:var(--green);font:700 16px system-ui,sans-serif}
 .nota-d{font-size:13px;color:var(--muted)}
 .lnk{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:14px;border-radius:12px;border:1px solid var(--line);background:var(--bg);color:var(--fg);text-decoration:none;font-size:22px}
 .lnk b{display:block;font-size:15px}.lnk small{display:block;font-size:12px;color:var(--muted)}
@@ -113,9 +105,7 @@ button.engr{background:none;border:0;cursor:pointer;padding:0}
     <div class="folha-top"><h2 id="t-defs">Definições</h2><button type="button" class="fechar" id="fecharDefs" aria-label="Fechar">×</button></div>
     <div class="sec-t" id="l-temas">Cores</div>
     <div class="temas" id="temas" role="radiogroup" aria-labelledby="l-temas"></div>
-    <div class="sec-t" id="l-fontes">Letra</div>
-    <div class="fontes" id="fontes" role="radiogroup" aria-labelledby="l-fontes"></div>
-    <div class="nota-d">As escolhas ficam guardadas neste telemóvel e valem para todas as apps. Sem internet, as letras novas são trocadas pela do telemóvel.</div>
+    <div class="nota-d">A escolha fica guardada neste telemóvel e vale para todas as apps.</div>
     <div class="sec-t">Administração</div>
     <a class="lnk" href="gestao.html"><span><b>Gestão de armazéns</b><small>Pede o código de administrador</small></span><span aria-hidden="true">›</span></a>
   </div>
@@ -233,10 +223,10 @@ $("mudar").onclick=()=>{
   SJT.sair();confirmarSair=false;$("mudar").textContent="Mudar";mostrarSessao();
 };
 /* ---- Definições: tema (qualquer pessoa) e acesso à gestão (com código) ---- */
-const AMOSTRA={claro:["#f2f4f1","#ffffff","#4d7a17","#1d2822"],escuro:["#1b211e","#242b27","#a7c34f","#e3e9e5"],classico:["#0c0f0d","#151a17","#B9D406","#eef3ef"]};
+const AMOSTRA={claro:["#f2f4f1","#ffffff","#4d7a17","#1d2822"],carf:["#f2f6f6","#ffffff","#007b7f","#151c1c","#b9d406"],classico:["#0c0f0d","#151a17","#B9D406","#eef3ef"]};
 function amostra(id){
   const a=document.createElement("div");a.className="amostra";
-  (id==="auto"?["claro","escuro"]:[id]).forEach(t=>{const [bg,pn,ac,fg]=AMOSTRA[t];const d=document.createElement("div");d.style.background=bg;
+  [id].forEach(t=>{const [bg,pn,ac,fg,br]=AMOSTRA[t];if(br)a.style.borderTop="4px solid "+br;const d=document.createElement("div");d.style.background=bg;
     const l1=document.createElement("i");l1.style.cssText="background:"+pn+";height:18px;border:1px solid rgba(127,127,127,.25)";
     const l2=document.createElement("i");l2.style.cssText="background:"+fg+";width:60%;opacity:.7";
     const l3=document.createElement("i");l3.style.cssText="background:"+ac+";width:45%";d.append(l1,l2,l3);a.appendChild(d);});
@@ -248,19 +238,7 @@ function desenharTemas(){
     const n=document.createElement("b");n.textContent=t.nome;const d=document.createElement("small");d.textContent=t.desc;
     b.append(amostra(t.id),n,d);b.onclick=()=>{CARF_TEMA.mudar(t.id);desenharTemas();};g.appendChild(b);});
 }
-function desenharFontes(){
-  const g=$("fontes");g.textContent="";const at=CARF_TEMA.fonteAtual();
-  CARF_TEMA.fontes.forEach(f=>{const b=document.createElement("button");b.type="button";b.className="fonte";b.setAttribute("role","radio");b.setAttribute("aria-checked",f.id===at?"true":"false");
-    b.setAttribute("aria-label",f.nome+" — "+f.desc);
-    const fam=f.pilha||'"Roboto Condensed","Arial Narrow",Arial,sans-serif';
-    const a=document.createElement("span");a.className="am";a.style.fontFamily=fam;a.textContent=f.id==="original"?"OPERAÇÕES CARF":"Operações CARF";if(f.id==="original")a.style.letterSpacing=".05em";
-    const a2=document.createElement("span");a2.className="am2";a2.style.fontFamily=f.pilha||'system-ui,sans-serif';a2.textContent="Volta 1602 chegou às 13:42";
-    const n=document.createElement("span");n.className="nm";n.textContent=f.nome;
-    const v=document.createElement("span");v.className="vis";v.textContent=f.id===at?"✓":"";
-    const d=document.createElement("small");d.textContent=f.desc;
-    b.append(a,n,a2,v,d);b.onclick=()=>{CARF_TEMA.mudarFonte(f.id);desenharFontes();ajustar();};g.appendChild(b);});
-}
-function abrirDefs(){CARF_TEMA.carregarTodas();desenharFontes();desenharTemas();$("defs").hidden=false;document.body.style.overflow="hidden";const s=$("temas").querySelector('[aria-checked="true"]');(s||$("fecharDefs")).focus();}
+function abrirDefs(){desenharTemas();$("defs").hidden=false;document.body.style.overflow="hidden";const s=$("temas").querySelector('[aria-checked="true"]');(s||$("fecharDefs")).focus();}
 function fecharDefs(){$("defs").hidden=true;document.body.style.overflow="";$("abrirDefs").focus();}
 $("abrirDefs").onclick=abrirDefs;$("fecharDefs").onclick=fecharDefs;
 $("defs").addEventListener("click",e=>{if(e.target===$("defs"))fecharDefs();});

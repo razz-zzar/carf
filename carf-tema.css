@@ -1,11 +1,31 @@
-/* OPS CARF — aspeto escolhido na roda de definições do hub (ver carf-tema.js).
-   Duas escolhas independentes, guardadas em cada telemóvel:
-   1) CORES  → html[data-tema=claro|escuro|classico]   ("classico" = cores originais de cada página)
-   2) LETRA  → html[data-fonte=original|sistema|inter|…] ("original" = títulos estreitos em maiúsculas)
+/* OPS CARF — aspeto (ver carf-tema.js).
+   LETRA: Inter em tudo (variáveis --body, --display e --mono definidas pelo carf-tema.js).
+   CORES: html[data-tema=classico|claro|carf], escolhidas na roda de definições do hub.
+          "classico" (Original) = cores de origem de cada página.
    Os seletores html[…] ganham às variáveis :root de cada página. */
 
 /* =====================================================================
-   1) CORES
+   LETRA (todas as páginas, todos os temas)
+   ===================================================================== */
+html:root body{-webkit-font-smoothing:antialiased;font-variant-numeric:tabular-nums}
+html:root h1{font-family:var(--body);font-weight:700;letter-spacing:-.01em;text-transform:none}
+html:root header:not(.top) h1{font-size:22px;line-height:1.15}
+html:root main>h1{font-size:26px}
+html:root h2{font-family:var(--body);font-size:17px;font-weight:700;letter-spacing:-.005em;text-transform:none}
+html:root h2 span{font-size:14px}
+html:root button,html:root .fbtn{text-transform:none!important;letter-spacing:0!important;font-family:var(--body)}
+html:root .registar,html:root .btn,html:root .entrar .ok{font-size:17px;font-weight:700;border-radius:12px}
+html:root .chegou{font-size:16px;font-weight:700}
+html:root .grupo-h,html:root .dia-h{font-family:var(--body);font-size:13px;letter-spacing:.05em}
+html:root .app b{font-family:var(--body);font-size:16px;letter-spacing:-.005em;text-transform:none}
+html:root .entrar h2{font-family:var(--body);text-transform:none;letter-spacing:0;font-size:18px}
+html:root #semNum{font-family:var(--body);text-transform:none;letter-spacing:0;font-size:16px}
+/* números grandes (voltas, matrículas, horas) */
+html:root .num,html:root .vol,html:root .quem,html:root .tipo{font-family:var(--body);letter-spacing:-.01em}
+html:root .num{font-weight:800}
+
+/* =====================================================================
+   CORES
    ===================================================================== */
 /* ---------- Claro ---------- */
 html[data-tema="claro"]{
@@ -15,43 +35,33 @@ html[data-tema="claro"]{
   --sombra:0 1px 2px rgba(20,32,24,.06),0 2px 8px rgba(20,32,24,.04);
   color-scheme:light;
 }
-/* ---------- Escuro suave ---------- */
-html[data-tema="escuro"]{
-  --bg:#1b211e; --panel:#242b27; --panel-hi:#2b332e; --line:#36403a; --fg:#e3e9e5; --muted:#9ba8a0;
-  --green:#a7c34f; --green-dk:#93ad42; --green-ink:#161b12; --danger:#e2766b; --amber:#d9a55a;
-  --icon:#a7c34f; --ico-bg:#1f2622; --ok-line:#4a5a2c; --brand:#a7c34f;
-  --sombra:none;
-  color-scheme:dark;
+/* ---------- CARF: cores do logótipo (azul-petróleo #007B7F, petróleo claro #3F9B9E, verde-lima #B9D406, preto) ---------- */
+html[data-tema="carf"]{
+  --bg:#f2f6f6; --panel:#ffffff; --panel-hi:#f5f9f9; --line:#d6e2e2; --fg:#151c1c; --muted:#58696a;
+  --green:#007b7f; --green-dk:#00666a; --green-ink:#ffffff; --danger:#c23b2e; --amber:#b9770e;
+  --icon:#007b7f; --ico-bg:#f3f9d9; --ok-line:#9fcfd1; --brand:#b9d406;
+  --sombra:0 1px 2px rgba(0,59,61,.07),0 2px 8px rgba(0,59,61,.05);
+  color-scheme:light;
 }
-/* acabamentos de cor dos temas novos */
-html[data-tema="claro"] header:not(.top),html[data-tema="escuro"] header:not(.top){border-bottom:1px solid var(--line)}
-html[data-tema="claro"] h2,html[data-tema="escuro"] h2{color:var(--fg)}
-html[data-tema="claro"] .entrar h2,html[data-tema="escuro"] .entrar h2{color:var(--fg)}
-html[data-tema="claro"] section.card,html[data-tema="claro"] .entrar,html[data-tema="claro"] .sessao,html[data-tema="claro"] .app{box-shadow:var(--sombra)}
-html[data-tema="claro"] section.card,html[data-tema="escuro"] section.card{border-radius:14px}
-html[data-tema="claro"] .top{border-bottom-width:4px;border-bottom-color:var(--brand)}
-html[data-tema="escuro"] .top{border-bottom-width:3px;border-bottom-color:var(--brand)}
-html[data-tema="claro"] input:not([type=checkbox]):not([type=radio]),html[data-tema="claro"] select,html[data-tema="claro"] textarea{background-color:#fbfcfa}
-html[data-tema="claro"] input:focus,html[data-tema="claro"] select:focus,html[data-tema="claro"] textarea:focus{box-shadow:0 0 0 3px rgba(77,122,23,.15)}
-html[data-tema="claro"] .resumo{box-shadow:0 10px 30px rgba(20,32,24,.18)}
-html[data-tema="claro"] .veu{background:rgba(20,28,24,.45)}
 
-/* =====================================================================
-   2) LETRA — a família vem de carf-tema.js (variáveis --body e --display).
-   Com qualquer letra que não a "original": títulos e botões sem maiúsculas gritadas.
-   ===================================================================== */
-html[data-letra="nova"] body{-webkit-font-smoothing:antialiased}
-html[data-letra="nova"] h1{font-family:var(--body);font-weight:700;letter-spacing:-.01em;text-transform:none}
-html[data-letra="nova"] header:not(.top) h1{font-size:22px;line-height:1.15}
-html[data-letra="nova"] main>h1{font-size:26px}
-html[data-letra="nova"] h2{font-family:var(--body);font-size:17px;font-weight:700;letter-spacing:0;text-transform:none}
-html[data-letra="nova"] h2 span{font-size:14px}
-html[data-letra="nova"] button,html[data-letra="nova"] .fbtn{text-transform:none;letter-spacing:.01em;font-family:var(--body)}
-html[data-letra="nova"] .registar,html[data-letra="nova"] .btn,html[data-letra="nova"] .entrar .ok{font-size:17px;font-weight:700;border-radius:12px}
-html[data-letra="nova"] .chegou{font-size:16px;font-weight:700}
-html[data-letra="nova"] .grupo-h,html[data-letra="nova"] .dia-h{font-family:var(--body);font-size:13px;letter-spacing:.06em}
-html[data-letra="nova"] .app b{font-family:var(--body);font-size:16px;letter-spacing:0;text-transform:none}
-html[data-letra="nova"] .entrar h2{font-family:var(--body);text-transform:none;letter-spacing:0;font-size:18px}
-html[data-letra="nova"] #semNum{font-family:var(--body);text-transform:none;letter-spacing:0;font-size:16px}
-/* números grandes (voltas, matrículas) ficam na letra escolhida, mais pesada */
-html[data-letra="nova"] .num,html[data-letra="nova"] .vol,html[data-letra="nova"] .quem,html[data-letra="nova"] .tipo{font-family:var(--body);letter-spacing:0}
+/* acabamentos comuns aos temas claros (Claro e CARF) */
+html[data-tema="claro"] header:not(.top),html[data-tema="carf"] header:not(.top){border-bottom:1px solid var(--line)}
+html[data-tema="claro"] h2,html[data-tema="claro"] .entrar h2{color:var(--fg)}
+html[data-tema="claro"] section.card,html[data-tema="claro"] .entrar,html[data-tema="claro"] .sessao,html[data-tema="claro"] .app,
+html[data-tema="carf"] section.card,html[data-tema="carf"] .entrar,html[data-tema="carf"] .sessao,html[data-tema="carf"] .app{box-shadow:var(--sombra)}
+html[data-tema="claro"] section.card,html[data-tema="carf"] section.card{border-radius:14px}
+html[data-tema="claro"] .top,html[data-tema="carf"] .top{border-bottom-width:4px;border-bottom-color:var(--brand)}
+html[data-tema="claro"] input:not([type=checkbox]):not([type=radio]),html[data-tema="claro"] select,html[data-tema="claro"] textarea,
+html[data-tema="carf"] input:not([type=checkbox]):not([type=radio]),html[data-tema="carf"] select,html[data-tema="carf"] textarea{background-color:#fbfcfc}
+html[data-tema="claro"] input:focus,html[data-tema="claro"] select:focus,html[data-tema="claro"] textarea:focus{box-shadow:0 0 0 3px rgba(77,122,23,.15)}
+html[data-tema="carf"] input:focus,html[data-tema="carf"] select:focus,html[data-tema="carf"] textarea:focus{box-shadow:0 0 0 3px rgba(0,123,127,.15)}
+html[data-tema="claro"] .resumo,html[data-tema="carf"] .resumo{box-shadow:0 10px 30px rgba(20,32,24,.18)}
+html[data-tema="claro"] .veu,html[data-tema="carf"] .veu{background:rgba(20,28,28,.45)}
+
+/* só no tema CARF: títulos a petróleo, cabeçalho com a risca lima, destaques a lima */
+html[data-tema="carf"] h2,html[data-tema="carf"] .entrar h2{color:var(--green)}
+html[data-tema="carf"] main>h1{color:#151c1c}
+html[data-tema="carf"] header:not(.top){border-bottom:3px solid var(--brand)}
+html[data-tema="carf"] .badge:not(.men){background:var(--brand);color:#151c1c}
+html[data-tema="carf"] .app.tem-novas{border-color:var(--brand);box-shadow:0 0 0 1px var(--brand) inset,var(--sombra)}
+html[data-tema="carf"] #barra{background:linear-gradient(90deg,#007b7f,#3f9b9e)}
