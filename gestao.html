@@ -38,6 +38,7 @@ input:focus-visible,textarea:focus-visible,button:focus-visible{outline:2px soli
 .dica{font-size:13px;color:var(--muted);margin:0}
 .chk{flex-direction:row;align-items:center;gap:10px;text-transform:none;letter-spacing:0;font-size:15px;color:var(--fg)}
 .chk input{width:22px;height:22px}
+.dica.alerta{color:var(--danger,#e0574f);font-weight:600}
 </style>
 <link rel="stylesheet" href="carf-tema.css">
 <script src="carf-tema.js"></script>
@@ -58,6 +59,7 @@ input:focus-visible,textarea:focus-visible,button:focus-visible{outline:2px soli
     <h2>Armazéns</h2>
     <div class="lista" id="polos"></div>
     <button class="btn sec" type="button" id="novo">+ Novo armazém</button>
+    <p class="dica" id="espaco"></p>
   </section>
 
   <form class="card" id="fPolo" hidden novalidate>
@@ -104,9 +106,16 @@ const linhas=t=>[...new Set(String(t).split(/\r?\n/).map(x=>x.replace(/\s+/g," "
 async function carregar(){
   try{
     const j=await SJT.pedido("/gestao/polos",{admin:ADMIN});
-    POLOS=j.polos;$("admin").value="";
+    POLOS=j.polos;$("admin").value="";espaco(j.fotos);
     $("fAdmin").hidden=true;$("sPolos").hidden=false;desenhar();
   }catch(e){ADMIN="";$("fAdmin").hidden=false;$("sPolos").hidden=true;$("fPolo").hidden=true;msg("msgA",e.message,false);}
+}
+/* Espaço ocupado pelas fotografias (a base de dados gratuita tem 500 MB; o R2 tem 10 GB gratuitos) */
+function espaco(f){
+  const el=$("espaco");if(!el||!f)return;
+  const mb=b=>(b/1048576).toFixed(b<10485760?1:0).replace(".",",")+" MB";
+  el.textContent="Fotografias: "+f.n+" ("+mb(f.bytes)+") · "+(f.r2?"guardadas no R2 (10 GB gratuitos)"+(f.naBaseDados?" · ainda "+mb(f.naBaseDados)+" na base de dados, passam para o R2 ao serem vistas":""):"guardadas na base de dados ("+mb(f.naBaseDados)+" de 500 MB) — ligue o R2 para não encher");
+  el.className="dica"+(!f.r2&&f.naBaseDados>300*1048576?" alerta":"");
 }
 function desenhar(){
   const el=$("polos");el.textContent="";

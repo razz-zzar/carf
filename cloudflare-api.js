@@ -10,10 +10,13 @@
 // 5. No worker: Settings → Variables and Secrets → Add (tipo Secret):
 //      SEGREDO = um texto longo qualquer (ex. 40 letras e números ao calhas) — assina as sessões
 //      ADMIN   = o código de administrador da página de gestão (só o Fábio o sabe)
-// 6. Testar: https://ops-carf-api.<conta>.workers.dev/ deve mostrar {"ok":true,...}
+// 6. Fotografias no R2 (recomendado; sem isto ficam na base de dados D1, que tem só 500 MB):
+//      R2 → Create bucket → nome "ops-carf-fotos" → Create
+//      No worker: Settings → Bindings → Add → R2 bucket → nome da variável "FOTOS" → bucket "ops-carf-fotos" → Deploy
+// 7. Testar: https://ops-carf-api.<conta>.workers.dev/ deve mostrar {"ok":true,...} ("fotos":"r2" se o R2 estiver ligado)
 // As tabelas da base de dados criam-se sozinhas no primeiro pedido.
 
-const VERSAO = 5;
+const VERSAO = 6;
 const ORIGENS = [
   "https://razz-zzar.github.io",
   "https://raw.githack.com",
@@ -229,8 +232,11 @@ async function gravar(request, env, cors, s) {
   return resposta(cors, { resultados, agora: Date.now() });
 }
 
-/* ---------- fotografias (guardadas na base de dados, por polo) ---------- */
+/* ---------- fotografias ----------
+   Com o R2 ligado (binding FOTOS) os ficheiros ficam no R2 e a tabela "fotos" guarda só os dados da fotografia
+   (dados vazio). Sem R2 ficam dentro da base de dados, como antes. As antigas passam para o R2 quando são vistas. */
 const idFoto = s => /^[A-Za-z0-9_-]{8,80}$/.test(s);
+const chaveR2 = (polo, id) => polo + "/" + id;
 async function enviarFoto(request, url, env, cors, s) {
   const id = url.searchParams.get("id") || "", registo = String(url.searchParams.get("registo") || "").slice(0, 100);
   if (!idFoto(id)) return erro(cors, 400, "id", "Identificador de fotografia inválido.");
@@ -240,25 +246,45 @@ async function enviarFoto(request, url, env, cors, s) {
   if (!bytes.length) return erro(cors, 400, "vazia", "Fotografia vazia.");
   if (bytes.length > MAX_FOTO) return erro(cors, 413, "grande", "Fotografia demasiado grande.");
   // Se já existir (reenvio depois de falha de rede), não volta a gravar
+  const ja = await env.DB.prepare("SELECT 1 AS x FROM fotos WHERE polo = ? AND id = ?").bind(s.polo.id, id).first();
+  if (ja) return resposta(cors, { ok: true, id, tamanho: bytes.length });
+  if (env.FOTOS) await env.FOTOS.put(chaveR2(s.polo.id, id), bytes, { httpMetadata: { contentType: tipo } });
   await env.DB.prepare(
     "INSERT INTO fotos (polo, id, registo, dados, tipo, tamanho, autor_disp, criado) VALUES (?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT (polo, id) DO NOTHING"
-  ).bind(s.polo.id, id, registo, bytes, tipo, bytes.length, s.disp, Date.now()).run();
+  ).bind(s.polo.id, id, registo, env.FOTOS ? new Uint8Array(0) : bytes, tipo, bytes.length, s.disp, Date.now()).run();
   return resposta(cors, { ok: true, id, tamanho: bytes.length });
 }
 async function lerFoto(id, env, cors, s) {
   if (!idFoto(id)) return erro(cors, 400, "id", "Identificador de fotografia inválido.");
-  const f = await env.DB.prepare("SELECT dados, tipo FROM fotos WHERE polo = ? AND id = ?").bind(s.polo.id, id).first();
+  const cab = t => ({ ...cors, "Content-Type": t, "Cache-Control": "private, max-age=31536000, immutable" });
+  const f = await env.DB.prepare("SELECT tipo, length(dados) AS n FROM fotos WHERE polo = ? AND id = ?").bind(s.polo.id, id).first();
   if (!f) return erro(cors, 404, "foto", "Fotografia não encontrada.");
-  const d = f.dados instanceof ArrayBuffer ? new Uint8Array(f.dados) : new Uint8Array(f.dados);
-  return new Response(d, { headers: { ...cors, "Content-Type": f.tipo, "Cache-Control": "private, max-age=31536000, immutable" } });
+  if (!f.n) {
+    // está no R2
+    const o = env.FOTOS ? await env.FOTOS.get(chaveR2(s.polo.id, id)) : null;
+    if (!o) return erro(cors, 404, "foto", "Fotografia não encontrada.");
+    return new Response(o.body, { headers: cab(f.tipo) });
+  }
+  const g = await env.DB.prepare("SELECT dados FROM fotos WHERE polo = ? AND id = ?").bind(s.polo.id, id).first();
+  const d = new Uint8Array(g.dados);
+  if (env.FOTOS) {
+    // fotografia antiga guardada na base de dados: passa para o R2 e liberta o espaço
+    await env.FOTOS.put(chaveR2(s.polo.id, id), d, { httpMetadata: { contentType: f.tipo } });
+    await env.DB.prepare("UPDATE fotos SET dados = ? WHERE polo = ? AND id = ?").bind(new Uint8Array(0), s.polo.id, id).run();
+  }
+  return new Response(d, { headers: cab(f.tipo) });
 }
 async function apagarFotos(request, env, cors, s) {
   let b; try { b = await request.json(); } catch (e) { return erro(cors, 400, "pedido", "Pedido inválido."); }
   const ids = (Array.isArray(b.ids) ? b.ids : []).filter(idFoto).slice(0, 40);
   if (!ids.length) return resposta(cors, { ok: true, apagadas: 0 });
   // Só quem tirou a fotografia a pode apagar
-  const r = await env.DB.prepare("DELETE FROM fotos WHERE polo = ? AND autor_disp = ? AND id IN (" + ids.map(() => "?").join(",") + ")")
-    .bind(s.polo.id, s.disp, ...ids).run();
+  const marcas = ids.map(() => "?").join(",");
+  const minhas = await env.DB.prepare("SELECT id FROM fotos WHERE polo = ? AND autor_disp = ? AND id IN (" + marcas + ")").bind(s.polo.id, s.disp, ...ids).all();
+  const lista = (minhas.results || []).map(x => x.id);
+  if (!lista.length) return resposta(cors, { ok: true, apagadas: 0 });
+  if (env.FOTOS) await env.FOTOS.delete(lista.map(x => chaveR2(s.polo.id, x)));
+  const r = await env.DB.prepare("DELETE FROM fotos WHERE polo = ? AND id IN (" + lista.map(() => "?").join(",") + ")").bind(s.polo.id, ...lista).run();
   return resposta(cors, { ok: true, apagadas: (r.meta && r.meta.changes) || 0 });
 }
 
@@ -270,9 +296,9 @@ async function gestao(request, url, env, cors) {
   }
   if (request.method === "GET") {
     const r = await env.DB.prepare("SELECT id, nome, config, ordem, ativo, alterado FROM polos ORDER BY ordem, nome").all();
-    const f = await env.DB.prepare("SELECT COUNT(*) AS n, COALESCE(SUM(tamanho), 0) AS bytes FROM fotos").first();
+    const f = await env.DB.prepare("SELECT COUNT(*) AS n, COALESCE(SUM(tamanho), 0) AS bytes, COALESCE(SUM(length(dados)), 0) AS na_bd FROM fotos").first();
     return resposta(cors, { polos: (r.results || []).map(p => ({ ...p, config: configDe(p), ativo: !!p.ativo })),
-      fotos: { n: (f && f.n) || 0, bytes: (f && f.bytes) || 0 } });
+      fotos: { n: (f && f.n) || 0, bytes: (f && f.bytes) || 0, naBaseDados: (f && f.na_bd) || 0, r2: !!env.FOTOS } });
   }
   let b; try { b = await request.json(); } catch (e) { return erro(cors, 400, "pedido", "Pedido inválido."); }
   const id = String(b.id || "").toLowerCase().trim(), nome = limpaNome(b.nome);
@@ -310,7 +336,7 @@ export default {
     }
     try {
       await prepararTabelas(env.DB);
-      if (caminho === "/" && request.method === "GET") return resposta(cors, { ok: true, servico: "ops-carf-api", versao: VERSAO });
+      if (caminho === "/" && request.method === "GET") return resposta(cors, { ok: true, servico: "ops-carf-api", versao: VERSAO, fotos: env.FOTOS ? "r2" : "base de dados" });
       if (caminho === "/polos" && request.method === "GET") {
         const r = await env.DB.prepare("SELECT id, nome FROM polos WHERE ativo = 1 ORDER BY ordem, nome").all();
         return resposta(cors, { polos: r.results || [] });

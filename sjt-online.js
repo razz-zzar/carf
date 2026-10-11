@@ -191,13 +191,13 @@
     const pendentes = () => Object.keys(est.fila).length;
 
     /* Atualiza sozinho: ao abrir, ao voltar à app, quando a rede volta e com um ritmo que se adapta:
-       - de 3 em 3 s enquanto alguém mexe na app (últimos 3 min) ou chegam registos novos (últimos 2 min);
-       - de 15 em 15 s quando a app está aberta mas parada;
+       - de 5 em 5 s enquanto alguém mexe na app (últimos 3 min) ou chegam registos novos (últimos 2 min);
+       - de 30 em 30 s quando a app está aberta mas parada;
        - nada com a app em segundo plano (atualiza logo ao voltar).
        Assim quem está a trabalhar vê as alterações dos outros em poucos segundos, sem gastar
        os pedidos diários do plano gratuito da Cloudflare com telemóveis parados. */
     let ultimoToque = Date.now(), ultimaNovidade = 0;
-    const RAPIDO = 3000, LENTO = 15000;
+    const RAPIDO = 5000, LENTO = 30000;
     const ativo = () => Date.now() - ultimoToque < 180000 || Date.now() - ultimaNovidade < 120000;
     if (s.token) {
       const toque = () => { const estavaParado = !ativo(); ultimoToque = Date.now(); if (estavaParado) agendar(0); };
