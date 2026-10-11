@@ -72,6 +72,14 @@ button.engr{background:none;border:0;cursor:pointer;padding:0}
 .amostra{height:58px;border-radius:8px;overflow:hidden;display:flex;border:1px solid rgba(0,0,0,.12)}
 .amostra>div{flex:1;padding:8px;display:flex;flex-direction:column;gap:5px}
 .amostra i{display:block;border-radius:3px;height:8px}
+.fontes{display:flex;flex-direction:column;gap:8px}
+.fonte{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:4px 10px;text-align:left;padding:12px;border-radius:12px;border:1px solid var(--line);background:var(--bg);color:var(--fg);cursor:pointer;font:inherit}
+.fonte[aria-checked=true]{border-color:var(--green);box-shadow:0 0 0 2px var(--green) inset}
+.fonte .am{font-size:19px;font-weight:700;line-height:1.2;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.fonte .am2{grid-column:1;font-size:14px;font-weight:400;color:var(--fg);opacity:.85}
+.fonte .nm{grid-column:2;grid-row:1;font:600 12px system-ui,sans-serif;color:var(--muted);text-align:right}
+.fonte small{grid-column:1/-1;font:400 12px system-ui,sans-serif;color:var(--muted)}
+.fonte .vis{grid-column:2;grid-row:2;color:var(--green);font:700 16px system-ui,sans-serif}
 .nota-d{font-size:13px;color:var(--muted)}
 .lnk{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:14px;border-radius:12px;border:1px solid var(--line);background:var(--bg);color:var(--fg);text-decoration:none;font-size:22px}
 .lnk b{display:block;font-size:15px}.lnk small{display:block;font-size:12px;color:var(--muted)}
@@ -103,9 +111,11 @@ button.engr{background:none;border:0;cursor:pointer;padding:0}
 <div class="veuD" id="defs" hidden>
   <div class="folha" role="dialog" aria-modal="true" aria-labelledby="t-defs">
     <div class="folha-top"><h2 id="t-defs">Definições</h2><button type="button" class="fechar" id="fecharDefs" aria-label="Fechar">×</button></div>
-    <div class="sec-t" id="l-temas">Aspeto</div>
+    <div class="sec-t" id="l-temas">Cores</div>
     <div class="temas" id="temas" role="radiogroup" aria-labelledby="l-temas"></div>
-    <div class="nota-d">O aspeto fica guardado neste telemóvel e vale para todas as apps.</div>
+    <div class="sec-t" id="l-fontes">Letra</div>
+    <div class="fontes" id="fontes" role="radiogroup" aria-labelledby="l-fontes"></div>
+    <div class="nota-d">As escolhas ficam guardadas neste telemóvel e valem para todas as apps. Sem internet, as letras novas são trocadas pela do telemóvel.</div>
     <div class="sec-t">Administração</div>
     <a class="lnk" href="gestao.html"><span><b>Gestão de armazéns</b><small>Pede o código de administrador</small></span><span aria-hidden="true">›</span></a>
   </div>
@@ -238,7 +248,19 @@ function desenharTemas(){
     const n=document.createElement("b");n.textContent=t.nome;const d=document.createElement("small");d.textContent=t.desc;
     b.append(amostra(t.id),n,d);b.onclick=()=>{CARF_TEMA.mudar(t.id);desenharTemas();};g.appendChild(b);});
 }
-function abrirDefs(){desenharTemas();$("defs").hidden=false;document.body.style.overflow="hidden";const s=$("temas").querySelector('[aria-checked="true"]');(s||$("fecharDefs")).focus();}
+function desenharFontes(){
+  const g=$("fontes");g.textContent="";const at=CARF_TEMA.fonteAtual();
+  CARF_TEMA.fontes.forEach(f=>{const b=document.createElement("button");b.type="button";b.className="fonte";b.setAttribute("role","radio");b.setAttribute("aria-checked",f.id===at?"true":"false");
+    b.setAttribute("aria-label",f.nome+" — "+f.desc);
+    const fam=f.pilha||'"Roboto Condensed","Arial Narrow",Arial,sans-serif';
+    const a=document.createElement("span");a.className="am";a.style.fontFamily=fam;a.textContent=f.id==="original"?"OPERAÇÕES CARF":"Operações CARF";if(f.id==="original")a.style.letterSpacing=".05em";
+    const a2=document.createElement("span");a2.className="am2";a2.style.fontFamily=f.pilha||'system-ui,sans-serif';a2.textContent="Volta 1602 chegou às 13:42";
+    const n=document.createElement("span");n.className="nm";n.textContent=f.nome;
+    const v=document.createElement("span");v.className="vis";v.textContent=f.id===at?"✓":"";
+    const d=document.createElement("small");d.textContent=f.desc;
+    b.append(a,n,a2,v,d);b.onclick=()=>{CARF_TEMA.mudarFonte(f.id);desenharFontes();ajustar();};g.appendChild(b);});
+}
+function abrirDefs(){CARF_TEMA.carregarTodas();desenharFontes();desenharTemas();$("defs").hidden=false;document.body.style.overflow="hidden";const s=$("temas").querySelector('[aria-checked="true"]');(s||$("fecharDefs")).focus();}
 function fecharDefs(){$("defs").hidden=true;document.body.style.overflow="";$("abrirDefs").focus();}
 $("abrirDefs").onclick=abrirDefs;$("fecharDefs").onclick=fecharDefs;
 $("defs").addEventListener("click",e=>{if(e.target===$("defs"))fecharDefs();});

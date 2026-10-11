@@ -1,7 +1,12 @@
-/* OPS CARF — temas de cor (escolhidos na roda de definições do hub; ver carf-tema.js).
-   "classico" não muda nada: usa as cores originais de cada página.
-   Os seletores html[data-tema=…] ganham às variáveis :root de cada página. */
+/* OPS CARF — aspeto escolhido na roda de definições do hub (ver carf-tema.js).
+   Duas escolhas independentes, guardadas em cada telemóvel:
+   1) CORES  → html[data-tema=claro|escuro|classico]   ("classico" = cores originais de cada página)
+   2) LETRA  → html[data-fonte=original|sistema|inter|…] ("original" = títulos estreitos em maiúsculas)
+   Os seletores html[…] ganham às variáveis :root de cada página. */
 
+/* =====================================================================
+   1) CORES
+   ===================================================================== */
 /* ---------- Claro ---------- */
 html[data-tema="claro"]{
   --bg:#f2f4f1; --panel:#ffffff; --panel-hi:#f6f8f5; --line:#dde3dc; --fg:#1d2822; --muted:#5f6d65;
@@ -18,40 +23,35 @@ html[data-tema="escuro"]{
   --sombra:none;
   color-scheme:dark;
 }
-
-/* ---------- Acabamentos comuns aos temas novos (claro e escuro) ---------- */
-html[data-tema="claro"] body,html[data-tema="escuro"] body{-webkit-font-smoothing:antialiased}
-/* títulos: sem maiúsculas gritadas */
-html[data-tema="claro"] h1,html[data-tema="escuro"] h1{font-family:var(--body);font-weight:700;letter-spacing:-.01em;text-transform:none}
-html[data-tema="claro"] header:not(.top) h1,html[data-tema="escuro"] header:not(.top) h1{font-size:22px;line-height:1.15}
-html[data-tema="claro"] h2,html[data-tema="escuro"] h2{font-family:var(--body);font-size:17px;font-weight:700;letter-spacing:0;text-transform:none;color:var(--fg)}
-html[data-tema="claro"] h2 span,html[data-tema="escuro"] h2 span{font-size:14px}
-/* cabeçalho das apps: linha fina em vez da barra verde */
+/* acabamentos de cor dos temas novos */
 html[data-tema="claro"] header:not(.top),html[data-tema="escuro"] header:not(.top){border-bottom:1px solid var(--line)}
-/* cartões */
-html[data-tema="claro"] section.card,html[data-tema="claro"] .card,html[data-tema="claro"] .entrar,html[data-tema="claro"] .sessao,html[data-tema="claro"] .app{box-shadow:var(--sombra)}
+html[data-tema="claro"] h2,html[data-tema="escuro"] h2{color:var(--fg)}
+html[data-tema="claro"] .entrar h2,html[data-tema="escuro"] .entrar h2{color:var(--fg)}
+html[data-tema="claro"] section.card,html[data-tema="claro"] .entrar,html[data-tema="claro"] .sessao,html[data-tema="claro"] .app{box-shadow:var(--sombra)}
 html[data-tema="claro"] section.card,html[data-tema="escuro"] section.card{border-radius:14px}
-/* botões: texto normal, letra do sistema */
-html[data-tema="claro"] button,html[data-tema="escuro"] button,
-html[data-tema="claro"] .fbtn,html[data-tema="escuro"] .fbtn{text-transform:none;letter-spacing:.01em;font-family:var(--body)}
-html[data-tema="claro"] .registar,html[data-tema="escuro"] .registar,
-html[data-tema="claro"] .btn,html[data-tema="escuro"] .btn,
-html[data-tema="claro"] .entrar .ok,html[data-tema="escuro"] .entrar .ok{font-size:17px;font-weight:700;border-radius:12px}
-html[data-tema="claro"] .chegou,html[data-tema="escuro"] .chegou{font-size:16px;font-weight:700}
-/* rótulos dos grupos de listas */
-html[data-tema="claro"] .grupo-h,html[data-tema="escuro"] .grupo-h,
-html[data-tema="claro"] .dia-h,html[data-tema="escuro"] .dia-h{font-family:var(--body);font-size:13px;letter-spacing:.06em}
-/* hub */
-html[data-tema="claro"] main>h1,html[data-tema="escuro"] main>h1{font-size:26px;letter-spacing:-.01em}
-html[data-tema="claro"] .app b,html[data-tema="escuro"] .app b{font-family:var(--body);font-size:16px;letter-spacing:0;text-transform:none}
 html[data-tema="claro"] .top{border-bottom-width:4px;border-bottom-color:var(--brand)}
 html[data-tema="escuro"] .top{border-bottom-width:3px;border-bottom-color:var(--brand)}
-html[data-tema="claro"] .entrar h2,html[data-tema="escuro"] .entrar h2{font-family:var(--body);text-transform:none;letter-spacing:0;font-size:18px;color:var(--fg)}
-/* campos: fundo do cartão no tema claro (mais limpo) */
 html[data-tema="claro"] input:not([type=checkbox]):not([type=radio]),html[data-tema="claro"] select,html[data-tema="claro"] textarea{background-color:#fbfcfa}
 html[data-tema="claro"] input:focus,html[data-tema="claro"] select:focus,html[data-tema="claro"] textarea:focus{box-shadow:0 0 0 3px rgba(77,122,23,.15)}
-/* janelas por cima (resumo, email) */
 html[data-tema="claro"] .resumo{box-shadow:0 10px 30px rgba(20,32,24,.18)}
 html[data-tema="claro"] .veu{background:rgba(20,28,24,.45)}
-/* Penalizações: etiqueta da semana */
-html[data-tema="claro"] #semNum,html[data-tema="escuro"] #semNum{font-family:var(--body);text-transform:none;letter-spacing:0;font-size:16px}
+
+/* =====================================================================
+   2) LETRA — a família vem de carf-tema.js (variáveis --body e --display).
+   Com qualquer letra que não a "original": títulos e botões sem maiúsculas gritadas.
+   ===================================================================== */
+html[data-letra="nova"] body{-webkit-font-smoothing:antialiased}
+html[data-letra="nova"] h1{font-family:var(--body);font-weight:700;letter-spacing:-.01em;text-transform:none}
+html[data-letra="nova"] header:not(.top) h1{font-size:22px;line-height:1.15}
+html[data-letra="nova"] main>h1{font-size:26px}
+html[data-letra="nova"] h2{font-family:var(--body);font-size:17px;font-weight:700;letter-spacing:0;text-transform:none}
+html[data-letra="nova"] h2 span{font-size:14px}
+html[data-letra="nova"] button,html[data-letra="nova"] .fbtn{text-transform:none;letter-spacing:.01em;font-family:var(--body)}
+html[data-letra="nova"] .registar,html[data-letra="nova"] .btn,html[data-letra="nova"] .entrar .ok{font-size:17px;font-weight:700;border-radius:12px}
+html[data-letra="nova"] .chegou{font-size:16px;font-weight:700}
+html[data-letra="nova"] .grupo-h,html[data-letra="nova"] .dia-h{font-family:var(--body);font-size:13px;letter-spacing:.06em}
+html[data-letra="nova"] .app b{font-family:var(--body);font-size:16px;letter-spacing:0;text-transform:none}
+html[data-letra="nova"] .entrar h2{font-family:var(--body);text-transform:none;letter-spacing:0;font-size:18px}
+html[data-letra="nova"] #semNum{font-family:var(--body);text-transform:none;letter-spacing:0;font-size:16px}
+/* números grandes (voltas, matrículas) ficam na letra escolhida, mais pesada */
+html[data-letra="nova"] .num,html[data-letra="nova"] .vol,html[data-letra="nova"] .quem,html[data-letra="nova"] .tipo{font-family:var(--body);letter-spacing:0}
