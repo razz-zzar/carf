@@ -16,7 +16,7 @@
 // 7. Testar: https://ops-carf-api.<conta>.workers.dev/ deve mostrar {"ok":true,...} ("fotos":"r2" se o R2 estiver ligado)
 // As tabelas da base de dados criam-se sozinhas no primeiro pedido.
 
-const VERSAO = 7;
+const VERSAO = 8;
 const ORIGENS = [
   "https://razz-zzar.github.io",
   "https://raw.githack.com",
@@ -55,6 +55,8 @@ const SQL_TABELAS = [
      tipo TEXT NOT NULL DEFAULT 'image/jpeg', tamanho INTEGER NOT NULL DEFAULT 0,
      autor_disp TEXT NOT NULL DEFAULT '', criado INTEGER NOT NULL, PRIMARY KEY (polo, id))`,
   `CREATE INDEX IF NOT EXISTS tentativas_chave ON tentativas (chave, t)`,
+  // última limpeza de dados de teste por polo ("*" = códigos/opções partilhados): os telemóveis esquecem a cópia local
+  `CREATE TABLE IF NOT EXISTS limpezas (polo TEXT PRIMARY KEY, t INTEGER NOT NULL)`,
 ];
 let tabelasProntas = null;
 function prepararTabelas(db) {
@@ -163,7 +165,8 @@ async function listar(url, env, cors, s) {
   ).bind(poloDe(app, s), app, desde, PAGINA + 1).all();
   const linhas = r.results || [];
   const mais = linhas.length > PAGINA;
-  return resposta(cors, { registos: linhas.slice(0, PAGINA).map(x => paraCliente(x, s.disp)), mais, agora: Date.now() });
+  const lp = await env.DB.prepare("SELECT t FROM limpezas WHERE polo = ?").bind(poloDe(app, s)).first();
+  return resposta(cors, { registos: linhas.slice(0, PAGINA).map(x => paraCliente(x, s.disp)), mais, agora: Date.now(), limpeza: lp ? lp.t : 0 });
 }
 
 async function gravar(request, env, cors, s) {
@@ -180,12 +183,18 @@ async function gravar(request, env, cors, s) {
   }
   const resultados = [];
   let agora = Date.now();
+  const lp = await env.DB.prepare("SELECT t FROM limpezas WHERE polo = ?").bind(poloDe(app, s)).first();
+  const limpeza = lp ? lp.t : 0;
   for (const it of itens) {
     const id = String(it && it.id || "");
     if (!id || id.length > 100) { resultados.push({ id, ok: false, codigo: "id" }); continue; }
     const atual = atuais.get(id);
     const t = agora++;
     let depois;
+    // registo feito antes de uma limpeza de dados de teste e que já não existe: não volta a aparecer
+    if (limpeza && !it.apagado && (!atual || atual.apagado) && Number(it.criado) > 0 && Number(it.criado) < limpeza) {
+      resultados.push({ id, ok: false, codigo: "limpo" }); continue;
+    }
     if (it.campos && typeof it.campos === "object" && !it.apagado) {
       // Altera só alguns campos (ex. "visto por", afixar), sem reescrever o resto: duas pessoas
       // a marcar ao mesmo tempo não apagam a marca uma da outra.
@@ -289,6 +298,34 @@ async function apagarFotos(request, env, cors, s) {
 }
 
 /* ---------- gestão (só com o código de administrador) ---------- */
+// Limpar dados de teste: {polos: ["sjt", ...], codigos: true|false}
+// Marca os registos como apagados (os telemóveis recebem a limpeza), apaga as fotografias e regista a hora da limpeza.
+async function gestaoLimpar(request, env, cors) {
+  if (!env.ADMIN || !iguais(request.headers.get("X-Admin") || "", env.ADMIN)) {
+    await pausa(600);
+    return erro(cors, 403, "admin", "Código de administrador errado.");
+  }
+  let b; try { b = await request.json(); } catch (e) { return erro(cors, 400, "pedido", "Pedido inválido."); }
+  const polos = (Array.isArray(b.polos) ? b.polos : []).map(String).filter(idPolo).slice(0, 8);
+  const alvos = [...polos, ...(b.codigos ? ["*"] : [])];
+  if (!alvos.length) return erro(cors, 400, "pedido", "Escolha o que limpar.");
+  const t = Date.now(); let registos = 0, fotos = 0;
+  for (const polo of alvos) {
+    const r = await env.DB.prepare("UPDATE registos SET apagado = 1, alterado = ?, alterado_por = 'Limpeza' WHERE polo = ? AND apagado = 0" + (polo === "*" ? " AND app = 'codigos'" : ""))
+      .bind(t, polo).run();
+    registos += (r.meta && r.meta.changes) || 0;
+    if (polo !== "*") {
+      const f = await env.DB.prepare("SELECT id FROM fotos WHERE polo = ?").bind(polo).all();
+      const ids = (f.results || []).map(x => chaveR2(polo, x.id));
+      if (env.FOTOS) for (let i = 0; i < ids.length; i += 1000) await env.FOTOS.delete(ids.slice(i, i + 1000));
+      await env.DB.prepare("DELETE FROM fotos WHERE polo = ?").bind(polo).run();
+      fotos += ids.length;
+    }
+    await env.DB.prepare("INSERT INTO limpezas (polo, t) VALUES (?, ?) ON CONFLICT (polo) DO UPDATE SET t = excluded.t").bind(polo, t).run();
+  }
+  return resposta(cors, { ok: true, registos, fotos });
+}
+
 // Opções e códigos de pneus acrescentados pelos supervisores (partilhados por todos os armazéns):
 // GET lista tudo; POST {ids:[...]} apaga (para corrigir o que alguém pôs mal).
 async function gestaoOpcoes(request, env, cors) {
@@ -364,6 +401,7 @@ export default {
       if (caminho === "/entrar" && request.method === "POST") return await entrar(request, env, cors);
       if (caminho === "/gestao/polos" && (request.method === "GET" || request.method === "POST")) return await gestao(request, url, env, cors);
       if (caminho === "/gestao/opcoes" && (request.method === "GET" || request.method === "POST")) return await gestaoOpcoes(request, env, cors);
+      if (caminho === "/gestao/limpar" && request.method === "POST") return await gestaoLimpar(request, env, cors);
       const s = await sessaoDe(request, env);
       if (!s) return erro(cors, 401, "sessao", "Sessão expirada ou código do armazém alterado. Entre de novo.");
       if (caminho === "/sessao" && request.method === "GET")

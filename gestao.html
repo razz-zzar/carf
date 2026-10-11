@@ -69,6 +69,15 @@ input:focus-visible,textarea:focus-visible,button:focus-visible{outline:2px soli
     <p class="dica" id="espaco"></p>
   </section>
 
+  <section class="card" id="sLimpar" hidden>
+    <h2>Limpar dados de teste</h2>
+    <p class="dica">Apaga todos os registos e fotografias dos armazéns escolhidos (incompletos, horários, penalizações, frota, ocorrências e mural). Os telemóveis esquecem a cópia que têm na próxima vez que abrirem a app. Os armazéns, códigos de entrada e configurações (voltas, horas previstas, emails, motivos) não são apagados.</p>
+    <div class="lista" id="limparPolos"></div>
+    <label class="chk"><input type="checkbox" id="limparCod"> Também os códigos e opções de pneus acrescentados (todos os armazéns)</label>
+    <button class="btn sec" type="button" id="limpar">Limpar dados</button>
+    <div class="msg" id="msgL" role="status"></div>
+  </section>
+
   <section class="card" id="sOpc" hidden>
     <h2>Pneus: opções e códigos acrescentados</h2>
     <p class="dica">O que os supervisores acrescentaram em "Outra" (marcas, modelos, medidas, índices) e os códigos de pneus preenchidos à mão. É partilhado por todos os armazéns: apague o que estiver mal e desaparece em todos os telemóveis.</p>
@@ -122,7 +131,7 @@ const linhas=t=>[...new Set(String(t).split(/\r?\n/).map(x=>x.replace(/\s+/g," "
 async function carregar(){
   try{
     const j=await SJT.pedido("/gestao/polos",{admin:ADMIN});
-    POLOS=j.polos;$("admin").value="";espaco(j.fotos);carregarOpcoes();
+    POLOS=j.polos;$("admin").value="";espaco(j.fotos);carregarOpcoes();desenharLimpar();
     $("fAdmin").hidden=true;$("sPolos").hidden=false;desenhar();
   }catch(e){ADMIN="";$("fAdmin").hidden=false;$("sPolos").hidden=true;$("fPolo").hidden=true;msg("msgA",e.message,false);}
 }
@@ -133,6 +142,30 @@ function espaco(f){
   el.textContent="Fotografias: "+f.n+" ("+mb(f.bytes)+") · "+(f.r2?"guardadas no R2 (10 GB gratuitos)"+(f.naBaseDados?" · ainda "+mb(f.naBaseDados)+" na base de dados, passam para o R2 ao serem vistas":""):"guardadas na base de dados ("+mb(f.naBaseDados)+" de 500 MB) — ligue o R2 para não encher");
   el.className="dica"+(!f.r2&&f.naBaseDados>300*1048576?" alerta":"");
 }
+/* ---- Limpar dados de teste ---- */
+let confirmarLimpar=false;
+function desenharLimpar(){
+  const el=$("limparPolos");el.textContent="";
+  POLOS.forEach(p=>{const l=document.createElement("label");l.className="chk";const c=document.createElement("input");c.type="checkbox";c.value=p.id;c.className="lp";
+    l.append(c," "+p.nome);el.appendChild(l);});
+  $("sLimpar").hidden=false;confirmarLimpar=false;$("limpar").textContent="Limpar dados";
+}
+$("limpar").onclick=async()=>{
+  const polos=[...document.querySelectorAll(".lp:checked")].map(c=>c.value),cod=$("limparCod").checked;
+  if(!polos.length&&!cod){msg("msgL","Escolha pelo menos um armazém (ou os códigos de pneus).",false);return;}
+  const nomes=POLOS.filter(p=>polos.includes(p.id)).map(p=>p.nome);
+  if(!confirmarLimpar){confirmarLimpar=true;$("limpar").textContent="Confirmar: apagar tudo de "+[...nomes,...(cod?["códigos de pneus"]:[])].join(", ");
+    msg("msgL","Isto não se pode desfazer. Carregue outra vez para confirmar.",false);
+    setTimeout(()=>{if(confirmarLimpar){confirmarLimpar=false;$("limpar").textContent="Limpar dados";msg("msgL","");}},8000);return;}
+  confirmarLimpar=false;$("limpar").disabled=true;$("limpar").textContent="A limpar…";msg("msgL","",true);
+  try{const j=await SJT.pedido("/gestao/limpar",{admin:ADMIN,metodo:"POST",corpo:{polos,codigos:cod},tempo:30000});
+    msg("msgL","Feito: "+j.registos+" registos e "+j.fotos+" fotografias apagados. Os telemóveis limpam a cópia ao abrir a app.",true);
+    document.querySelectorAll(".lp").forEach(c=>c.checked=false);$("limparCod").checked=false;carregarOpcoes();
+    try{const k=await SJT.pedido("/gestao/polos",{admin:ADMIN});espaco(k.fotos);}catch(e){}
+  }catch(e){msg("msgL",e.estado===404||/não encontrad/i.test(e.message)?"Atualize a API (cloudflare-api.js, versão 8) para usar a limpeza.":e.message,false);}
+  $("limpar").disabled=false;$("limpar").textContent="Limpar dados";
+};
+
 /* ---- Opções e códigos de pneus acrescentados pelos supervisores ---- */
 let OPCOES=[],filtroO="todos",apagarO=null;
 const TIPO_O={marca:"Marca",modelo:"Modelo",medida:"Medida",carga:"Índice de carga",vel:"Índice de velocidade",ref:"XL / TL / outro",codigo:"Código de pneu"};
@@ -257,7 +290,7 @@ $("fPolo").addEventListener("submit",async e=>{
 let saiuEm=0;
 document.addEventListener("visibilitychange",()=>{if(document.hidden){saiuEm=Date.now();}else if(ADMIN&&Date.now()-saiuEm>300000){sairGestao();}});
 window.addEventListener("pagehide",()=>{ADMIN="";});
-function sairGestao(){ADMIN="";POLOS=[];OPCOES=[];editar=null;$("fPolo").hidden=true;$("sPolos").hidden=true;$("sOpc").hidden=true;$("fAdmin").hidden=false;msg("msgA","");$("admin").focus();}
+function sairGestao(){ADMIN="";POLOS=[];OPCOES=[];editar=null;$("fPolo").hidden=true;$("sPolos").hidden=true;$("sOpc").hidden=true;$("sLimpar").hidden=true;$("fAdmin").hidden=false;msg("msgA","");$("admin").focus();}
 $("sairG").onclick=sairGestao;
 </script>
 </body>

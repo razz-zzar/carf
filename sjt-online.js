@@ -158,7 +158,7 @@
               if (mudouEntretanto) continue;
               if (res.registo) { if (res.registo.apagado) delete est.cache[res.id]; else est.cache[res.id] = res.registo; }
               else if (enviado && enviado.apagado) delete est.cache[res.id];
-              if (res.codigo === "nao_existe") { delete est.cache[res.id]; continue; } /* foi apagado entretanto por quem o fez */
+              if (res.codigo === "nao_existe" || res.codigo === "limpo") { delete est.cache[res.id]; continue; } /* apagado entretanto ou limpo pela gestão */
               if (!res.ok) avisos.push(res.codigo === "so_autor" ? "Só quem fez o registo o pode apagar." : "Um registo não foi aceite pelo servidor.");
             }
             guardar();
@@ -168,6 +168,12 @@
           while (mais && voltas++ < 50) {
             const antes = est.cursor;
             const j = await pedido("/registos?app=" + encodeURIComponent(app) + "&desde=" + est.cursor, { token: s.token });
+            /* a gestão limpou os dados de teste: esquece a cópia deste telemóvel e volta a buscar tudo */
+            if (j.limpeza && j.limpeza > (est.limpeza || 0)) {
+              const primeira = !est.limpeza && est.cursor === 0 && !Object.keys(est.cache).length;
+              est.limpeza = j.limpeza;
+              if (!primeira) { est.cache = {}; est.fila = {}; est.cursor = 0; guardar(); avisar({ remoto: true }); mais = true; continue; }
+            }
             /* só conta como novidade o que mudou desde a última vez (o servidor devolve sempre de novo o último registo) */
             if ((j.registos || []).some(r => r.alterado > antes)) ultimaNovidade = Date.now();
             for (const r of j.registos || []) {
