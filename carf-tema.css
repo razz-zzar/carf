@@ -1,6 +1,6 @@
 /* OPS CARF — aspeto (ver carf-tema.js).
    LETRA: Inter em tudo (variáveis --body, --display e --mono definidas pelo carf-tema.js).
-   CORES: html[data-tema=classico|claro|carf], escolhidas na roda de definições do hub.
+   CORES: html[data-tema=classico|claro|carf|carf-escuro], escolhidas na roda de definições do hub.
           "classico" (Original) = cores de origem de cada página.
    Os seletores html[…] ganham às variáveis :root de cada página. */
 
@@ -44,6 +44,15 @@ html[data-tema="carf"]{
   color-scheme:light;
 }
 
+/* ---------- CARF Escuro: as mesmas cores da empresa sobre fundo escuro ---------- */
+html[data-tema="carf-escuro"]{
+  --bg:#0f1718; --panel:#172224; --panel-hi:#1c292b; --line:#27393b; --fg:#e4eded; --muted:#93a6a6;
+  --green:#3f9b9e; --green-dk:#35868a; --green-ink:#071112; --danger:#e2766b; --amber:#d9a55a;
+  --icon:#b9d406; --ico-bg:#13282a; --ok-line:#2c5e60; --brand:#b9d406;
+  --sombra:none;
+  color-scheme:dark;
+}
+
 /* acabamentos comuns aos temas claros (Claro e CARF) */
 html[data-tema="claro"] header:not(.top),html[data-tema="carf"] header:not(.top){border-bottom:1px solid var(--line)}
 html[data-tema="claro"] h2,html[data-tema="claro"] .entrar h2{color:var(--fg)}
@@ -58,10 +67,15 @@ html[data-tema="carf"] input:focus,html[data-tema="carf"] select:focus,html[data
 html[data-tema="claro"] .resumo,html[data-tema="carf"] .resumo{box-shadow:0 10px 30px rgba(20,32,24,.18)}
 html[data-tema="claro"] .veu,html[data-tema="carf"] .veu{background:rgba(20,28,28,.45)}
 
-/* só no tema CARF: títulos a petróleo, cabeçalho com a risca lima, destaques a lima */
-html[data-tema="carf"] h2,html[data-tema="carf"] .entrar h2{color:var(--green)}
+/* temas CARF (claro e escuro): títulos a petróleo, cabeçalho com a risca lima, destaques a lima */
+html[data-tema="carf"] h2,html[data-tema="carf"] .entrar h2,
+html[data-tema="carf-escuro"] h2,html[data-tema="carf-escuro"] .entrar h2{color:var(--green)}
 html[data-tema="carf"] main>h1{color:#151c1c}
-html[data-tema="carf"] header:not(.top){border-bottom:3px solid var(--brand)}
-html[data-tema="carf"] .badge:not(.men){background:var(--brand);color:#151c1c}
+html[data-tema="carf"] header:not(.top),html[data-tema="carf-escuro"] header:not(.top){border-bottom:3px solid var(--brand)}
+html[data-tema="carf"] .badge:not(.men),html[data-tema="carf-escuro"] .badge:not(.men){background:var(--brand);color:#151c1c}
 html[data-tema="carf"] .app.tem-novas{border-color:var(--brand);box-shadow:0 0 0 1px var(--brand) inset,var(--sombra)}
-html[data-tema="carf"] #barra{background:linear-gradient(90deg,#007b7f,#3f9b9e)}
+html[data-tema="carf-escuro"] .app.tem-novas{border-color:var(--brand);box-shadow:0 0 0 1px var(--brand) inset}
+html[data-tema="carf"] #barra,html[data-tema="carf-escuro"] #barra{background:linear-gradient(90deg,#007b7f,#3f9b9e)}
+html[data-tema="carf-escuro"] .top{border-bottom-width:3px;border-bottom-color:var(--brand)}
+html[data-tema="carf-escuro"] section.card{border-radius:14px}
+html[data-tema="carf-escuro"] input:focus,html[data-tema="carf-escuro"] select:focus,html[data-tema="carf-escuro"] textarea:focus{box-shadow:0 0 0 3px rgba(63,155,158,.25)}

@@ -7,10 +7,11 @@
   var TEMAS = [
     { id: "classico", nome: "Original", desc: "O aspeto de origem: preto e verde" },
     { id: "claro", nome: "Claro", desc: "Fundo claro, cartões brancos e verde sóbrio" },
-    { id: "carf", nome: "CARF", desc: "As cores da empresa: azul-petróleo e verde-lima" }
+    { id: "carf", nome: "CARF", desc: "As cores da empresa: azul-petróleo e verde-lima" },
+    { id: "carf-escuro", nome: "CARF Escuro", desc: "As cores da empresa sobre fundo escuro" }
   ];
   var CHAVE = "carf_tema";
-  var COR_BARRA = { classico: "#0c0f0d", claro: "#ffffff", carf: "#ffffff" };
+  var COR_BARRA = { classico: "#0c0f0d", claro: "#ffffff", carf: "#ffffff", "carf-escuro": "#0f1718" };
   var html = document.documentElement;
 
   /* Letra Inter em tudo (vem do Google Fonts e fica guardada no telemóvel; sem rede usa a letra do sistema) */
