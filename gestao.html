@@ -67,7 +67,7 @@ input:focus-visible,textarea:focus-visible,button:focus-visible{outline:2px soli
       <label for="pId">Identificador <small>(letras minúsculas, sem espaços; não muda depois)</small><input id="pId" maxlength="30" autocapitalize="off" placeholder="ex. sjt"></label>
     </div>
     <div class="linha">
-      <label for="pCodigo">Código de acesso <small id="cDica">(o que os supervisores escrevem; mín. 4)</small><input id="pCodigo" autocomplete="off" autocapitalize="off"></label>
+      <label for="pCodigo">Código de acesso <small id="cDica">(só números, o que os supervisores escrevem; mín. 4)</small><input id="pCodigo" inputmode="numeric" pattern="[0-9]*" autocomplete="off" autocapitalize="off"></label>
       <label for="pOrdem">Ordem na lista<input id="pOrdem" type="number" inputmode="numeric" value="0"></label>
     </div>
     <label class="chk"><input type="checkbox" id="pAtivo" checked> Armazém ativo (aparece na entrada)</label>
@@ -135,7 +135,7 @@ function abrir(p){
   $("tPolo").textContent=p?"Editar "+p.nome:"Novo armazém";
   $("pNome").value=p?p.nome:"";$("pId").value=p?p.id:"";$("pId").disabled=!!p;
   $("pCodigo").value="";$("pCodigo").placeholder=p?"deixe vazio para manter o atual":"";
-  $("cDica").textContent=p?"(só se o quiser mudar — quem já entrou terá de entrar de novo)":"(o que os supervisores escrevem; mín. 4)";
+  $("cDica").textContent=p?"(só se o quiser mudar — quem já entrou terá de entrar de novo)":"(só números, o que os supervisores escrevem; mín. 4)";
   $("pOrdem").value=p?p.ordem:POLOS.length;$("pAtivo").checked=p?p.ativo:true;
   preencher(p?p.config:{});
   $("fPolo").scrollIntoView({behavior:"smooth",block:"start"});
@@ -171,6 +171,8 @@ $("pId").addEventListener("input",()=>$("pId").dataset.mexido="1");
 $("fPolo").addEventListener("submit",async e=>{
   e.preventDefault();
   const {c,erros}=lerConfig();
+  const cod=$("pCodigo").value.trim();
+  if(cod&&!/^\d+$/.test(cod))erros.unshift("O código do armazém só pode ter números (os supervisores escrevem-no no teclado numérico).");
   if(erros.length){msg("msgP",erros.slice(0,3).join(" · "),false);return;}
   const corpo={id:(editar?editar.id:$("pId").value.trim()),nome:$("pNome").value.trim(),codigo:$("pCodigo").value.trim(),ordem:parseInt($("pOrdem").value,10)||0,ativo:$("pAtivo").checked,config:c};
   $("gravar").disabled=true;msg("msgP","A guardar…",true);

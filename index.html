@@ -92,7 +92,7 @@ button.engr{background:none;border:0;cursor:pointer;padding:0}
     <p id="entrarDica">Escolha o seu armazém e escreva o código que lhe deram. Só é preciso fazer isto uma vez neste telemóvel.</p>
     <div><div class="lbl" style="font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:6px" id="l-polo">Armazém</div>
       <div class="polos" id="polos" role="group" aria-labelledby="l-polo"><span class="msgE info">A carregar armazéns…</span></div></div>
-    <label for="codigo">Código do armazém<input id="codigo" type="password" autocomplete="off" autocapitalize="off" spellcheck="false"></label>
+    <label for="codigo">Código do armazém<input id="codigo" type="password" inputmode="numeric" pattern="[0-9]*" autocomplete="off" autocapitalize="off" spellcheck="false"></label>
     <label for="nome">O seu nome<input id="nome" autocomplete="name" maxlength="40" placeholder="ex. Fábio Lopes"></label>
     <button class="ok" id="btnEntrar" type="submit">Entrar</button>
     <div class="msgE" id="msgE" role="status"></div>
