@@ -218,7 +218,7 @@ const diaDe=d=>d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate());
 const hora=iso=>{const d=new Date(iso);return pad(d.getHours())+":"+pad(d.getMinutes());};
 const dataPT=iso=>{const d=new Date(iso);return pad(d.getDate())+"/"+pad(d.getMonth()+1)+"/"+d.getFullYear();};
 function msg(id,t,ok){const m=$(id);m.textContent=t||"";m.className="msg "+(ok?"ok":"err");}
-const MOTIVOS=["Sem contacto do destinatário","Destinatário não atende","Morada incompleta ou errada","Agendar entrega"];
+const MOTIVOS=["Sem contacto do destinatário","Morada incompleta ou errada"];
 
 /* ---- Dados partilhados pelo armazém ---- */
 let BD=[],assinatura="";
