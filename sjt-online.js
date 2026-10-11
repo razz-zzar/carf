@@ -191,14 +191,14 @@
     const pendentes = () => Object.keys(est.fila).length;
 
     /* Atualiza sozinho enquanto alguém está a usar a app:
-       - de 3 em 3 s enquanto alguém mexe (últimos 2 min) ou chegam registos novos (últimos 2 min);
-       - parada há 2 min, em segundo plano ou sem rede: fica em pausa (não gasta pedidos);
+       - de 3 em 3 s enquanto a pessoa mexe na app (último minuto);
+       - parada há 1 min, em segundo plano ou sem rede: fica em pausa (não gasta pedidos);
        - ao tocar no ecrã, voltar à app ou a rede voltar: atualiza logo e retoma o ritmo.
        Assim quem está a trabalhar vê as alterações dos outros em segundos e os telemóveis parados
        não gastam os pedidos diários do plano gratuito da Cloudflare. */
     let ultimoToque = Date.now(), ultimaNovidade = 0, parado = true;
-    const RAPIDO = 3000, COM_ERRO = 15000, JANELA = 120000;
-    const ativo = () => Date.now() - ultimoToque < JANELA || Date.now() - ultimaNovidade < JANELA;
+    const RAPIDO = 3000, COM_ERRO = 15000, JANELA = 60000;
+    const ativo = () => Date.now() - ultimoToque < JANELA; /* só conta quem está a mexer neste telemóvel */
     const visivel = () => document.visibilityState === "visible" && navigator.onLine !== false;
     const ciclo = async () => {
       if (!visivel() || !ativo()) { parado = true; estado.pausa = visivel(); avisar({ estado: true }); return; }
