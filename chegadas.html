@@ -76,8 +76,13 @@ h2{font-family:var(--display);font-size:20px;font-weight:700;text-transform:uppe
 .v.atras{border-color:rgba(224,87,79,.6)}
 .v>.num{grid-area:num}.v>.est{grid-area:est}.v>button{grid-area:btn}.v>.editor{grid-area:ed}
 .editor{display:flex;flex-direction:column;gap:8px;min-width:0}
-.editor label{font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
-.editor input{width:100%;background:var(--panel);color:var(--fg);border:1px solid var(--green);border-radius:8px;padding:10px;font:600 24px var(--mono)}
+.ed-rot{font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.ed-hora{display:flex;align-items:center;gap:6px}
+.ed-hora input{width:72px;text-align:center;background:var(--panel);color:var(--fg);border:1px solid var(--green);border-radius:10px;padding:10px 6px;font:700 28px var(--mono);font-variant-numeric:tabular-nums}
+.ed-hora input:focus{outline:2px solid var(--green);outline-offset:1px}
+.ed-hora span{font:700 28px var(--mono);color:var(--muted)}
+.ed-atalhos{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+.ed-atalhos button{background:var(--panel);color:var(--fg);border:1px solid var(--line);border-radius:999px;padding:8px 4px;white-space:nowrap;font:600 14px var(--body);cursor:pointer}
 .ed-btns{display:flex;gap:8px;justify-content:flex-end}
 .guardar{border:0;border-radius:8px;padding:10px 18px;font:700 17px var(--display);letter-spacing:.06em;text-transform:uppercase;background:var(--green);color:var(--green-ink);cursor:pointer}
 .abas{display:grid;grid-template-columns:1fr 1fr;gap:6px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:6px}
@@ -265,20 +270,37 @@ function render(){
   if(porFazer.length)porFazer.forEach(linha);else vazio(modo==="c"?"Já chegaram todas as voltas.":"Já saíram todas as voltas.");
   cab(modo==="c"?"Já chegaram":"Já saíram",feitas.length,"feitos");
   if(feitas.length)feitas.forEach(linha);else vazio(modo==="c"?"Ainda não chegou nenhuma volta.":"Ainda não saiu nenhuma volta.");
-  if(aEditar){const i=$("hEd");if(i)i.focus();}
+  /* não abre o teclado sozinho: a pessoa toca no campo ou usa um atalho */
 }
 function abrirEditor(v){aEditar=v;aConfirmar=null;msg("msg","");render();}
+/* Editor da hora: dois campos (horas e minutos) com teclado numérico, sem o relógio do sistema,
+   e atalhos para "agora" e alguns minutos atrás. Fica dentro do cartão da volta. */
 function editor(v,r){
   const w=document.createElement("div");w.className="editor";
-  const lb=document.createElement("label");lb.htmlFor="hEd";lb.textContent=T().campo;
-  const i=document.createElement("input");i.type="time";i.id="hEd";
-  const base=r?new Date(r.t):new Date();i.value=pad(base.getHours())+":"+pad(base.getMinutes());
+  const lb=document.createElement("div");lb.className="ed-rot";lb.id="lEd";lb.textContent=T().campo;
+  const base=r?new Date(r.t):new Date();
+  const campo=(id,val,rot)=>{const i=document.createElement("input");i.type="text";i.id=id;i.inputMode="numeric";i.autocomplete="off";i.maxLength=2;
+    i.setAttribute("pattern","[0-9]*");i.setAttribute("aria-label",rot);i.value=pad(val);i.addEventListener("focus",()=>i.select());return i;};
+  const hh=campo("hEd",base.getHours(),"Horas"),mm=campo("mEd",base.getMinutes(),"Minutos");
+  const so2=i=>{i.value=i.value.replace(/\D/g,"").slice(0,2);};
+  hh.addEventListener("input",()=>{so2(hh);if(hh.value.length===2||+hh.value>2){mm.focus();}});
+  mm.addEventListener("input",()=>so2(mm));
+  const fix=(i,max)=>{const n=Math.min(max,Math.max(0,parseInt(i.value,10)||0));i.value=pad(n);};
+  hh.addEventListener("blur",()=>fix(hh,23));mm.addEventListener("blur",()=>fix(mm,59));
+  const valor=()=>{fix(hh,23);fix(mm,59);return hh.value+":"+mm.value;};
+  const linha=document.createElement("div");linha.className="ed-hora";linha.setAttribute("role","group");linha.setAttribute("aria-labelledby","lEd");
+  const dp=document.createElement("span");dp.textContent=":";dp.setAttribute("aria-hidden","true");
+  linha.append(hh,dp,mm);
+  /* atalhos: agora e minutos atrás */
+  const at=document.createElement("div");at.className="ed-atalhos";
+  [["Agora",0],["−5 min",5],["−15 min",15],["−30 min",30]].forEach(([t,min])=>{const b=document.createElement("button");b.type="button";b.textContent=t;
+    b.onclick=()=>{const d=new Date(Date.now()-min*60000);hh.value=pad(d.getHours());mm.value=pad(d.getMinutes());};at.appendChild(b);});
   const g=document.createElement("button");g.type="button";g.className="guardar";g.textContent="Guardar";
   const c=document.createElement("button");c.type="button";c.className="anular";c.textContent="Cancelar";
-  g.onclick=()=>guardarHora(v,i.value);c.onclick=()=>{aEditar=null;render();};
-  i.addEventListener("keydown",e=>{if(e.key==="Enter")guardarHora(v,i.value);if(e.key==="Escape"){aEditar=null;render();}});
+  g.onclick=()=>guardarHora(v,valor());c.onclick=()=>{aEditar=null;render();};
+  [hh,mm].forEach(i=>i.addEventListener("keydown",e=>{if(e.key==="Enter")guardarHora(v,valor());if(e.key==="Escape"){aEditar=null;render();}}));
   const bs=document.createElement("div");bs.className="ed-btns";bs.append(c,g);
-  w.append(lb,i,bs);return w;
+  w.append(lb,linha,at,bs);return w;
 }
 function guardarHora(v,val){
   const m=/^(\d{1,2}):(\d{2})/.exec(val||"");
