@@ -12,7 +12,7 @@
 <link rel="icon" href="carf-icon-192.png">
 <link rel="apple-touch-icon" href="carf-icon-192.png">
 <style>
-/* Layout (Pedidos de contacto, baseado nas Ocorrências): novo pedido (tipo, guia lida com a câmara, expedidor, volumes, descrição, fotografias), lista contínua de ocorrências (sem divisão por dia) com pesquisa e estado aberta/resolvida, email com as fotografias em anexo e Excel do dia */
+/* Layout (Pedidos de contacto, baseado nas Ocorrências): novo pedido (motivo, guia lida com a câmara, expedidor, observações), lista contínua de pedidos (sem divisão por dia) com pesquisa e estado aberta/resolvida, email com as fotografias em anexo e Excel do dia */
 :root{
   --bg:#0c0f0d; --panel:#151a17; --line:#26302a; --fg:#eef3ef; --muted:#93a39a;
   --green:#B9D406; --green-dk:#94aa05; --green-ink:#0a0a0a; --danger:#e0574f;
@@ -182,24 +182,6 @@ select{appearance:none;-webkit-appearance:none;background-image:linear-gradient(
       <input type="text" id="cliente" autocomplete="off" autocapitalize="words" list="clientes" placeholder="Nome do expedidor">
       <datalist id="clientes"></datalist>
     </div>
-    <div class="campo" id="c-dest">
-      <label for="dest">Destinatário</label>
-      <input type="text" id="dest" autocomplete="off" autocapitalize="words" placeholder="Nome do particular">
-    </div>
-    <div class="par">
-      <div class="campo">
-        <label for="local">Localidade</label>
-        <input type="text" id="local" autocomplete="off" autocapitalize="words" placeholder="Opcional">
-      </div>
-      <div class="campo">
-        <label id="l-vol">Volumes</label>
-        <div class="stepper" role="group" aria-labelledby="l-vol">
-          <button type="button" id="menos" aria-label="Menos um">−</button>
-          <input type="number" id="volumes" min="1" value="1" inputmode="numeric" aria-labelledby="l-vol">
-          <button type="button" id="mais" aria-label="Mais um">+</button>
-        </div>
-      </div>
-    </div>
     <div class="campo">
       <label for="obs">Observações <i>(opcional)</i></label>
       <textarea id="obs" rows="2" placeholder="ex. morada sem número de porta, prédio sem campainha"></textarea>
@@ -210,7 +192,7 @@ select{appearance:none;-webkit-appearance:none;background-image:linear-gradient(
 
   <section class="card" aria-labelledby="t-lista">
     <h2 id="t-lista">Pedidos <span id="total">0</span></h2>
-    <input type="search" id="procura" class="procura" placeholder="Procurar guia, destinatário ou expedidor" autocomplete="off" aria-label="Procurar pedidos">
+    <input type="search" id="procura" class="procura" placeholder="Procurar guia ou expedidor" autocomplete="off" aria-label="Procurar pedidos">
     <div class="filtro" role="group" aria-label="Mostrar"><button type="button" class="chip" id="fTodas" aria-pressed="true">Todos</button><button type="button" class="chip" id="fAbertas" aria-pressed="false">Só pendentes</button></div>
     <div id="lista"></div>
     <button type="button" class="btn mais" id="maisOc" hidden>Mostrar mais</button>
@@ -252,10 +234,7 @@ MOTIVOS.forEach(t=>{const b=document.createElement("button");b.type="button";b.c
   b.onclick=()=>{motivo=t;gM.querySelectorAll(".chip").forEach(c=>c.setAttribute("aria-pressed",c===b?"true":"false"));$("c-motivo").classList.remove("erro");};gM.appendChild(b);});
 const opt=(dl,v)=>{const o=document.createElement("option");o.value=v;dl.appendChild(o);};
 function sugerirClientes(){const dl=$("clientes");dl.textContent="";[...new Set(BD.map(r=>r.cliente).filter(Boolean))].sort((a,b)=>a.localeCompare(b,"pt")).forEach(c=>opt(dl,c));}
-const vol=()=>Math.max(1,parseInt($("volumes").value,10)||1);
-$("menos").onclick=()=>{$("volumes").value=Math.max(1,vol()-1);};
-$("mais").onclick=()=>{$("volumes").value=vol()+1;};
-[["guia","guia"],["cliente","cliente"],["dest","dest"]].forEach(([k,c])=>$(k).addEventListener("input",()=>$("c-"+c).classList.remove("erro")));
+[["guia","guia"],["cliente","cliente"]].forEach(([k,c])=>$(k).addEventListener("input",()=>$("c-"+c).classList.remove("erro")));
 $("lerGuia").onclick=async()=>{
   const txt=await SJT_LEITOR.abrir({titulo:"Ler guia",texto:"Aponte para o código de barras da guia de transporte.",preferir:"barras"});
   if(!txt)return;
@@ -269,13 +248,12 @@ $("registar").onclick=()=>{
   if(!motivo){falta.push("o motivo");$("c-motivo").classList.add("erro");}
   if(!g("guia")){falta.push("a guia");$("c-guia").classList.add("erro");}
   if(!g("cliente")){falta.push("o expedidor");$("c-cliente").classList.add("erro");}
-  if(!g("dest")){falta.push("o destinatário");$("c-dest").classList.add("erro");}
   if(falta.length){msg("msg","Falta indicar "+falta.join(", ").replace(/, ([^,]*)$/," e $1")+".",false);return;}
   const agora=new Date(),id="c"+agora.getTime().toString(36)+Math.random().toString(36).slice(2,6)+SJT.dispositivo().replace(/[^a-z0-9]/gi,"").slice(0,4);
-  const r={t:agora.toISOString(),motivo,guia:g("guia"),cliente:g("cliente"),destinatario:g("dest"),localidade:g("local"),volumes:vol(),obs:$("obs").value.trim(),estado:"pendente",telefone:"",nota:"",resolvidoPor:"",resolvidoEm:""};
+  const r={t:agora.toISOString(),motivo,guia:g("guia"),cliente:g("cliente"),obs:$("obs").value.trim(),estado:"pendente",telefone:"",nota:"",resolvidoPor:"",resolvidoEm:""};
   if(!LIG.gravar(id,diaDe(agora),r)){msg("msg","O telemóvel não deixou guardar (sem espaço ou armazenamento bloqueado).",false);return;}
   motivo="";gM.querySelectorAll(".chip").forEach(c=>c.setAttribute("aria-pressed","false"));
-  ["guia","cliente","dest","local","obs"].forEach(k=>$(k).value="");$("volumes").value=1;
+  ["guia","cliente","obs"].forEach(k=>$(k).value="");
   if(document.activeElement&&document.activeElement!==document.body)document.activeElement.blur();
   carregar();sugerirClientes();assinatura="";render();
   msg("msg","Pedido registado: guia "+r.guia+". A abrir o email…",true);
@@ -286,12 +264,11 @@ $("registar").onclick=()=>{
 function saudacao(){const h=new Date().getHours();return h<13?"Bom dia":h<20?"Boa tarde":"Boa noite";}
 const destinoEmail=()=>((S.config||{}).emailContactos||"").trim();
 function textoEmail(r){
-  const assunto="Pedido de contacto | "+(r.guia||"sem guia")+" | "+(r.destinatario||"sem destinatário");
+  const assunto="Pedido de contacto | "+(r.guia||"sem guia")+(r.cliente?" | "+r.cliente:"");
   const l=[saudacao()+",","",
-    "Solicitamos o contacto telefónico do destinatário abaixo indicado, para podermos efetuar a entrega do volume.","",
-    "Guia de transporte: "+(r.guia||"—"),"Expedidor: "+(r.cliente||"—"),"Destinatário: "+(r.destinatario||"—")];
-  if(r.localidade)l.push("Localidade: "+r.localidade);
-  l.push("Volumes: "+(r.volumes||1),"Motivo: "+(r.motivo||"—"));
+    "Solicitamos o contacto telefónico do destinatário da guia abaixo indicada, para podermos efetuar a entrega do volume.","",
+    "Guia de transporte: "+(r.guia||"—"),"Expedidor: "+(r.cliente||"—")];
+  l.push("Motivo: "+(r.motivo||"—"));
   if(r.obs)l.push("Observações: "+String(r.obs).replace(/\s*\n\s*/g," "));
   l.push("","Pedimos o envio do contacto com a maior brevidade possível.","");
   return {assunto,corpo:l.join("\n")};
@@ -316,7 +293,7 @@ const pendente=r=>r.estado!=="resolvido";
 function visiveis(){
   const o=BD.slice().sort((a,b)=>String(b.t).localeCompare(String(a.t)));let l=[...o.filter(pendente),...o.filter(r=>!pendente(r))];
   if(filtroPend)l=l.filter(pendente);
-  if(procura)l=l.filter(r=>semAcentos([r.guia,r.cliente,r.destinatario,r.localidade,r.obs,r.telefone,r.autor].join(" ")).includes(procura));
+  if(procura)l=l.filter(r=>semAcentos([r.guia,r.cliente,r.obs,r.telefone,r.autor].join(" ")).includes(procura));
   return l;
 }
 function render(){
@@ -338,15 +315,11 @@ function cartao(r){
   const ok=!pendente(r);
   const c=document.createElement("article");c.className="oc"+(ok?" resolvida":"");
   const top=document.createElement("div");top.className="top";
-  const tp=document.createElement("div");tp.className="tipo";tp.textContent=r.destinatario||"—";
+  const tp=document.createElement("div");tp.className="tipo";tp.textContent="Guia "+(r.guia||"—");
   const es=document.createElement("span");es.className="est "+(ok?"resolvida":"aberta");es.textContent=ok?"RECEBIDO":"PENDENTE";
   top.append(tp,es);c.appendChild(top);
   const mo=document.createElement("div");mo.className="mot";mo.textContent=r.motivo||"";c.appendChild(mo);
-  const ref=document.createElement("div");ref.className="ref";
-  const parte=(rot,val)=>{if(!val&&val!==0)return;if(ref.childNodes.length)ref.append("  ·  ");const s=document.createElement("small");s.textContent=rot+" ";ref.append(s,String(val));};
-  parte("Guia",r.guia);parte("Vol.",r.volumes);c.appendChild(ref);
   const cl=document.createElement("div");cl.className="cli";const s1=document.createElement("small");s1.className="rot";s1.textContent="Expedidor ";cl.append(s1,r.cliente||"—");
-  if(r.localidade){const s2=document.createElement("small");s2.className="rot";s2.textContent="  ·  Localidade ";cl.append(s2,r.localidade);}
   c.appendChild(cl);
   if(r.obs){const d=document.createElement("div");d.className="desc";d.textContent=r.obs;c.appendChild(d);}
   if(ok){const d=document.createElement("div");d.className="res";
@@ -433,8 +406,8 @@ function criarXlsx({titulo,folha,cab,linhas,larguras}){
 function gerarExcel(){
   const l=visiveis();if(!l.length)return null;
   const hj=new Date(),[y,m,d]=[hj.getFullYear(),pad(hj.getMonth()+1),pad(hj.getDate())];
-  const linhas=l.map(r=>[dataPT(r.t),hora(r.t),r.guia||"",r.cliente||"",r.destinatario||"",r.localidade||"",+r.volumes||"",r.motivo||"",pendente(r)?"Pendente":"Recebido",r.telefone||"",[r.obs,r.nota].filter(Boolean).join(" | ").replace(/\s*\n\s*/g," "),r.autor||""]);
-  return {bytes:criarXlsx({titulo:"PEDIDOS DE CONTACTO — "+S.polo.nome+" — exportado a "+d+"/"+m+"/"+y,folha:"Pedidos de contacto",cab:["Data","Hora","Guia","Expedidor","Destinatário","Localidade","Volumes","Motivo","Estado","Telefone","Notas","Registado por"],linhas,larguras:[12,8,24,24,26,16,10,28,12,16,40,20]}),nome:`pedidos-contacto-${y}-${m}-${d}.xlsx`};
+  const linhas=l.map(r=>[dataPT(r.t),hora(r.t),r.guia||"",r.cliente||"",r.motivo||"",pendente(r)?"Pendente":"Recebido",r.telefone||"",[r.obs,r.nota].filter(Boolean).join(" | ").replace(/\s*\n\s*/g," "),r.autor||""]);
+  return {bytes:criarXlsx({titulo:"PEDIDOS DE CONTACTO — "+S.polo.nome+" — exportado a "+d+"/"+m+"/"+y,folha:"Pedidos de contacto",cab:["Data","Hora","Guia","Expedidor","Motivo","Estado","Telefone","Notas","Registado por"],linhas,larguras:[12,8,24,28,28,12,16,40,20]}),nome:`pedidos-contacto-${y}-${m}-${d}.xlsx`};
 }
 $("excel").onclick=()=>{
   try{const x=gerarExcel();if(!x){msg("msgX","Não há pedidos na lista para exportar.",false);return;}
