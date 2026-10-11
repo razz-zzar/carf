@@ -195,7 +195,7 @@ input.mono{font-family:var(--mono);letter-spacing:.02em}
       <button class="btn btn-main" id="guardar" type="button">Guardar guia</button>
     </div>
     <div class="msg" id="msg" role="status"></div>
-    <details class="guardados" id="guardados" hidden><summary id="guardadosTit">Opções guardadas neste telemóvel</summary><div id="guardadosLista"></div></details>
+    <details class="guardados" id="guardados" hidden><summary id="guardadosTit">Opções acrescentadas</summary><div id="guardadosLista"></div></details>
     <div class="hint">Com mais de 1 pneu em falta, se não forem todos iguais, carregue em “Adicionar outro pneu diferente” e escolha o seguinte. No fim, “Guardar guia”.</div>
   </section>
 
@@ -302,6 +302,22 @@ const CATALOGO={
 let CUST={marcas:[],modelos:{},medidas:[],cargas:{},vels:[],refs:[]};
 try{const c=JSON.parse(localStorage.getItem("pneus_opcoes")||"{}");CUST={marcas:c.marcas||[],modelos:c.modelos||{},medidas:c.medidas||[],cargas:c.cargas||{},vels:c.vels||[],refs:c.refs||[]};}catch(e){}
 function gravarCust(){try{localStorage.setItem("pneus_opcoes",JSON.stringify(CUST));return true}catch(e){return false}}
+/* Opções acrescentadas ("Outra marca", "Outro modelo", medidas, índices): partilhadas por TODOS os armazéns,
+   no mesmo armazenamento dos códigos (registos {k:"opt", ref:[tipo,…]}). As que este telemóvel já tinha são enviadas uma vez. */
+function juntarOpc(C,r){
+  const [t,a,b]=r;
+  if(t==="marca"){if(!C.marcas.some(x=>igual(x,a)))C.marcas.push(a);}
+  else if(t==="modelo"){const l=C.modelos[a]=C.modelos[a]||[];if(!l.some(x=>igual(x,b)))l.push(b);}
+  else if(t==="medida"){if(!C.medidas.some(x=>igual(x,a)))C.medidas.push(a);}
+  else if(t==="carga"){const l=C.cargas[a]=C.cargas[a]||[];if(!l.includes(String(b)))l.push(String(b));}
+  else if(t==="vel"){if(!C.vels.includes(a))C.vels.push(a);}
+  else if(t==="ref"){if(!C.refs.includes(a))C.refs.push(a);}
+}
+const chaveOpc=r=>r.map(x=>String(x).toLowerCase()).join("|");
+function idOpc(r){const c=chaveOpc(r);let h=5381;for(let i=0;i<c.length;i++)h=((h<<5)+h+c.charCodeAt(i))>>>0;return "opt-"+h.toString(36)+"-"+c.length.toString(36);}
+let OPC_META={},opcPartilhadas=false;
+try{opcPartilhadas=!!localStorage.getItem("pneus_opcoes_partilhadas");}catch(e){}
+function partilharOpc(r){if(typeof LIGC==="undefined"||OPC_META[chaveOpc(r)])return;LIGC.gravar(idOpc(r),"",{k:"opt",ref:r,polo:S.polo.nome});}
 const igual=(a,b)=>String(a).toLowerCase()===String(b).toLowerCase();
 const chaveMed=m=>String(m||"").toUpperCase().replace(/\s+/g,"");
 const todasMarcas=()=>[...Object.keys(CATALOGO),...CUST.marcas];
@@ -311,14 +327,15 @@ let novoFlags={};
 function memorizar(p,fl){
   if(typeof aprenderCodigo==="function")aprenderCodigo(p);
   let mudou=false;
-  if(fl.marca&&p.marca&&!todasMarcas().some(k=>igual(k,p.marca))){CUST.marcas.push(p.marca);mudou=true;}
+  const novo=r=>{juntarOpc(CUST,r);partilharOpc(r);mudou=true;};
+  if(fl.marca&&p.marca&&!todasMarcas().some(k=>igual(k,p.marca)))novo(["marca",p.marca]);
   if(fl.modelo&&p.marca&&p.modelo){const ja=[...(CATALOGO[p.marca]||[]).map(x=>x[0]),...(CUST.modelos[p.marca]||[])];
-    if(!ja.some(k=>igual(k,p.modelo))){(CUST.modelos[p.marca]=CUST.modelos[p.marca]||[]).push(p.modelo);mudou=true;}}
-  if(fl.medida&&p.medida){const ja=[...Object.values(MED).flat(),...CUST.medidas];if(!ja.some(k=>igual(k,p.medida))){CUST.medidas.push(p.medida);mudou=true;}}
+    if(!ja.some(k=>igual(k,p.modelo)))novo(["modelo",p.marca,p.modelo]);}
+  if(fl.medida&&p.medida){const ja=[...Object.values(MED).flat(),...CUST.medidas];if(!ja.some(k=>igual(k,p.medida)))novo(["medida",p.medida]);}
   if(fl.carga&&p.carga&&p.medida){const k=chaveMed(p.medida),ja=[...(CARGA[p.medida]||[]).map(String),...(CUST.cargas[k]||[])];
-    if(!ja.includes(String(p.carga))){(CUST.cargas[k]=CUST.cargas[k]||[]).push(String(p.carga));mudou=true;}}
-  if(fl.vel&&p.vel&&!VEL_TODAS.includes(p.vel)&&!CUST.vels.includes(p.vel)){CUST.vels.push(p.vel);mudou=true;}
-  if(fl.ref&&p.ref&&!["TL","XL"].includes(p.ref)&&!CUST.refs.includes(p.ref)){CUST.refs.push(p.ref);mudou=true;}
+    if(!ja.includes(String(p.carga)))novo(["carga",k,String(p.carga)]);}
+  if(fl.vel&&p.vel&&!VEL_TODAS.includes(p.vel)&&!CUST.vels.includes(p.vel))novo(["vel",p.vel]);
+  if(fl.ref&&p.ref&&!["TL","XL"].includes(p.ref)&&!CUST.refs.includes(p.ref))novo(["ref",p.ref]);
   if(mudou)gravarCust();
   return mudou;
 }
@@ -371,7 +388,12 @@ const LIG=SJT.ligar("pneus",{aoMudar:()=>{carregarRegistos();render();}});
 let CODIGOS_POLO={};
 const LIGC=SJT.ligar("codigos",{diasLocais:0,ritmoFixo:60000,aoMudar:()=>carregarCodigos()});
 function carregarCodigos(){
-  CODIGOS_POLO={};
+  CODIGOS_POLO={};OPC_META={};
+  /* depois de enviadas as deste telemóvel, as opções vêm só do servidor (o que alguém apagar desaparece em todos) */
+  const C=opcPartilhadas?{marcas:[],modelos:{},medidas:[],cargas:{},vels:[],refs:[]}:JSON.parse(JSON.stringify(CUST));
+  LIGC.registos().forEach(r=>{const d=r.dados||{};if(d.k==="opt"&&Array.isArray(d.ref)){juntarOpc(C,d.ref);OPC_META[chaveOpc(d.ref)]={id:r.id,meu:r.meu,autor:r.autor,polo:d.polo||""};}});
+  CUST=C;if(opcPartilhadas)gravarCust();
+  if(typeof paginaPronta!=="undefined"&&paginaPronta){renderGuardados();if(!marca)construirMarcas();} /* marcas novas de outros armazéns (sem estragar um pneu a meio) */
   LIGC.registos().forEach(r=>{const d=r.dados||{};if(d.chave)CODIGOS_POLO[d.chave]={marca:d.marca,modelo:d.modelo,medida:d.medida,carga:d.carga,vel:d.vel,ref:d.ref,_id:r.id,_autor:r.autor,_polo:d.polo||"",_meu:r.meu};});
 }
 carregarCodigos();
@@ -570,22 +592,27 @@ function itensGuardados(){const l=[];
   return l;}
 function renderGuardados(){
   const l=itensGuardados();$("guardados").hidden=!l.length;if(!l.length)return;
-  $("guardadosTit").textContent=`Opções guardadas neste telemóvel (${l.length})`;
-  $("guardadosLista").innerHTML=l.map((i,n)=>`<div class="opc"><div><b>${esc(i.txt)}</b><small>${esc(i.tipo)}${i.sub?" · "+esc(i.sub):""}</small></div><button type="button" class="del${apagarOpc===n?" confirm":""}" data-n="${n}">${apagarOpc===n?"Confirmar":"Apagar"}</button></div>`).join("");
+  $("guardadosTit").textContent=`Opções acrescentadas, partilhadas por todos os armazéns (${l.length})`;
+  $("guardadosLista").innerHTML=l.map((i,n)=>{const m=OPC_META[chaveOpc(i.ref)],pode=!m||m.meu;
+    const quem=m?(m.meu?"por si":"por "+esc(m.autor||"?")+(m.polo&&m.polo!==S.polo.nome?", "+esc(m.polo):"")):"a enviar";
+    return `<div class="opc"><div><b>${esc(i.txt)}</b><small>${esc(i.tipo)}${i.sub?" · "+esc(i.sub):""} · ${quem}</small></div>${pode?`<button type="button" class="del${apagarOpc===n?" confirm":""}" data-n="${n}">${apagarOpc===n?"Confirmar":"Apagar"}</button>`:""}</div>`;}).join("");
 }
 $("guardadosLista").addEventListener("click",e=>{
   const b=e.target.closest(".del");if(!b)return;const n=+b.dataset.n,l=itensGuardados();
   if(apagarOpc!==n){apagarOpc=n;renderGuardados();setTimeout(()=>{if(apagarOpc===n){apagarOpc=null;renderGuardados();}},4000);return;}
-  apagarOpc=null;const r=l[n].ref;
+  apagarOpc=null;const r=l[n].ref,m=OPC_META[chaveOpc(r)];
+  if(m){if(!m.meu)return;LIGC.apagar(m.id);
+    /* ao apagar uma marca, apaga também os modelos dessa marca acrescentados por si */
+    if(r[0]==="marca")(CUST.modelos[r[1]]||[]).forEach(md=>{const mm=OPC_META[chaveOpc(["modelo",r[1],md])];if(mm&&mm.meu)LIGC.apagar(mm.id);});}
   if(r[0]==="marca"){CUST.marcas=CUST.marcas.filter(x=>x!==r[1]);delete CUST.modelos[r[1]];}
   else if(r[0]==="modelo"){CUST.modelos[r[1]]=CUST.modelos[r[1]].filter(x=>x!==r[2]);if(!CUST.modelos[r[1]].length)delete CUST.modelos[r[1]];}
   else if(r[0]==="medida"){CUST.medidas=CUST.medidas.filter(x=>x!==r[1]);}
   else if(r[0]==="vel"){CUST.vels=CUST.vels.filter(x=>x!==r[1]);}
   else if(r[0]==="ref"){CUST.refs=CUST.refs.filter(x=>x!==r[1]);}
   else{CUST.cargas[r[1]]=CUST.cargas[r[1]].filter(x=>x!==r[2]);if(!CUST.cargas[r[1]].length)delete CUST.cargas[r[1]];}
-  gravarCust();limparPneu();construirMarcas();renderGuardados();
+  gravarCust();if(m)carregarCodigos();limparPneu();construirMarcas();renderGuardados();
 });
-render();atualizarQtd();renderGuardados();
+render();atualizarQtd();var paginaPronta=true;renderGuardados();
 
 try{navigator.storage&&navigator.storage.persist&&navigator.storage.persist();}catch(e){}
 if("serviceWorker" in navigator&&location.protocol!=="file:"){navigator.serviceWorker.register("sw.js").catch(()=>{});}
@@ -616,6 +643,7 @@ function idEprel(c){const m=String(c).match(/eprel\.ec\.europa\.eu\/(?:qr|screen
 /* Códigos que este telemóvel já tinha aprendido antes da partilha: enviados uma vez para o armazém */
 LIGC.ouvir(info=>{
   if(!info.remoto||LIGC.estado().erro)return;
+  if(!opcPartilhadas){itensGuardados().forEach(i=>partilharOpc(i.ref));opcPartilhadas=true;try{localStorage.setItem("pneus_opcoes_partilhadas","1");}catch(e){}carregarCodigos();}
   try{if(localStorage.getItem("pneus_codigos_partilhados"))return;}catch(e){return;}
   let n=0;
   for(const [chave,v] of Object.entries(CODIGOS)){
