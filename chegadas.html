@@ -166,6 +166,7 @@ body.preso{overflow:hidden}
   <div class="mjan" role="dialog" aria-modal="true" aria-labelledby="t-mail">
     <h2 id="t-mail">Enviar por email</h2>
     <div class="mcampo" id="mParaCx"><div class="mrot">Para</div><div class="mval" id="mPara"></div><button type="button" class="mcop" id="mCopPara">Copiar</button></div>
+    <div class="mcampo" id="mCcCx"><div class="mrot">CC</div><div class="mval" id="mCc"></div><button type="button" class="mcop" id="mCopCc">Copiar</button></div>
     <div class="mcampo"><div class="mrot">Assunto</div><div class="mval" id="mAssunto"></div><button type="button" class="mcop" id="mCopAss">Copiar</button></div>
     <div class="mnota" id="mNota"></div>
     <button class="mabrir" id="mAbrir" type="button">Abrir email com o ficheiro</button>
@@ -446,8 +447,9 @@ $("email").onclick=()=>{
   if(!gerarExcel(dia)){msg("msgX","Ainda não há chegadas nem saídas registadas neste dia.",false);return;}
   const {assunto,corpo}=textoMail(dia),para=((S.config||{}).emailHorarios||"").trim();
   mailAtual={dia,assunto,corpo,para};
+  mailAtual.cc=((S.config||{}).ccHorarios||"").trim();$("mCcCx").hidden=!mailAtual.cc;$("mCc").textContent=mailAtual.cc;
   $("mParaCx").hidden=!para;$("mPara").textContent=para;$("mAssunto").textContent=assunto;
-  ["mCopPara","mCopAss"].forEach(k=>{$(k).textContent="Copiar";$(k).classList.remove("ok");});
+  ["mCopPara","mCopCc","mCopAss"].forEach(k=>{$(k).textContent="Copiar";$(k).classList.remove("ok");});
   $("mNota").textContent="O ficheiro vai em CSV (abre diretamente no Excel): a partilha do telemóvel não aceita ficheiros .xlsx. Se precisar do Excel formatado, use Descarregar Excel e anexe-o. Ao abrir o email, o assunto fica copiado: se não aparecer, cole-o."+(para?"":" Este armazém ainda não tem email para horários definido na gestão.");
   $("mMsg").textContent="";$("mail").hidden=false;document.body.classList.add("preso");$("mAbrir").focus();
 };
@@ -456,8 +458,9 @@ $("mFechar").onclick=fecharMail;
 $("mail").addEventListener("click",e=>{if(e.target===$("mail"))fecharMail();});
 document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("mail").hidden)fecharMail();});
 async function botaoCopiar(id,txt){const ok=await copiar(txt);$(id).textContent=ok?"Copiado ✓":"Selecione";$(id).classList.toggle("ok",ok);
-  ["mCopPara","mCopAss"].filter(k=>k!==id).forEach(k=>{$(k).textContent="Copiar";$(k).classList.remove("ok");});}
+  ["mCopPara","mCopCc","mCopAss"].filter(k=>k!==id).forEach(k=>{$(k).textContent="Copiar";$(k).classList.remove("ok");});}
 $("mCopPara").onclick=()=>botaoCopiar("mCopPara",mailAtual.para);
+$("mCopCc").onclick=()=>botaoCopiar("mCopCc",mailAtual.cc);
 $("mCopAss").onclick=()=>botaoCopiar("mCopAss",mailAtual.assunto);
 $("mXlsx").onclick=()=>{const x=gerarExcel(mailAtual.dia);if(x){descarregarX(x);$("mMsg").textContent="Excel descarregado: "+x.nome+" (ver em Transferências).";$("mMsg").className="msg ok";}};
 $("mAbrir").onclick=async()=>{
@@ -477,7 +480,7 @@ $("mAbrir").onclick=async()=>{
   }
   /* sem partilha de ficheiros: descarrega o Excel e abre o email preenchido para anexar */
   const x=gerarExcel(m.dia);if(x)descarregarX(x);
-  const href="mailto:"+encodeURIComponent(m.para).replace(/%2C/gi,",").replace(/%40/g,"@")+"?subject="+encodeURIComponent(m.assunto)+"&body="+encodeURIComponent(m.corpo);
+  const href="mailto:"+encodeURIComponent(m.para).replace(/%2C/gi,",").replace(/%40/g,"@")+"?"+((c=>c?"cc="+encodeURIComponent(c).replace(/%2C/gi,",").replace(/%40/g,"@")+"&":"")(((S.config||{}).ccHorarios||"").trim()))+"subject="+encodeURIComponent(m.assunto)+"&body="+encodeURIComponent(m.corpo);
   setTimeout(()=>{const a=document.createElement("a");a.href=href;document.body.appendChild(a);a.click();a.remove();},500);
   fecharMail();msg("msgX","Email aberto com destinatário, assunto e texto. O Excel foi descarregado (ver Transferências): anexe-o ao email.",true);
 };

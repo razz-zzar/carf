@@ -226,6 +226,7 @@ select{appearance:none;-webkit-appearance:none;background-image:linear-gradient(
   <div class="resumo" role="dialog" aria-modal="true" aria-labelledby="t-mail">
     <h2 id="t-mail">Enviar email</h2>
     <div class="mcampo" id="mParaCx"><div class="mrot">Para</div><div class="mval" id="mPara"></div><button type="button" class="mcop" id="mCopPara">Copiar</button></div>
+    <div class="mcampo" id="mCcCx"><div class="mrot">CC</div><div class="mval" id="mCc"></div><button type="button" class="mcop" id="mCopCc">Copiar</button></div>
     <div class="mcampo"><div class="mrot">Assunto</div><div class="mval" id="mAssunto"></div><button type="button" class="mcop" id="mCopAss">Copiar</button></div>
     <div class="mnota" id="mNota"></div>
     <button class="registar" id="mAbrir" type="button">Abrir email com as fotografias</button>
@@ -480,8 +481,9 @@ let mailAtual=null;
 async function enviarEmail(r){
   const {assunto,corpo}=textoEmail(r),para=destinoEmail();
   mailAtual={r,assunto,corpo,para,ficheiros:null,aviso:""};
+  mailAtual.cc=((S.config||{}).ccOcorrencias||"").trim();$("mCcCx").hidden=!mailAtual.cc;$("mCc").textContent=mailAtual.cc;
   $("mParaCx").hidden=!para;$("mPara").textContent=para;$("mAssunto").textContent=assunto;
-  ["mCopPara","mCopAss"].forEach(k=>{$(k).textContent="Copiar";$(k).classList.remove("ok");});
+  ["mCopPara","mCopCc","mCopAss"].forEach(k=>{$(k).textContent="Copiar";$(k).classList.remove("ok");});
   const n=(r.fotos||[]).length;
   $("mAbrir").textContent=n?"Abrir email com "+(n===1?"a fotografia":"as "+n+" fotografias"):"Abrir email";
   $("mSemFotos").hidden=!n;
@@ -493,8 +495,9 @@ $("mFechar").onclick=fecharMail;
 $("mail").addEventListener("click",e=>{if(e.target===$("mail"))fecharMail();});
 document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("mail").hidden)fecharMail();});
 async function botaoCopiar(id,txt){const ok=await copiar(txt);$(id).textContent=ok?"Copiado ✓":"Selecione";$(id).classList.toggle("ok",ok);
-  ["mCopPara","mCopAss"].filter(k=>k!==id).forEach(k=>{$(k).textContent="Copiar";$(k).classList.remove("ok");});}
+  ["mCopPara","mCopCc","mCopAss"].filter(k=>k!==id).forEach(k=>{$(k).textContent="Copiar";$(k).classList.remove("ok");});}
 $("mCopPara").onclick=()=>botaoCopiar("mCopPara",mailAtual.para);
+$("mCopCc").onclick=()=>botaoCopiar("mCopCc",mailAtual.cc);
 $("mCopAss").onclick=()=>botaoCopiar("mCopAss",mailAtual.assunto);
 async function ficheirosDe(m){
   if(m.ficheiros)return m.ficheiros;
@@ -513,7 +516,7 @@ $("mAbrir").onclick=async()=>{
   let partilha=false;
   try{partilha=fs.length>0&&!!(navigator.share&&navigator.canShare&&navigator.canShare({files:fs,title:m.assunto,text:m.corpo}));}catch(e){}
   const copiado=await copiar(m.assunto);
-  if(copiado){$("mCopAss").textContent="Copiado ✓";$("mCopAss").classList.add("ok");$("mCopPara").textContent="Copiar";$("mCopPara").classList.remove("ok");}
+  if(copiado){$("mCopAss").textContent="Copiado ✓";$("mCopAss").classList.add("ok");$("mCopPara").textContent="Copiar";$("mCopPara").classList.remove("ok");$("mCopCc").textContent="Copiar";$("mCopCc").classList.remove("ok");}
   $("mAbrir").disabled=false;
   if(partilha){
     try{
@@ -532,7 +535,7 @@ $("mSemFotos").onclick=()=>{const m=mailAtual;if(!m)return;fecharMail();abrirMai
 function abrirMailto(r,assunto,corpo,para,ficheiros,aviso){
   /* Descarrega as fotografias para anexar à mão e abre o email já escrito */
   ficheiros.forEach((f,i)=>setTimeout(()=>{const u=URL.createObjectURL(f),a=document.createElement("a");a.href=u;a.download=f.name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),15000);},i*400));
-  const href="mailto:"+encodeURIComponent(para).replace(/%2C/gi,",").replace(/%40/g,"@")+"?subject="+encodeURIComponent(assunto)+"&body="+encodeURIComponent(corpo);
+  const href="mailto:"+encodeURIComponent(para).replace(/%2C/gi,",").replace(/%40/g,"@")+"?"+((c=>c?"cc="+encodeURIComponent(c).replace(/%2C/gi,",").replace(/%40/g,"@")+"&":"")(((S.config||{}).ccOcorrencias||"").trim()))+"subject="+encodeURIComponent(assunto)+"&body="+encodeURIComponent(corpo);
   setTimeout(()=>{const a=document.createElement("a");a.href=href;document.body.appendChild(a);a.click();a.remove();},ficheiros.length*400+100);
   marcarEmail(r);
   msg("msgL","Email aberto com destinatário, assunto e texto."+(ficheiros.length?" As fotografias foram descarregadas (ver Transferências): anexe-as ao email.":"")+aviso,!aviso);

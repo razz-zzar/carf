@@ -275,7 +275,7 @@ function textoEmail(r){
 }
 function enviarEmail(r){
   const {assunto,corpo}=textoEmail(r),para=destinoEmail();
-  const href="mailto:"+encodeURIComponent(para).replace(/%2C/gi,",").replace(/%40/g,"@")+"?subject="+encodeURIComponent(assunto)+"&body="+encodeURIComponent(corpo);
+  const href="mailto:"+encodeURIComponent(para).replace(/%2C/gi,",").replace(/%40/g,"@")+"?"+((c=>c?"cc="+encodeURIComponent(c).replace(/%2C/gi,",").replace(/%40/g,"@")+"&":"")(((S.config||{}).ccContactos||"").trim()))+"subject="+encodeURIComponent(assunto)+"&body="+encodeURIComponent(corpo);
   const a=document.createElement("a");a.href=href;document.body.appendChild(a);a.click();a.remove();
   const atual=BD.find(x=>x.id===r.id)||r;
   LIG.mudar(r.id,{emailPor:S.nome,emailEm:new Date().toISOString()});
