@@ -119,8 +119,8 @@ input:focus-visible,textarea:focus-visible,button:focus-visible{outline:2px soli
     <label for="cEmail" class="cc">CC — ocorrências <small>(opcional; vários separados por vírgula)</small><input id="cEmail" type="email" inputmode="email" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="ex. chefia@empresa.pt" multiple></label>
     <label for="pEmailHor">Email para horários <small>— para onde se envia o Excel das chegadas e saídas (opcional; vários separados por vírgula)</small><input id="pEmailHor" type="email" inputmode="email" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="ex. trafego@empresa.pt" multiple></label>
     <label for="cEmailHor" class="cc">CC — horários <small>(opcional; vários separados por vírgula)</small><input id="cEmailHor" type="email" inputmode="email" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="ex. chefia@empresa.pt" multiple></label>
-    <label for="pEmailCont">Email para pedidos de contacto <small>— para onde se pedem os contactos dos particulares (opcional; vários separados por vírgula)</small><input id="pEmailCont" type="email" inputmode="email" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="ex. apoio.cliente@empresa.pt" multiple></label>
-    <label for="cEmailCont" class="cc">CC — pedidos de contacto <small>(opcional; vários separados por vírgula)</small><input id="cEmailCont" type="email" inputmode="email" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="ex. chefia@empresa.pt" multiple></label>
+    <label for="pEmailCont">Email para pedidos <small>— para onde se pedem contactos e documentos (opcional; vários separados por vírgula)</small><input id="pEmailCont" type="email" inputmode="email" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="ex. apoio.cliente@empresa.pt" multiple></label>
+    <label for="cEmailCont" class="cc">CC — pedidos <small>(opcional; vários separados por vírgula)</small><input id="cEmailCont" type="email" inputmode="email" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="ex. chefia@empresa.pt" multiple></label>
     <label for="lMotivos">Motivos de penalização <small>— motivo = valor em € (ou nao_pago, ou reembolso). Vazio = lista comum.</small><textarea id="lMotivos" spellcheck="false" style="min-height:160px"></textarea></label>
     <div class="btns">
       <button class="btn sec" type="button" id="usarSJT">Auto Preencher com dados Base</button>
@@ -155,7 +155,7 @@ function espaco(f){
   el.className="dica"+(!f.r2&&f.naBaseDados>300*1048576?" alerta":"");
 }
 /* ---- Apagar dados (testes ou registos antigos) ---- */
-const APPS_L=[["pneus","Incompletos (pneus)"],["chegadas","Horários (chegadas e saídas)"],["penalizacoes","Penalizações"],["frota","Frota"],["ocorrencias","Ocorrências (com fotografias)"],["contactos","Pedidos de contacto"],["resumos","Resumos do dia"],["turno","Mural (com fotografias)"],["codigos","Códigos e opções de pneus (comuns a todos os armazéns)"]];
+const APPS_L=[["pneus","Incompletos (pneus)"],["chegadas","Horários (chegadas e saídas)"],["penalizacoes","Penalizações"],["frota","Frota"],["ocorrencias","Ocorrências (com fotografias)"],["contactos","Pedidos (contactos e documentos)"],["resumos","Resumos do dia"],["turno","Mural (com fotografias)"],["codigos","Códigos e opções de pneus (comuns a todos os armazéns)"]];
 let planoL=null;
 const chk=(cls,v,txt,el)=>{const l=document.createElement("label");l.className="chk";const c=document.createElement("input");c.type="checkbox";c.value=v;c.className=cls;c.onchange=()=>{planoL=null;botaoL();};l.append(c," "+txt);el.appendChild(l);return c;};
 function desenharLimpar(){
@@ -309,7 +309,7 @@ function lerConfig(){
   ep.forEach(x=>{if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(x))erros.push("Email para penalizações inválido: “"+x+"”");});
   if(ep.length)c.emailPenalizacoes=ep.join(", ");
   const ec=$("pEmailCont").value.split(/[,;\s]+/).map(x=>x.trim()).filter(Boolean);
-  ec.forEach(x=>{if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(x))erros.push("Email para pedidos de contacto inválido: “"+x+"”");});
+  ec.forEach(x=>{if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(x))erros.push("Email para pedidos inválido: “"+x+"”");});
   if(ec.length)c.emailContactos=ec.join(", ");
   const eh=$("pEmailHor").value.split(/[,;\s]+/).map(x=>x.trim()).filter(Boolean);
   eh.forEach(x=>{if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(x))erros.push("Email para horários inválido: “"+x+"”");});
@@ -317,7 +317,7 @@ function lerConfig(){
   {const l=$("cEmailPen").value.split(/[,;\s]+/).map(x=>x.trim()).filter(Boolean);l.forEach(x=>{if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(x))erros.push("Email em CC (penalizações) inválido: “"+x+"”");});if(l.length)c.ccPenalizacoes=l.join(", ");}
   {const l=$("cEmail").value.split(/[,;\s]+/).map(x=>x.trim()).filter(Boolean);l.forEach(x=>{if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(x))erros.push("Email em CC (ocorrências) inválido: “"+x+"”");});if(l.length)c.ccOcorrencias=l.join(", ");}
   {const l=$("cEmailHor").value.split(/[,;\s]+/).map(x=>x.trim()).filter(Boolean);l.forEach(x=>{if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(x))erros.push("Email em CC (horários) inválido: “"+x+"”");});if(l.length)c.ccHorarios=l.join(", ");}
-  {const l=$("cEmailCont").value.split(/[,;\s]+/).map(x=>x.trim()).filter(Boolean);l.forEach(x=>{if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(x))erros.push("Email em CC (pedidos de contacto) inválido: “"+x+"”");});if(l.length)c.ccContactos=l.join(", ");}
+  {const l=$("cEmailCont").value.split(/[,;\s]+/).map(x=>x.trim()).filter(Boolean);l.forEach(x=>{if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(x))erros.push("Email em CC (pedidos) inválido: “"+x+"”");});if(l.length)c.ccContactos=l.join(", ");}
   return {c,erros};
 }
 $("fAdmin").addEventListener("submit",e=>{e.preventDefault();ADMIN=$("admin").value.trim();if(!ADMIN){msg("msgA","Escreva o código.",false);return;}msg("msgA","A verificar…",true);carregar();});

@@ -7,7 +7,7 @@
 <meta name="application-name" content="OPS CARF">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<title>Contactos</title>
+<title>Pedidos</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="carf-icon-192.png">
 <link rel="apple-touch-icon" href="carf-icon-192.png">
@@ -163,12 +163,12 @@ select{appearance:none;-webkit-appearance:none;background-image:linear-gradient(
   <header>
     <div class="brand">
       <img class="logo" alt="Logotipo" src="data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0idXRmLTgiPz4KPCEtLSBHZW5lcmF0b3I6IEFkb2JlIElsbHVzdHJhdG9yIDI3LjAuMCwgU1ZHIEV4cG9ydCBQbHVnLUluIC4gU1ZHIFZlcnNpb246IDYuMDAgQnVpbGQgMCkgIC0tPgo8c3ZnIHZlcnNpb249IjEuMSIgaWQ9IkxheWVyXzEiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgeG1sbnM6eGxpbms9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkveGxpbmsiIHg9IjBweCIgeT0iMHB4IgoJIHZpZXdCb3g9IjAgMCA0NTYgMTg0LjMiIHN0eWxlPSJlbmFibGUtYmFja2dyb3VuZDpuZXcgMCAwIDQ1NiAxODQuMzsiIHhtbDpzcGFjZT0icHJlc2VydmUiPgo8c3R5bGUgdHlwZT0idGV4dC9jc3MiPgoJLnN0MHtmaWxsOiNCOUQ0MDY7fQoJLnN0MXtmaWxsOiMwMDdCN0Y7fQoJLnN0MntmaWxsOiMzRjlCOUU7fQo8L3N0eWxlPgo8Zz4KCTxwYXRoIGNsYXNzPSJzdDAiIGQ9Ik00NDQuMiw3Mi43Yy0yMy40LDcuNi00Ni41LDE1LjEtNjkuNywyMi43Yy0zLTMuNC00LjItNy40LTUuNi0xMS4yYy0zLjQtOS4xLTQuOS0xOC42LTUuMS0yOC4zCgkJYy0wLjMtMTcuOCwxMC4zLTI5LjksMjMuOC0zNC4yYzIyLjMtNy4xLDQ0LjUtMTQuMyw2Ni43LTIxLjVjMC41LTAuMSwxLTAuMSwxLjUtMC4yQzQ1Ni41LDMuNiw0NDguNSw1My41LDQ0NC4yLDcyLjd6Ii8+Cgk8cGF0aCBjbGFzcz0ic3QxIiBkPSJNNDU1LDE0Ny4xYy04LjcsNi43LTE4LjEsMTIuMy0yNy4xLDE4LjZjLTguMyw1LjgtMTYuOSwxMS4zLTI1LjMsMTdjLTEuNiwxLjEtMywxLjktNSwxLjQKCQljLTE2LjItNC4xLTMwLjYtMTEuMS00MS0yNC43Yy01LjEtNi43LTguMy0xNC40LTkuNy0yMi43Yy0wLjQtMi4xLTAuNC00LjQtMC4xLTYuNWMyLTE0LDQuMi0yNy45LDYuMy00MS45CgkJYzEuMy04LjYsMi42LTE3LjMsNC4xLTI1LjljMS40LDcuNCwxLjksMTQuOCw0LjMsMjJjMTEuMiwzMi43LDMzLjIsNTMuMyw2Ny4yLDYwLjhjNi45LDEuNSwxMy44LDEuOCwyMC44LDEuOAoJCUM0NTEuMywxNDYuNSw0NTMuMiwxNDYuMiw0NTUsMTQ3LjF6Ii8+Cgk8cGF0aCBjbGFzcz0ic3QyIiBkPSJNNDU1LDE0Ny4xYy0xLjgtMC4xLTMuNy0wLjEtNS41LTAuMmMyLTEuNCw0LjMtMC43LDYuNS0wLjljMCwwLjQsMCwwLjgtMC4xLDAuOQoJCUM0NTUuNywxNDcuMSw0NTUuMywxNDcuMSw0NTUsMTQ3LjF6Ii8+Cgk8cGF0aCBkPSJNMzMzLjIsNTMuNmMtMTUuMywwLTMwLjctMC40LTQ2LDAuMWMtMTQuMywwLjQtMjUuOSwxMC43LTI4LjQsMjQuM2MtMS41LDgtMi44LDE2LjEtNC4zLDI0LjFjLTEuNyw5LjItMy41LDE4LjQtNS4zLDI4LjIKCQljLTYuNS00LjctMTIuNi05LjEtMTkuMS0xMy44YzEuOS0xLjMsMy4zLTIuMiw0LjYtMy4xYzguMi01LjgsMTMuOC0xMy40LDE2LjMtMjMuMWM1LTE5LjItNy4xLTM1LjYtMjQuOS0zNi4zCgkJYy05LjMtMC40LTE4LjcsMC0yOC0wLjNjLTE2LjMtMC41LTI5LDExLTMxLjUsMjYuMmMtMi4yLDEzLjEtNC45LDI2LjEtNy4zLDM5LjFjLTAuMywwLTAuNiwwLjEtMC45LDAuMQoJCWMtMy44LTIxLjYtNy42LTQzLjMtMTEuNS02NC45Yy04LjMsMC0xNi4xLDAtMjQuMywwYy03LjksMTEuMS0xNiwyMi4zLTI0LDMzLjZjLTgsMTEuMi0xNiwyMi40LTI0LDMzLjZjLTExLjUsMC0yMi42LDAuMS0zMy44LDAKCQljLTE0LjEtMC4xLTIyLjUtMTEuNS0xOC44LTI1LjFjMy4yLTExLjgsMTUuNC0yMS44LDI4LjEtMjEuNWMxMi4zLDAuMiwyNC43LDAuMSwzNywwYzEuNiwwLDMuMywwLjQsNC42LTEuMgoJCWM1LjEtNi4zLDEwLjMtMTIuNiwxNS43LTE5LjJjLTEuNC0wLjEtMi4yLTAuMi0zLTAuMmMtMTksMC0zOCwwLTU3LDBjLTIuMiwwLTQuMywwLjEtNi40LDAuNmMtMTUuMywzLjQtMjYuMywxMi4zLTM0LDI1LjYKCQljLTYsMTAuNC04LjcsMjEuNi02LjIsMzMuNmMzLjQsMTYuOSwxNy43LDI4LjIsMzUuNiwyOC41YzEwLjMsMC4yLDIwLjcsMCwzMSwwYzYuMiwwLDEyLjMsMCwxOC40LDBjNS4yLTcuMiwxMC4yLTE0LjIsMTUuMi0yMS4yCgkJYzUuOC0wLjEsMTEuMSwxLjQsMTYuMiwzLjRjOS4zLDMuOCwxNi44LDkuOSwyMi44LDE3LjRjMTIuNCwwLDI0LjMsMCwzNi4yLDBjMi40LTEyLjgsNC44LTI1LjMsNy4zLTM4LjNjMS45LDEuNCwzLjIsMi40LDQuNSwzLjQKCQljMTMuOSwxMC45LDI3LjgsMjEuOCw0MS42LDMyLjhjMi4yLDEuOCw0LjQsMi42LDcuMiwyLjZjOS4yLTAuMiwxOC4zLDAsMjcuNS0wLjFjMS4zLDAsMi43LDAuNCwzLjktMC44CgkJYzIuMi0xMS42LDQuNC0yMy4zLDYuNy0zNS41YzE0LDAsMjcuNywwLDQxLjYsMGMxLjYtNi44LDMuMS0xMy4yLDQuNy0yMC4yYy0xNC41LDAtMjguNCwwLTQyLjYsMGMwLjMtMS41LDAuNi0yLjUsMC43LTMuNAoJCWMxLjMtNy41LDIuMy04LjQsOS42LTguNGMxMi43LDAsMjUuMywwLDM4LDBjMS40LDAsMywwLjUsNC40LTAuOGMwLjktNi4yLDIuOC0xMi41LDMuMy0xOC45QzMzNC4xLDUzLjksMzMzLjcsNTMuNiwzMzMuMiw1My42egoJCSBNMTA4LjIsMTExLjJjNy05LjksMTMuNy0xOS4yLDIxLTI5LjVjMi4xLDExLjcsMy45LDIyLjQsNS45LDMzLjVDMTI2LjMsMTEyLjEsMTE3LjcsMTExLjIsMTA4LjIsMTExLjJ6IE0yMTcuMiwxMDAuMgoJCWMtMi44LDAuNC01LjYsMC4zLTguNSwwLjNjLTcuOCwwLTE1LjYsMC0yMy43LDBjLTEtMi43LDAuMi00LjcsMC41LTYuOGMwLjgtNC42LDEuNi05LjIsMi42LTEzLjdjMS00LjgsMi42LTYuMSw3LjUtNi4xCgkJYzguMywwLDE2LjcsMCwyNSwwYzguNCwwLDEzLjMsNi41LDEwLjYsMTQuNEMyMjksOTUsMjI0LjMsOTkuMiwyMTcuMiwxMDAuMnoiLz4KPC9nPgo8L3N2Zz4K">
-      <div style="min-width:0"><h1>Pedidos de Contacto</h1><a class="voltar" href="./">‹ Início</a></div>
+      <div style="min-width:0"><h1>Pedidos</h1><a class="voltar" href="./">‹ Início</a></div>
     </div>
   </header>
 
   <section class="card" aria-labelledby="t-novo">
-    <h2 id="t-novo">Novo pedido de contacto</h2>
+    <h2 id="t-novo">Novo pedido</h2>
     <div class="campo" id="c-motivo">
       <label id="l-motivo">Motivo</label>
       <div class="chips" id="motivos" role="group" aria-labelledby="l-motivo"></div>
@@ -197,7 +197,7 @@ select{appearance:none;-webkit-appearance:none;background-image:linear-gradient(
     <div id="lista"></div>
     <button type="button" class="btn mais" id="maisOc" hidden>Mostrar mais</button>
     <div class="msg" id="msgL" role="status"></div>
-    <div class="hint">Os pedidos são partilhados com todo o armazém. Quando receber o contacto, carregue em "Contacto recebido" e escreva o número: fica visível para todos, com um toque para ligar. Só quem registou um pedido o pode apagar.</div>
+    <div class="hint">Os pedidos são partilhados com todo o armazém. Quando receber a resposta, carregue em "Contacto recebido" (e escreva o número: fica visível para todos, com um toque para ligar) ou em "Documentos recebidos". Só quem registou um pedido o pode apagar.</div>
   </section>
 
   <section class="card">
@@ -218,7 +218,9 @@ const diaDe=d=>d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate());
 const hora=iso=>{const d=new Date(iso);return pad(d.getHours())+":"+pad(d.getMinutes());};
 const dataPT=iso=>{const d=new Date(iso);return pad(d.getDate())+"/"+pad(d.getMonth()+1)+"/"+d.getFullYear();};
 function msg(id,t,ok){const m=$(id);m.textContent=t||"";m.className="msg "+(ok?"ok":"err");}
-const MOTIVOS=["Sem contacto do destinatário","Morada incompleta ou errada"];
+const MOTIVOS=["Pedido de contacto","Pedido de documentos"];
+/* pedidos antigos (outros motivos) contam como pedido de contacto */
+const eDocs=r=>r&&r.motivo==="Pedido de documentos";
 
 /* ---- Dados partilhados pelo armazém ---- */
 let BD=[],assinatura="";
@@ -264,13 +266,14 @@ $("registar").onclick=()=>{
 function saudacao(){const h=new Date().getHours();return h<13?"Bom dia":h<20?"Boa tarde":"Boa noite";}
 const destinoEmail=()=>((S.config||{}).emailContactos||"").trim();
 function textoEmail(r){
-  const assunto="Pedido de contacto | "+(r.guia||"sem guia")+(r.cliente?" | "+r.cliente:"");
+  const docs=eDocs(r);
+  const assunto=(docs?"Pedido de documentos":"Pedido de contacto")+" | "+(r.guia||"sem guia")+(r.cliente?" | "+r.cliente:"");
   const l=[saudacao()+",","",
-    "Solicitamos o contacto telefónico do destinatário da guia abaixo indicada, para podermos efetuar a entrega do volume.","",
+    docs?"Solicitamos o envio dos documentos referentes à guia abaixo indicada, necessários para podermos efetuar a entrega do volume.":
+      "Solicitamos o contacto telefónico do destinatário da guia abaixo indicada, para podermos efetuar a entrega do volume.","",
     "Guia de transporte: "+(r.guia||"—"),"Expedidor: "+(r.cliente||"—")];
-  l.push("Motivo: "+(r.motivo||"—"));
   if(r.obs)l.push("Observações: "+String(r.obs).replace(/\s*\n\s*/g," "));
-  l.push("","Pedimos o envio do contacto com a maior brevidade possível.","");
+  l.push("",docs?"Pedimos o envio dos documentos com a maior brevidade possível.":"Pedimos o envio do contacto com a maior brevidade possível.","");
   return {assunto,corpo:l.join("\n")};
 }
 function enviarEmail(r){
@@ -280,7 +283,7 @@ function enviarEmail(r){
   const atual=BD.find(x=>x.id===r.id)||r;
   LIG.mudar(r.id,{emailPor:S.nome,emailEm:new Date().toISOString()});
   carregar();assinatura="";render();
-  if(!para)msg("msgL","Este armazém ainda não tem email para pedidos de contacto definido na gestão — escreva o destinatário no email.",false);
+  if(!para)msg("msgL","Este armazém ainda não tem email para pedidos definido na gestão — escreva o destinatário no email.",false);
 }
 
 /* ---- Lista ---- */
@@ -303,10 +306,10 @@ function render(){
   const nPend=BD.filter(pendente).length;
   $("total").textContent=BD.length?BD.length+(nPend?" · "+nPend+" pendente"+(nPend===1?"":"s"):""):"0";
   const el=$("lista");el.textContent="";
-  if(!mostrar.length){const p=document.createElement("div");p.className="vazio";p.textContent=procura?"Nenhum pedido corresponde à procura.":filtroPend?"Não há pedidos pendentes.":"Ainda não há pedidos de contacto.";el.appendChild(p);}
+  if(!mostrar.length){const p=document.createElement("div");p.className="vazio";p.textContent=procura?"Nenhum pedido corresponde à procura.":filtroPend?"Não há pedidos pendentes.":"Ainda não há pedidos.";el.appendChild(p);}
   const nA=todas.filter(pendente).length,nR=todas.length-nA;let grupo=null;
   mostrar.forEach(r=>{const g=pendente(r)?"a":"r";
-    if(g!==grupo){grupo=g;const h=document.createElement("div");h.className="grupo-h"+(g==="r"?" res":"");h.textContent=g==="a"?"Pendentes ("+nA+")":"Contacto recebido ("+nR+")";el.appendChild(h);}
+    if(g!==grupo){grupo=g;const h=document.createElement("div");h.className="grupo-h"+(g==="r"?" res":"");h.textContent=g==="a"?"Pendentes ("+nA+")":"Recebidos ("+nR+")";el.appendChild(h);}
     el.appendChild(cartao(r));});
   $("maisOc").hidden=todas.length<=limite;$("maisOc").textContent="Mostrar mais ("+(todas.length-limite)+")";
   if(aResolver){const t=document.getElementById("resTel");if(t&&document.activeElement!==t&&document.activeElement!==document.getElementById("resNota")){t.value=telResolver;}}
@@ -324,31 +327,32 @@ function cartao(r){
   if(r.obs){const d=document.createElement("div");d.className="desc";d.textContent=r.obs;c.appendChild(d);}
   if(ok){const d=document.createElement("div");d.className="res";
     if(r.telefone){const a=document.createElement("a");a.className="tel";a.href="tel:"+r.telefone.replace(/[^\d+]/g,"");a.textContent="📞 "+r.telefone;d.appendChild(a);d.append("\n");}
-    const b=document.createElement("b");b.textContent="Contacto recebido";d.append(b," por "+(r.resolvidoPor||"?")+(r.resolvidoEm?" em "+dataPT(r.resolvidoEm)+" às "+hora(r.resolvidoEm):"")+(r.nota?"\n"+r.nota:""));c.appendChild(d);}
+    const b=document.createElement("b");b.textContent=eDocs(r)?"Documentos recebidos":"Contacto recebido";d.append(b," por "+(r.resolvidoPor||"?")+(r.resolvidoEm?" em "+dataPT(r.resolvidoEm)+" às "+hora(r.resolvidoEm):"")+(r.nota?"\n"+r.nota:""));c.appendChild(d);}
   if(r.emailPor){const e=document.createElement("div");e.className="meta mail";e.textContent="✉ Email enviado por "+r.emailPor+(r.emailEm?" em "+dataPT(r.emailEm)+" às "+hora(r.emailEm):"");c.appendChild(e);}
   const m=document.createElement("div");m.className="meta";m.textContent="Registado por "+SJT.autorTxt(r)+" · "+dataPT(r.t)+" às "+hora(r.t)+(r.pendente?" · a enviar":"");c.appendChild(m);
   if(aResolver===r.id){
     const w=document.createElement("div");w.className="resolver";
-    const t=document.createElement("input");t.id="resTel";t.type="tel";t.inputMode="tel";t.autocomplete="off";t.placeholder="Número de telefone do destinatário";t.value=telResolver;t.addEventListener("input",()=>{telResolver=t.value;});
-    const n=document.createElement("textarea");n.id="resNota";n.placeholder="Nota (opcional) — ex. entregar depois das 18h";n.value=notaResolver;n.addEventListener("input",()=>{notaResolver=n.value;});
+    const docs=eDocs(r);
+    const t=document.createElement("input");t.id="resTel";if(docs)t.hidden=true;t.type="tel";t.inputMode="tel";t.autocomplete="off";t.placeholder="Número de telefone do destinatário";t.value=telResolver;t.addEventListener("input",()=>{telResolver=t.value;});
+    const n=document.createElement("textarea");n.id="resNota";n.placeholder=docs?"Nota (opcional) — ex. documentos recebidos por email":"Nota (opcional) — ex. entregar depois das 18h";n.value=notaResolver;n.addEventListener("input",()=>{notaResolver=n.value;});
     const bs=document.createElement("div");
     const cn=document.createElement("button");cn.type="button";cn.textContent="Cancelar";cn.onclick=()=>{aResolver=null;telResolver=notaResolver="";assinatura="";render();};
-    const okb=document.createElement("button");okb.type="button";okb.className="p";okb.textContent="Guardar contacto";okb.onclick=()=>resolver(r);
-    bs.append(cn,okb);w.append(t,n,bs);c.appendChild(w);setTimeout(()=>t.focus(),50);return c;
+    const okb=document.createElement("button");okb.type="button";okb.className="p";okb.textContent=docs?"Guardar":"Guardar contacto";okb.onclick=()=>resolver(r);
+    bs.append(cn,okb);w.append(t,n,bs);c.appendChild(w);setTimeout(()=>(docs?n:t).focus(),50);return c;
   }
   const ac=document.createElement("div");ac.className="acoes";
   const bt=(txt,fn,cls)=>{const b=document.createElement("button");b.type="button";b.textContent=txt;if(cls)b.className=cls;b.onclick=fn;ac.appendChild(b);return b;};
   if(ok)bt(aConfirmar==="re"+r.id?"Confirmar reabrir":"Reabrir",()=>reabrir(r),aConfirmar==="re"+r.id?"confirm":"");
-  else bt("Contacto recebido",()=>{aResolver=r.id;telResolver=notaResolver="";aConfirmar=null;assinatura="";render();},"p");
+  else bt(eDocs(r)?"Documentos recebidos":"Contacto recebido",()=>{aResolver=r.id;telResolver=notaResolver="";aConfirmar=null;assinatura="";render();},"p");
   bt(r.emailPor?"Enviar email de novo":"Enviar email",()=>enviarEmail(r),r.emailPor||ok?"":"p");
   if(r.meu)bt(aConfirmar===r.id?"Confirmar apagar":"Apagar",()=>apagar(r),"dir"+(aConfirmar===r.id?" confirm":""));
   c.appendChild(ac);return c;
 }
 function resolver(r){
-  const tel=telResolver.trim();
-  if(!tel&&!notaResolver.trim()){msg("msgL","Escreva o número de telefone (ou uma nota).",false);return;}
+  const tel=eDocs(r)?"":telResolver.trim();
+  if(!eDocs(r)&&!tel&&!notaResolver.trim()){msg("msgL","Escreva o número de telefone (ou uma nota).",false);return;}
   if(!LIG.mudar(r.id,{estado:"resolvido",telefone:tel,nota:notaResolver.trim(),resolvidoPor:S.nome,resolvidoEm:new Date().toISOString()})){msg("msgL","O telemóvel não deixou guardar.",false);return;}
-  aResolver=null;telResolver=notaResolver="";carregar();assinatura="";render();msg("msgL","Contacto guardado: guia "+(r.guia||"—")+".",true);
+  aResolver=null;telResolver=notaResolver="";carregar();assinatura="";render();msg("msgL",(eDocs(r)?"Documentos recebidos":"Contacto guardado")+": guia "+(r.guia||"—")+".",true);
 }
 function reabrir(r){
   const k="re"+r.id;
@@ -407,7 +411,7 @@ function gerarExcel(){
   const l=visiveis();if(!l.length)return null;
   const hj=new Date(),[y,m,d]=[hj.getFullYear(),pad(hj.getMonth()+1),pad(hj.getDate())];
   const linhas=l.map(r=>[dataPT(r.t),hora(r.t),r.guia||"",r.cliente||"",r.motivo||"",pendente(r)?"Pendente":"Recebido",r.telefone||"",[r.obs,r.nota].filter(Boolean).join(" | ").replace(/\s*\n\s*/g," "),r.autor||""]);
-  return {bytes:criarXlsx({titulo:"PEDIDOS DE CONTACTO — "+S.polo.nome+" — exportado a "+d+"/"+m+"/"+y,folha:"Pedidos de contacto",cab:["Data","Hora","Guia","Expedidor","Motivo","Estado","Telefone","Notas","Registado por"],linhas,larguras:[12,8,24,28,28,12,16,40,20]}),nome:`pedidos-contacto-${y}-${m}-${d}.xlsx`};
+  return {bytes:criarXlsx({titulo:"PEDIDOS — "+S.polo.nome+" — exportado a "+d+"/"+m+"/"+y,folha:"Pedidos",cab:["Data","Hora","Guia","Expedidor","Motivo","Estado","Telefone","Notas","Registado por"],linhas,larguras:[12,8,24,28,28,12,16,40,20]}),nome:`pedidos-contacto-${y}-${m}-${d}.xlsx`};
 }
 $("excel").onclick=()=>{
   try{const x=gerarExcel();if(!x){msg("msgX","Não há pedidos na lista para exportar.",false);return;}

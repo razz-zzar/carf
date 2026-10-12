@@ -333,6 +333,7 @@ async function bloqueado(env, chave, max, janelaSeg) {
 }
 const eur = n => (Math.round(n * 100) / 100).toFixed(2).replace(".", ",") + " €";
 const corta = (t, n) => { t = String(t || "").replace(/\s+/g, " ").trim(); return t.length > n ? t.slice(0, n - 1) + "…" : t; };
+const tipoPedido = r => r.motivo === "Pedido de documentos" ? "pedido de documentos" : "pedido de contacto";
 function factosDoDia(dia, cfg, linhas, anteriores) {
   const por = {}; for (const l of linhas) { let d = {}; try { d = JSON.parse(l.dados); } catch (e) {} (por[l.app] = por[l.app] || []).push({ ...d, _autor: l.autor, _dia: l.dia }); }
   const F = [], atencao = [];
@@ -395,13 +396,13 @@ function factosDoDia(dia, cfg, linhas, anteriores) {
   const co = (por.contactos || []).filter(r => r._dia === dia);
   if (co.length) {
     const pend = co.filter(r => r.estado !== "resolvido");
-    F.push("Pedidos de contacto: " + co.length + (pend.length ? " (" + pend.length + " à espera de contacto: guia" + (pend.length > 1 ? "s " : " ") + pend.map(r => r.guia).join(", ") + ")" : " (todos com contacto recebido)") + ".");
-    if (pend.length) atencao.push(pend.length + " pedido" + (pend.length > 1 ? "s" : "") + " de contacto pendente" + (pend.length > 1 ? "s" : ""));
+    F.push("Pedidos (contactos e documentos): " + co.length + (pend.length ? " (" + pend.length + " à espera de resposta: " + pend.map(r => "guia " + r.guia + " – " + tipoPedido(r)).join(", ") + ")" : " (todos com resposta recebida)") + ".");
+    if (pend.length) atencao.push(pend.length + " pedido" + (pend.length > 1 ? "s" : "") + " pendente" + (pend.length > 1 ? "s" : ""));
   }
   if (ant.contactos.length) {
     const n = ant.contactos.length;
-    F.push("Pedidos de contacto de dias anteriores que CONTINUAM PENDENTES: " + ant.contactos.slice(0, 15).map(r => "guia " + (r.guia || "?") + (r.cliente ? " (" + r.cliente + ")" : "") + ", pedido a " + desde(r._dia)).join("; ") + (n > 15 ? "; e mais " + (n - 15) : "") + ".");
-    atencao.push(n + " pedido" + (n > 1 ? "s" : "") + " de contacto de dias anteriores ainda pendente" + (n > 1 ? "s" : ""));
+    F.push("Pedidos de dias anteriores que CONTINUAM PENDENTES: " + ant.contactos.slice(0, 15).map(r => tipoPedido(r) + " — guia " + (r.guia || "?") + (r.cliente ? " (" + r.cliente + ")" : "") + ", pedido a " + desde(r._dia)).join("; ") + (n > 15 ? "; e mais " + (n - 15) : "") + ".");
+    atencao.push(n + " pedido" + (n > 1 ? "s" : "") + " de dias anteriores ainda pendente" + (n > 1 ? "s" : ""));
   }
   // Frota: viaturas na oficina nesse dia (entraram até esse dia e ainda lá estão)
   const fr = por.frota || [], id2 = {}; for (const v of fr) if (v.id) id2[v.id] = v;
@@ -444,7 +445,7 @@ async function resumoDia(request, env, cors, s) {
   if (!env.AI) return resposta(cors, { texto: simples, ia: false, motivo: "IA não ligada no Cloudflare", factos: f.factos });
   const mensagens = [
     { role: "system", content: "És o assistente de operações dos armazéns da CARF, uma empresa de transportes. Escreves em português de Portugal (nunca do Brasil) o resumo de um dia para a passagem de turno entre supervisores. " +
-      "Se houver ocorrências ou pedidos de contacto de dias anteriores que continuam abertos/pendentes, diz isso claramente, um a um, com a guia e há quantos dias. " +
+      "Se houver ocorrências ou pedidos (de contacto ou de documentos) de dias anteriores que continuam abertos/pendentes, diz isso claramente, um a um, com a guia e há quantos dias. " +
       "Regras: usa APENAS os factos fornecidos; não inventes números, nomes, matrículas, horas nem causas; não acrescentes conselhos genéricos. " +
       "Formato: primeira linha exatamente igual ao título dado; depois uma linha 'Atenção:' com o que precisa de seguimento (se houver); depois tópicos curtos começados por '• '. " +
       "Máximo 200 palavras. Sem saudações, sem despedida, sem assinatura, sem markdown (nada de ** nem #)." },
