@@ -155,7 +155,7 @@ function espaco(f){
   el.className="dica"+(!f.r2&&f.naBaseDados>300*1048576?" alerta":"");
 }
 /* ---- Apagar dados (testes ou registos antigos) ---- */
-const APPS_L=[["pneus","Incompletos (pneus)"],["chegadas","Horários (chegadas e saídas)"],["penalizacoes","Penalizações"],["frota","Frota"],["ocorrencias","Ocorrências (com fotografias)"],["contactos","Pedidos de contacto"],["turno","Mural (com fotografias)"],["codigos","Códigos e opções de pneus (comuns a todos os armazéns)"]];
+const APPS_L=[["pneus","Incompletos (pneus)"],["chegadas","Horários (chegadas e saídas)"],["penalizacoes","Penalizações"],["frota","Frota"],["ocorrencias","Ocorrências (com fotografias)"],["contactos","Pedidos de contacto"],["resumos","Resumos do dia"],["turno","Mural (com fotografias)"],["codigos","Códigos e opções de pneus (comuns a todos os armazéns)"]];
 let planoL=null;
 const chk=(cls,v,txt,el)=>{const l=document.createElement("label");l.className="chk";const c=document.createElement("input");c.type="checkbox";c.value=v;c.className=cls;c.onchange=()=>{planoL=null;botaoL();};l.append(c," "+txt);el.appendChild(l);return c;};
 function desenharLimpar(){

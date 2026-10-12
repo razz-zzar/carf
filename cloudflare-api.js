@@ -13,12 +13,12 @@
 // 6. Fotografias no R2 (recomendado; sem isto ficam na base de dados D1, que tem só 500 MB):
 //      R2 → Create bucket → nome "ops-carf-fotos" → Create
 //      No worker: Settings → Bindings → Add → R2 bucket → nome da variável "FOTOS" → bucket "ops-carf-fotos" → Deploy
-// 7. Resumo do dia com IA (Mural → "Resumo do dia"; grátis até ~60 resumos/dia no plano gratuito):
+// 7. Resumo do dia com IA (app Resumos; grátis até ~60 resumos/dia no plano gratuito):
 //      No worker: Settings → Bindings → Add → Workers AI → nome da variável "AI" → Deploy
 // 8. Testar: https://ops-carf-api.<conta>.workers.dev/ deve mostrar {"ok":true,...} ("fotos":"r2" se o R2 estiver ligado)
 // As tabelas da base de dados criam-se sozinhas no primeiro pedido.
 
-const VERSAO = 10;
+const VERSAO = 11;
 const ORIGENS = [
   "https://razz-zzar.github.io",
   "https://raw.githack.com",
@@ -26,7 +26,7 @@ const ORIGENS = [
   "http://localhost:8000",
   "http://127.0.0.1:8000",
 ];
-const APPS = new Set(["pneus", "chegadas", "penalizacoes", "frota", "ocorrencias", "contactos", "turno", "codigos"]);
+const APPS = new Set(["pneus", "chegadas", "penalizacoes", "frota", "ocorrencias", "contactos", "turno", "codigos", "resumos"]);
 // Apps partilhadas por TODOS os armazéns (ex. códigos de pneus aprendidos): guardadas no polo "*"
 const GLOBAIS = new Set(["codigos"]);
 const poloDe = (app, s) => GLOBAIS.has(app) ? "*" : s.polo.id;
@@ -333,15 +333,25 @@ async function bloqueado(env, chave, max, janelaSeg) {
 }
 const eur = n => (Math.round(n * 100) / 100).toFixed(2).replace(".", ",") + " €";
 const corta = (t, n) => { t = String(t || "").replace(/\s+/g, " ").trim(); return t.length > n ? t.slice(0, n - 1) + "…" : t; };
-function factosDoDia(dia, cfg, linhas) {
+function factosDoDia(dia, cfg, linhas, anteriores) {
   const por = {}; for (const l of linhas) { let d = {}; try { d = JSON.parse(l.dados); } catch (e) {} (por[l.app] = por[l.app] || []).push({ ...d, _autor: l.autor, _dia: l.dia }); }
   const F = [], atencao = [];
   const temDia = linhas.some(l => l.app !== "frota" && l.dia === dia && !(l.app === "turno" && /"k":"p"/.test(l.dados)));
-  if (!temDia) return { factos: [], atencao: [] };
+  /* Ocorrências e pedidos de contacto de dias anteriores que no fim deste dia continuavam por resolver */
+  const fimDia = d => !d || ((lisboa(d) || {}).dia || "") > dia;
+  const desde = d => { const a = Date.UTC(+d.slice(0, 4), +d.slice(5, 7) - 1, +d.slice(8, 10)), b = Date.UTC(+dia.slice(0, 4), +dia.slice(5, 7) - 1, +dia.slice(8, 10));
+    const n = Math.round((b - a) / 86400000); return d.slice(8) + "/" + d.slice(5, 7) + ", há " + n + " dia" + (n > 1 ? "s" : ""); };
+  const ant = { ocorrencias: [], contactos: [] };
+  for (const l of anteriores || []) { let d = {}; try { d = JSON.parse(l.dados); } catch (e) {}
+    if (l.app === "ocorrencias" && (d.estado !== "resolvida" || fimDia(d.resolvidoEm))) ant.ocorrencias.push({ ...d, _dia: l.dia });
+    if (l.app === "contactos" && (d.estado !== "resolvido" || fimDia(d.resolvidoEm))) ant.contactos.push({ ...d, _dia: l.dia }); }
+  ant.ocorrencias.sort((a, b) => a._dia.localeCompare(b._dia)); ant.contactos.sort((a, b) => a._dia.localeCompare(b._dia));
+  if (!temDia && !ant.ocorrencias.length && !ant.contactos.length) return { factos: [], atencao: [] };
   // Horários
   const voltasC = (cfg.voltasC || []).map(String), voltasS = (cfg.voltasS || []).map(String), extra = new Set((cfg.interruptor || []).map(String)), prev = cfg.previsoes || {};
   const ch = {}, sa = {}; for (const r of (por.chegadas || [])) { if (r._dia !== dia || !r.volta) continue; (r.modo === "s" ? sa : ch)[String(r.volta)] = r.t; }
-  if (voltasC.length || Object.keys(ch).length) {
+  const temHorarios = Object.keys(ch).length || Object.keys(sa).length;  /* sem nenhum registo nesse dia não se lista "0 de N" */
+  if (temHorarios && (voltasC.length || Object.keys(ch).length)) {
     const contaC = voltasC.filter(v => !extra.has(v)), chegaram = contaC.filter(v => ch[v]), faltam = contaC.filter(v => !ch[v]);
     F.push("Chegadas: " + chegaram.length + " de " + contaC.length + " voltas." + (faltam.length ? " Sem chegada registada: " + faltam.join(", ") + "." : ""));
     const atr = [];
@@ -352,7 +362,7 @@ function factosDoDia(dia, cfg, linhas) {
       atencao.push(atr.length + " volta" + (atr.length > 1 ? "s" : "") + " atrasada" + (atr.length > 1 ? "s" : "")); }
     if (faltam.length) atencao.push(faltam.length + " volta" + (faltam.length > 1 ? "s" : "") + " sem chegada registada");
   }
-  if (voltasS.length || Object.keys(sa).length) {
+  if (temHorarios && (voltasS.length || Object.keys(sa).length)) {
     const sairam = voltasS.filter(v => sa[v]), semS = voltasS.filter(v => !sa[v]);
     F.push("Saídas: " + sairam.length + " de " + voltasS.length + " voltas." + (semS.length ? " Sem saída registada: " + semS.join(", ") + "." : ""));
   }
@@ -376,12 +386,22 @@ function factosDoDia(dia, cfg, linhas) {
     F.push("Ocorrências registadas: " + oc.length + (ab.length ? " (" + ab.length + (ab.length > 1 ? " ainda abertas)" : " ainda aberta)") : " (todas resolvidas)") + ". " + oc.map(r => (r.tipo || "Ocorrência") + " — guia " + (r.guia || "?") + (r.cliente ? ", " + r.cliente : "") + (r.estado === "resolvida" ? " (resolvida)" : " (aberta)")).join("; ") + ".");
     if (ab.length) atencao.push(ab.length + " ocorrência" + (ab.length > 1 ? "s" : "") + " aberta" + (ab.length > 1 ? "s" : ""));
   }
+  if (ant.ocorrencias.length) {
+    const n = ant.ocorrencias.length;
+    F.push("Ocorrências de dias anteriores que CONTINUAM ABERTAS: " + ant.ocorrencias.slice(0, 15).map(r => (r.tipo || "Ocorrência") + " — guia " + (r.guia || "?") + (r.cliente ? ", " + r.cliente : "") + " (aberta desde " + desde(r._dia) + ")").join("; ") + (n > 15 ? "; e mais " + (n - 15) : "") + ".");
+    atencao.push(n + " ocorrência" + (n > 1 ? "s" : "") + " de dias anteriores ainda aberta" + (n > 1 ? "s" : ""));
+  }
   // Pedidos de contacto
   const co = (por.contactos || []).filter(r => r._dia === dia);
   if (co.length) {
     const pend = co.filter(r => r.estado !== "resolvido");
     F.push("Pedidos de contacto: " + co.length + (pend.length ? " (" + pend.length + " à espera de contacto: guia" + (pend.length > 1 ? "s " : " ") + pend.map(r => r.guia).join(", ") + ")" : " (todos com contacto recebido)") + ".");
     if (pend.length) atencao.push(pend.length + " pedido" + (pend.length > 1 ? "s" : "") + " de contacto pendente" + (pend.length > 1 ? "s" : ""));
+  }
+  if (ant.contactos.length) {
+    const n = ant.contactos.length;
+    F.push("Pedidos de contacto de dias anteriores que CONTINUAM PENDENTES: " + ant.contactos.slice(0, 15).map(r => "guia " + (r.guia || "?") + (r.cliente ? " (" + r.cliente + ")" : "") + ", pedido a " + desde(r._dia)).join("; ") + (n > 15 ? "; e mais " + (n - 15) : "") + ".");
+    atencao.push(n + " pedido" + (n > 1 ? "s" : "") + " de contacto de dias anteriores ainda pendente" + (n > 1 ? "s" : ""));
   }
   // Frota: viaturas na oficina nesse dia (entraram até esse dia e ainda lá estão)
   const fr = por.frota || [], id2 = {}; for (const v of fr) if (v.id) id2[v.id] = v;
@@ -413,16 +433,21 @@ async function resumoDia(request, env, cors, s) {
   const r = await env.DB.prepare(
     "SELECT app, dia, dados, autor FROM registos WHERE polo = ? AND apagado = 0 AND app IN ('chegadas','pneus','penalizacoes','ocorrencias','contactos','turno','frota') AND (dia = ? OR app = 'frota') LIMIT 3000"
   ).bind(s.polo.id, dia).all();
-  const cfg = configDe(s.polo), f = factosDoDia(dia, cfg, r.results || []);
+  const inicio = new Date(Date.UTC(+dia.slice(0, 4), +dia.slice(5, 7) - 1, +dia.slice(8, 10)) - 90 * 86400000).toISOString().slice(0, 10);
+  const ra = await env.DB.prepare(
+    "SELECT app, dia, dados FROM registos WHERE polo = ? AND apagado = 0 AND app IN ('ocorrencias','contactos') AND dia < ? AND dia >= ? LIMIT 2000"
+  ).bind(s.polo.id, dia, inicio).all();
+  const cfg = configDe(s.polo), f = factosDoDia(dia, cfg, r.results || [], ra.results || []);
   const titulo = "Resumo de " + dia.slice(8) + "/" + dia.slice(5, 7) + "/" + dia.slice(0, 4) + " — " + s.polo.nome;
   const simples = resumoSimples(titulo, f);
   if (!f.factos.length) return resposta(cors, { texto: simples, ia: false, motivo: "sem registos", factos: [] });
   if (!env.AI) return resposta(cors, { texto: simples, ia: false, motivo: "IA não ligada no Cloudflare", factos: f.factos });
   const mensagens = [
     { role: "system", content: "És o assistente de operações dos armazéns da CARF, uma empresa de transportes. Escreves em português de Portugal (nunca do Brasil) o resumo de um dia para a passagem de turno entre supervisores. " +
+      "Se houver ocorrências ou pedidos de contacto de dias anteriores que continuam abertos/pendentes, diz isso claramente, um a um, com a guia e há quantos dias. " +
       "Regras: usa APENAS os factos fornecidos; não inventes números, nomes, matrículas, horas nem causas; não acrescentes conselhos genéricos. " +
       "Formato: primeira linha exatamente igual ao título dado; depois uma linha 'Atenção:' com o que precisa de seguimento (se houver); depois tópicos curtos começados por '• '. " +
-      "Máximo 170 palavras. Sem saudações, sem despedida, sem assinatura, sem markdown (nada de ** nem #)." },
+      "Máximo 200 palavras. Sem saudações, sem despedida, sem assinatura, sem markdown (nada de ** nem #)." },
     { role: "user", content: "Título: " + titulo + "\nPontos de atenção: " + (f.atencao.join(", ") || "nenhum") + "\nFactos do dia:\n" + f.factos.map(x => "- " + x).join("\n") }
   ];
   for (const modelo of MODELOS_IA) {
@@ -432,7 +457,7 @@ async function resumoDia(request, env, cors, s) {
       if (t.length > 40) return resposta(cors, { texto: t.slice(0, 4000), ia: true, modelo, factos: f.factos });
     } catch (e) { /* sem quota ou modelo indisponível: tenta o seguinte */ }
   }
-  return resposta(cors, { texto: simples, ia: false, motivo: "a IA não respondeu (limite diário gratuito ou serviço indisponível)", factos: f.factos });
+  return resposta(cors, { texto: simples, ia: false, motivo: "a IA não respondeu: limite diário gratuito esgotado ou serviço indisponível", factos: f.factos });
 }
 
 async function gestaoLimpar(request, env, cors) {
