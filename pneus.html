@@ -103,21 +103,9 @@ input.mono{font-family:var(--mono);letter-spacing:.02em}
 .lido b{display:block;color:var(--fg);font:500 13px var(--mono);overflow-wrap:anywhere}
 .lido a{color:var(--green)}
 .com-scan{display:grid;grid-template-columns:1fr 48px;gap:6px}
-.com-scan input{min-width:0}
 .scan-mini{display:grid;place-items:center;border:2px dashed var(--green);background:transparent;color:var(--green);border-radius:8px;cursor:pointer;padding:0}
 .scan-mini:active{background:rgba(185,212,6,.12)}
-.scan{position:fixed;inset:0;z-index:50;background:#000;display:flex;flex-direction:column;gap:12px;padding:calc(12px + env(safe-area-inset-top,0px)) 16px calc(16px + env(safe-area-inset-bottom,0px))}
-.scan-top{display:flex;justify-content:space-between;align-items:center;gap:12px}
-.scan-top b{font:700 22px var(--display);text-transform:uppercase;letter-spacing:.05em;color:var(--green)}
-.scan-x{background:none;border:1px solid var(--line);color:var(--fg);border-radius:8px;padding:10px 14px;font:600 15px var(--body);cursor:pointer}
-.scan-vid{position:relative;flex:1;min-height:0;border-radius:12px;overflow:hidden;background:#111}
-.scan-vid video{width:100%;height:100%;object-fit:cover;display:block}
-.scan-mira{position:absolute;inset:32% 7%;border:3px solid var(--green);border-radius:14px;box-shadow:0 0 0 100vmax rgba(0,0,0,.35);pointer-events:none}
-.scan-mira.qr{inset:auto;left:50%;top:50%;width:68%;aspect-ratio:1/1;transform:translate(-50%,-50%)}
-.scan-est{margin:0;min-height:40px;font-size:15px;text-align:center;color:var(--fg)}
-.scan-est.err{color:var(--danger)}
-.scan-man{display:grid;grid-template-columns:1fr auto;gap:8px}
-.scan-man .btn{padding:12px 18px;font-size:17px}
+.com-scan input{min-width:0}
 </style>
 <link rel="stylesheet" href="carf-tema.css">
 <script src="carf-tema.js"></script>
@@ -620,24 +608,14 @@ try{navigator.storage&&navigator.storage.persist&&navigator.storage.persist();}c
 if("serviceWorker" in navigator&&location.protocol!=="file:"){navigator.serviceWorker.register("sw.js").catch(()=>{});}
 </script>
 
-<div class="scan" id="scan" hidden role="dialog" aria-modal="true" aria-labelledby="scanTit">
-  <div class="scan-top"><b id="scanTit">Ler etiqueta</b><button type="button" class="scan-x" id="scanFechar">Fechar</button></div>
-  <div class="scan-vid"><video id="scanVideo" playsinline muted></video><div class="scan-mira"></div></div>
-  <p class="scan-est" id="scanEstado" role="status">A abrir a câmara…</p>
-  <button type="button" class="btn btn-ghost" id="scanLuz" hidden>Ligar lanterna</button>
-  <form class="scan-man" id="scanManual"><input type="text" id="scanTexto" class="mono" placeholder="Ou escreva o código" autocomplete="off" aria-label="Código da etiqueta"><button class="btn btn-main" type="submit">OK</button></form>
-</div>
-
 <script>
 /* ===== Leitor de etiquetas: câmara → QR / código de barras → preenche o pneu =====
    1) Códigos já conhecidos neste telemóvel (aprendidos ao guardar) → preenche tudo.
    2) QR da etiqueta europeia (EPREL) → tenta obter marca/modelo/medida da base de dados da UE.
    3) Texto com medida (ex. 205/55 R16 91V XL) e marca → preenche o que encontrar.
    4) Código novo → fica associado ao pneu quando a guia for guardada; da próxima vez preenche sozinho. */
-const LIB_LEITOR="https://cdn.jsdelivr.net/npm/barcode-detector@2.3.1/pure/+esm";
-const FORMATOS=["qr_code","ean_13","ean_8","code_128","code_39","upc_a","upc_e","itf","data_matrix"];
 let CODIGOS={};try{CODIGOS=JSON.parse(localStorage.getItem("pneus_codigos")||"{}")||{};}catch(e){}
-let codigoAtual="",stream=null,detetor=null,aLer=false,luz=false,lido=false,modoLeitor="pneu";
+let codigoAtual="",modoLeitor="pneu";
 
 function gravarCodigos(){try{localStorage.setItem("pneus_codigos",JSON.stringify(CODIGOS));}catch(e){}}
 function chaveCodigo(c){c=String(c||"").trim();const ep=idEprel(c);return ep?"EPREL:"+ep:c;}
@@ -780,45 +758,12 @@ async function tratarCodigo(cod){
 }
 
 /* ---- Câmara ---- */
-function estado(t,err){const e=$("scanEstado");e.textContent=t;e.className="scan-est"+(err?" err":"");}
-async function obterDetetor(){
-  if(detetor)return detetor;
-  let BD=window.BarcodeDetector;
-  if(BD){try{const sup=await BD.getSupportedFormats();const f=FORMATOS.filter(x=>sup.includes(x));if(f.includes("qr_code")){detetor=new BD({formats:f});return detetor;}}catch(e){}}
-  estado("A preparar o leitor (só da primeira vez)…");
-  const mod=await import(LIB_LEITOR);detetor=new mod.BarcodeDetector({formats:FORMATOS});return detetor;
-}
 const TEXTO_MODO={pneu:["Ler etiqueta","Aponte para o código QR ou de barras da etiqueta."],guia:["Ler guia","Aponte para o código de barras ou QR da guia de transporte."]};
 async function abrirLeitor(modo){
-  modoLeitor=modo==="guia"?"guia":"pneu";$("scanTit").textContent=TEXTO_MODO[modoLeitor][0];document.querySelector(".scan-mira").classList.toggle("qr",modoLeitor==="pneu");
-  $("scan").hidden=false;document.body.style.overflow="hidden";lido=false;luz=false;$("scanLuz").hidden=true;$("scanTexto").value="";
-  estado("A abrir a câmara…");
-  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){estado("Este navegador não dá acesso à câmara. Escreva o código em baixo.",true);return;}
-  try{
-    stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:"environment"},width:{ideal:1920},height:{ideal:1080}},audio:false});
-  }catch(e){estado(e&&e.name==="NotAllowedError"?"Sem autorização para usar a câmara. Autorize nas definições do navegador, ou escreva o código em baixo.":"Não foi possível abrir a câmara. Escreva o código em baixo.",true);return;}
-  if($("scan").hidden){pararCamara();return;}
-  const v=$("scanVideo");v.srcObject=stream;try{await v.play();}catch(e){}
-  try{const tr=stream.getVideoTracks()[0],cap=tr.getCapabilities?tr.getCapabilities():{};if(cap.torch)$("scanLuz").hidden=false;
-    if(cap.focusMode&&cap.focusMode.includes("continuous"))tr.applyConstraints({advanced:[{focusMode:"continuous"}]}).catch(()=>{});}catch(e){}
-  if(window.SJT_LEITOR)SJT_LEITOR.focarAoTocar(document.querySelector(".scan-vid"),v,()=>stream&&stream.getVideoTracks()[0]);
-  try{await obterDetetor();}catch(e){estado("Não foi possível carregar o leitor (precisa de internet da primeira vez). Escreva o código em baixo.",true);return;}
-  estado(TEXTO_MODO[modoLeitor][1]);
-  aLer=true;ciclo();
+  modoLeitor=modo==="guia"?"guia":"pneu";
+  const txt=await SJT_LEITOR.abrir({titulo:TEXTO_MODO[modoLeitor][0],texto:TEXTO_MODO[modoLeitor][1],preferir:modoLeitor==="guia"?"barras":"qr"});
+  if(txt)entregar(txt);else $(ultimoBotao).focus();
 }
-async function ciclo(){
-  const v=$("scanVideo");
-  while(aLer&&!lido){
-    if(v.readyState>=2){
-      try{const r=await detetor.detect(v);
-        if(r&&r.length){const pref=modoLeitor==="guia"?(r.find(x=>x.format!=="qr_code")||r[0]):(r.find(x=>x.format==="qr_code")||r[0]);lido=true;if(navigator.vibrate)navigator.vibrate(80);fecharLeitor();entregar(pref.rawValue);return;}
-      }catch(e){}
-    }
-    await new Promise(ok=>setTimeout(ok,180));
-  }
-}
-function pararCamara(){aLer=false;if(stream){stream.getTracks().forEach(t=>t.stop());stream=null;}$("scanVideo").srcObject=null;}
-function fecharLeitor(){pararCamara();$("scan").hidden=true;document.body.style.overflow="";}
 $("ler").onclick=()=>abrirLeitor("pneu");
 $("lerGuia").onclick=()=>abrirLeitor("guia");
 let ultimoBotao="ler";$("ler").addEventListener("click",()=>ultimoBotao="ler");$("lerGuia").addEventListener("click",()=>ultimoBotao="lerGuia");
@@ -844,11 +789,6 @@ function tratarGuia(raw){
   msg("msg","Nº da guia preenchido pelo "+r.origem+": "+r.num+extra+"."+aviso,!aviso);
   $("guia").scrollIntoView({behavior:"smooth",block:"center"});
 }
-$("scanFechar").onclick=()=>{fecharLeitor();$(ultimoBotao).focus();};
-document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("scan").hidden){fecharLeitor();$(ultimoBotao).focus();}});
-$("scanLuz").onclick=async()=>{try{const tr=stream&&stream.getVideoTracks()[0];if(!tr)return;luz=!luz;await tr.applyConstraints({advanced:[{torch:luz}]});$("scanLuz").textContent=luz?"Desligar lanterna":"Ligar lanterna";}catch(e){$("scanLuz").hidden=true;}};
-$("scanManual").addEventListener("submit",e=>{e.preventDefault();const c=$("scanTexto").value.trim();if(!c){$("scanTexto").focus();return;}fecharLeitor();entregar(c);});
-document.addEventListener("visibilitychange",()=>{if(document.hidden&&!$("scan").hidden)fecharLeitor();});
 </script>
 </body>
 </html>
