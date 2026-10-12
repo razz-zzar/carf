@@ -13,10 +13,12 @@
 // 6. Fotografias no R2 (recomendado; sem isto ficam na base de dados D1, que tem só 500 MB):
 //      R2 → Create bucket → nome "ops-carf-fotos" → Create
 //      No worker: Settings → Bindings → Add → R2 bucket → nome da variável "FOTOS" → bucket "ops-carf-fotos" → Deploy
-// 7. Testar: https://ops-carf-api.<conta>.workers.dev/ deve mostrar {"ok":true,...} ("fotos":"r2" se o R2 estiver ligado)
+// 7. Resumo do dia com IA (Mural → "Resumo do dia"; grátis até ~60 resumos/dia no plano gratuito):
+//      No worker: Settings → Bindings → Add → Workers AI → nome da variável "AI" → Deploy
+// 8. Testar: https://ops-carf-api.<conta>.workers.dev/ deve mostrar {"ok":true,...} ("fotos":"r2" se o R2 estiver ligado)
 // As tabelas da base de dados criam-se sozinhas no primeiro pedido.
 
-const VERSAO = 9;
+const VERSAO = 10;
 const ORIGENS = [
   "https://razz-zzar.github.io",
   "https://raw.githack.com",
@@ -311,6 +313,128 @@ async function apagarFotos(request, env, cors, s) {
 // {polo: "sjt" | "*", apps: ["pneus", ...], de: "AAAA-MM-DD"?, ate: "AAAA-MM-DD"?, simular: true?}
 // O dia de cada registo é o seu campo "dia" (ou a data em que foi criado). "simular" só conta o que seria apagado.
 // Marca os registos como apagados (os telemóveis recebem a limpeza) e apaga as fotografias desses registos.
+/* ---------- Resumo do dia (Mural) ----------
+   Os números calculam-se aqui, a partir dos registos do armazém nesse dia; a IA (Workers AI) só escreve o texto.
+   Sem IA ligada (ou sem quota), devolve o resumo simples feito só com os números. */
+const MODELOS_IA = ["@cf/meta/llama-3.3-70b-instruct-fp8-fast", "@cf/meta/llama-3.1-8b-instruct-fp8"];
+const FMT_LX = new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Lisbon", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
+function lisboa(iso) {
+  const d = new Date(iso); if (isNaN(d)) return null;
+  const p = Object.fromEntries(FMT_LX.formatToParts(d).map(x => [x.type, x.value]));
+  return { dia: p.year + "-" + p.month + "-" + p.day, hora: p.hour + ":" + p.minute, min: +p.hour * 60 + +p.minute };
+}
+/* Limite de pedidos por chave numa janela (usa a tabela das tentativas) */
+async function bloqueado(env, chave, max, janelaSeg) {
+  const desde = Date.now() - janelaSeg * 1000;
+  const n = await env.DB.prepare("SELECT COUNT(*) AS n FROM tentativas WHERE chave = ? AND t > ?").bind(chave, desde).first();
+  if (n && n.n >= max) return true;
+  await env.DB.prepare("INSERT INTO tentativas (chave, t) VALUES (?, ?)").bind(chave, Date.now()).run();
+  return false;
+}
+const eur = n => (Math.round(n * 100) / 100).toFixed(2).replace(".", ",") + " €";
+const corta = (t, n) => { t = String(t || "").replace(/\s+/g, " ").trim(); return t.length > n ? t.slice(0, n - 1) + "…" : t; };
+function factosDoDia(dia, cfg, linhas) {
+  const por = {}; for (const l of linhas) { let d = {}; try { d = JSON.parse(l.dados); } catch (e) {} (por[l.app] = por[l.app] || []).push({ ...d, _autor: l.autor, _dia: l.dia }); }
+  const F = [], atencao = [];
+  const temDia = linhas.some(l => l.app !== "frota" && l.dia === dia && !(l.app === "turno" && /"k":"p"/.test(l.dados)));
+  if (!temDia) return { factos: [], atencao: [] };
+  // Horários
+  const voltasC = (cfg.voltasC || []).map(String), voltasS = (cfg.voltasS || []).map(String), extra = new Set((cfg.interruptor || []).map(String)), prev = cfg.previsoes || {};
+  const ch = {}, sa = {}; for (const r of (por.chegadas || [])) { if (r._dia !== dia || !r.volta) continue; (r.modo === "s" ? sa : ch)[String(r.volta)] = r.t; }
+  if (voltasC.length || Object.keys(ch).length) {
+    const contaC = voltasC.filter(v => !extra.has(v)), chegaram = contaC.filter(v => ch[v]), faltam = contaC.filter(v => !ch[v]);
+    F.push("Chegadas: " + chegaram.length + " de " + contaC.length + " voltas." + (faltam.length ? " Sem chegada registada: " + faltam.join(", ") + "." : ""));
+    const atr = [];
+    for (const v of Object.keys(ch)) { const p = /^(\d{1,2}):(\d{2})$/.exec(prev[v] || ""), lx = lisboa(ch[v]); if (!p || !lx) continue;
+      const x = lx.min - (+p[1] * 60 + +p[2]); if (x > 5) atr.push({ v, x, h: lx.hora, p: prev[v] }); }
+    atr.sort((a, b) => b.x - a.x);
+    if (atr.length) { F.push("Voltas atrasadas (mais de 5 min): " + atr.map(a => a.v + " chegou " + a.h + ", prevista " + a.p + " (+" + a.x + " min)").join("; ") + ".");
+      atencao.push(atr.length + " volta" + (atr.length > 1 ? "s" : "") + " atrasada" + (atr.length > 1 ? "s" : "")); }
+    if (faltam.length) atencao.push(faltam.length + " volta" + (faltam.length > 1 ? "s" : "") + " sem chegada registada");
+  }
+  if (voltasS.length || Object.keys(sa).length) {
+    const sairam = voltasS.filter(v => sa[v]), semS = voltasS.filter(v => !sa[v]);
+    F.push("Saídas: " + sairam.length + " de " + voltasS.length + " voltas." + (semS.length ? " Sem saída registada: " + semS.join(", ") + "." : ""));
+  }
+  // Incompletos (pneus em falta)
+  const pn = (por.pneus || []).filter(r => r._dia === dia);
+  if (pn.length) {
+    const porV = {}; for (const r of pn) { const k = r.volta || "?"; (porV[k] = porV[k] || []).push((+r.qtd || 1) + "× " + [r.marca, r.medida].filter(Boolean).join(" ")); }
+    const tot = pn.reduce((a, r) => a + (+r.qtd || 1), 0);
+    F.push("Pneus em falta (incompletos): " + tot + " pneu" + (tot > 1 ? "s" : "") + " — " + Object.entries(porV).map(([v, l]) => "volta " + v + ": " + l.join(", ")).join("; ") + ".");
+  }
+  // Penalizações
+  const pe = (por.penalizacoes || []).filter(r => r._dia === dia);
+  if (pe.length) {
+    const soma = pe.reduce((a, r) => a + (typeof r.valor === "number" ? r.valor : 0), 0);
+    F.push("Penalizações: " + pe.length + ", total " + eur(soma) + ". " + pe.map(r => "volta " + (r.volta || "?") + (r.sub ? " (" + r.sub + ")" : "") + ": " + corta(r.motivo, 60) + " — " + (typeof r.valor === "number" ? eur(r.valor) : (r.valor || "sem valor")) + (r.motorista ? ", motorista " + r.motorista : "")).join("; ") + ".");
+  }
+  // Ocorrências
+  const oc = (por.ocorrencias || []).filter(r => r._dia === dia);
+  if (oc.length) {
+    const ab = oc.filter(r => r.estado !== "resolvida");
+    F.push("Ocorrências registadas: " + oc.length + (ab.length ? " (" + ab.length + (ab.length > 1 ? " ainda abertas)" : " ainda aberta)") : " (todas resolvidas)") + ". " + oc.map(r => (r.tipo || "Ocorrência") + " — guia " + (r.guia || "?") + (r.cliente ? ", " + r.cliente : "") + (r.estado === "resolvida" ? " (resolvida)" : " (aberta)")).join("; ") + ".");
+    if (ab.length) atencao.push(ab.length + " ocorrência" + (ab.length > 1 ? "s" : "") + " aberta" + (ab.length > 1 ? "s" : ""));
+  }
+  // Pedidos de contacto
+  const co = (por.contactos || []).filter(r => r._dia === dia);
+  if (co.length) {
+    const pend = co.filter(r => r.estado !== "resolvido");
+    F.push("Pedidos de contacto: " + co.length + (pend.length ? " (" + pend.length + " à espera de contacto: guia" + (pend.length > 1 ? "s " : " ") + pend.map(r => r.guia).join(", ") + ")" : " (todos com contacto recebido)") + ".");
+    if (pend.length) atencao.push(pend.length + " pedido" + (pend.length > 1 ? "s" : "") + " de contacto pendente" + (pend.length > 1 ? "s" : ""));
+  }
+  // Frota: viaturas na oficina nesse dia (entraram até esse dia e ainda lá estão)
+  const fr = por.frota || [], id2 = {}; for (const v of fr) if (v.id) id2[v.id] = v;
+  const of = fr.filter(v => v.oficina && v.oficina.desde && (lisboa(v.oficina.desde) || {}).dia <= dia);
+  if (of.length) {
+    F.push("Viaturas na oficina: " + of.map(v => { const c = v.oficina.cortesia && id2[v.oficina.cortesia]; const d = lisboa(v.oficina.desde);
+      return v.matricula + " (" + (v.marca || "") + ", desde " + (d ? d.dia.slice(8) + "/" + d.dia.slice(5, 7) : "?") + (c ? ", carro de cortesia " + c.matricula : ", sem carro de cortesia") + ")"; }).join("; ") + ".");
+    atencao.push(of.length + " viatura" + (of.length > 1 ? "s" : "") + " na oficina");
+  }
+  // Mural: mensagens desse dia (sem resumos anteriores)
+  const mu = (por.turno || []).filter(r => r._dia === dia && r.k === "m" && !r.resumo);
+  if (mu.length) {
+    const imp = mu.filter(r => r.importante || r.afixada);
+    const outras = mu.filter(r => !(r.importante || r.afixada)).slice(-10);
+    F.push("Mensagens no Mural: " + mu.length + ". " + (imp.length ? "Importantes/afixadas: " + imp.slice(0, 8).map(r => "«" + corta(r.texto, 160) + "» (" + (r._autor || "?") + ")").join("; ") + ". " : "") +
+      (outras.length ? "Outras: " + outras.map(r => "«" + corta(r.texto, 120) + "»").join("; ") + "." : ""));
+  }
+  return { factos: F, atencao };
+}
+function resumoSimples(titulo, f) {
+  if (!f.factos.length) return titulo + "\nSem registos neste dia.";
+  return titulo + "\n" + (f.atencao.length ? "Atenção: " + f.atencao.join(", ") + ".\n" : "") + f.factos.map(x => "• " + x).join("\n");
+}
+async function resumoDia(request, env, cors, s) {
+  let b; try { b = await request.json(); } catch (e) { return erro(cors, 400, "pedido", "Pedido inválido."); }
+  const dia = String(b.dia || "");
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dia)) return erro(cors, 400, "dia", "Dia inválido.");
+  if (await bloqueado(env, "resumo:" + s.polo.id, 12, 900)) return erro(cors, 429, "limite", "Demasiados resumos pedidos nos últimos 15 minutos. Tente daqui a pouco.");
+  const r = await env.DB.prepare(
+    "SELECT app, dia, dados, autor FROM registos WHERE polo = ? AND apagado = 0 AND app IN ('chegadas','pneus','penalizacoes','ocorrencias','contactos','turno','frota') AND (dia = ? OR app = 'frota') LIMIT 3000"
+  ).bind(s.polo.id, dia).all();
+  const cfg = configDe(s.polo), f = factosDoDia(dia, cfg, r.results || []);
+  const titulo = "Resumo de " + dia.slice(8) + "/" + dia.slice(5, 7) + "/" + dia.slice(0, 4) + " — " + s.polo.nome;
+  const simples = resumoSimples(titulo, f);
+  if (!f.factos.length) return resposta(cors, { texto: simples, ia: false, motivo: "sem registos", factos: [] });
+  if (!env.AI) return resposta(cors, { texto: simples, ia: false, motivo: "IA não ligada no Cloudflare", factos: f.factos });
+  const mensagens = [
+    { role: "system", content: "És o assistente de operações dos armazéns da CARF, uma empresa de transportes. Escreves em português de Portugal (nunca do Brasil) o resumo de um dia para a passagem de turno entre supervisores. " +
+      "Regras: usa APENAS os factos fornecidos; não inventes números, nomes, matrículas, horas nem causas; não acrescentes conselhos genéricos. " +
+      "Formato: primeira linha exatamente igual ao título dado; depois uma linha 'Atenção:' com o que precisa de seguimento (se houver); depois tópicos curtos começados por '• '. " +
+      "Máximo 170 palavras. Sem saudações, sem despedida, sem assinatura, sem markdown (nada de ** nem #)." },
+    { role: "user", content: "Título: " + titulo + "\nPontos de atenção: " + (f.atencao.join(", ") || "nenhum") + "\nFactos do dia:\n" + f.factos.map(x => "- " + x).join("\n") }
+  ];
+  for (const modelo of MODELOS_IA) {
+    try {
+      const out = await env.AI.run(modelo, { messages: mensagens, max_tokens: 700, temperature: 0.2 });
+      let t = String((out && (out.response || (out.result && out.result.response))) || "").replace(/\*\*/g, "").replace(/^#+\s*/gm, "").trim();
+      if (t.length > 40) return resposta(cors, { texto: t.slice(0, 4000), ia: true, modelo, factos: f.factos });
+    } catch (e) { /* sem quota ou modelo indisponível: tenta o seguinte */ }
+  }
+  return resposta(cors, { texto: simples, ia: false, motivo: "a IA não respondeu (limite diário gratuito ou serviço indisponível)", factos: f.factos });
+}
+
 async function gestaoLimpar(request, env, cors) {
   if (!env.ADMIN || !iguais(request.headers.get("X-Admin") || "", env.ADMIN)) {
     await pausa(600);
@@ -440,6 +564,7 @@ export default {
         return resposta(cors, { polo: { id: s.polo.id, nome: s.polo.nome }, nome: s.nome, config: configDe(s.polo) });
       if (caminho === "/registos" && request.method === "GET") return await listar(url, env, cors, s);
       if (caminho === "/registos" && request.method === "POST") return await gravar(request, env, cors, s);
+      if (caminho === "/resumo" && request.method === "POST") return await resumoDia(request, env, cors, s);
       if (caminho === "/fotos" && request.method === "POST") return await enviarFoto(request, url, env, cors, s);
       if (caminho === "/fotos/apagar" && request.method === "POST") return await apagarFotos(request, env, cors, s);
       if (caminho.startsWith("/fotos/") && request.method === "GET") return await lerFoto(decodeURIComponent(caminho.slice(7)), env, cors, s);

@@ -50,6 +50,10 @@ h2 span{font:600 15px var(--mono);color:var(--muted)}
 .registar{border:0;border-radius:10px;padding:16px;font:700 21px var(--display);letter-spacing:.06em;text-transform:uppercase;cursor:pointer;background:var(--green);color:var(--green-ink)}
 .registar:active{background:var(--green-dk)}
 .registar:disabled{background:var(--line);color:var(--muted);cursor:default}
+.res-l{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px}
+.res-l input{min-width:0;background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:10px;padding:10px 12px;font:600 17px var(--body);min-height:48px;color-scheme:inherit}
+.res-l .btn{white-space:nowrap}
+.btn:disabled{opacity:.55;cursor:default}
 .btn{border-radius:10px;padding:12px;font:700 16px var(--display);letter-spacing:.06em;text-transform:uppercase;cursor:pointer;background:transparent;color:var(--green);border:2px solid var(--green)}
 .msg{font-size:14px;min-height:20px}
 .msg.ok{color:var(--green)} .msg.err{color:var(--danger)}
@@ -149,6 +153,13 @@ h2 span{font:600 15px var(--mono);color:var(--muted)}
       <div style="min-width:0"><h1>Mural</h1><a class="voltar" href="./">‹ Início</a></div>
     </div>
   </header>
+
+  <section class="card" id="cResumo" aria-labelledby="t-res">
+    <h2 id="t-res">Resumo do dia</h2>
+    <div class="res-l"><input type="date" id="resDia" aria-label="Dia do resumo"><button type="button" class="btn" id="resGerar">Gerar resumo</button></div>
+    <div class="hint">Junta as chegadas e saídas, incompletos, penalizações, ocorrências, pedidos de contacto, viaturas na oficina e mensagens do dia escolhido, e escreve um resumo. O texto aparece em "Nova mensagem" para rever antes de publicar.</div>
+    <div class="msg" id="msgR" role="status"></div>
+  </section>
 
   <section class="card" aria-labelledby="t-novo">
     <h2 id="t-novo">Nova mensagem</h2>
@@ -328,6 +339,31 @@ function desenharNovas(){
   $("tirar").disabled=$("galeria").disabled=novas.length>=MAX_FOTOS;
 }
 const novoId=p=>p+Date.now().toString(36)+Math.random().toString(36).slice(2,6)+SJT.dispositivo().replace(/[^a-z0-9]/gi,"").slice(0,4);
+/* ---- Resumo do dia (a API junta os registos do dia e a IA escreve o texto) ---- */
+let resumoDe="",resumoInicio="";
+{const h=new Date(),hj=h.getFullYear()+"-"+String(h.getMonth()+1).padStart(2,"0")+"-"+String(h.getDate()).padStart(2,"0");$("resDia").value=hj;$("resDia").max=hj;}
+$("resGerar").onclick=async()=>{
+  const dia=$("resDia").value;
+  if(!dia){msg("msgR","Escolha o dia.",false);return;}
+  if(!navigator.onLine){msg("msgR","O resumo precisa de internet.",false);return;}
+  if($("texto").value.trim()&&!$("texto").value.startsWith(resumoInicio||"\u0000")){msg("msgR","A caixa de nova mensagem já tem texto. Publique-o ou apague-o antes de gerar o resumo.",false);return;}
+  $("resGerar").disabled=true;msg("msgR","A juntar os registos e a escrever o resumo…",true);
+  try{
+    await LIG.sincronizar().catch(()=>{});
+    const j=await SJT.pedido("/resumo",{metodo:"POST",corpo:{dia},token:S.token,tempo:45000});
+    if(j.motivo==="sem registos"){msg("msgR","Não há registos neste dia.",false);$("resGerar").disabled=false;return;}
+    resumoDe=dia;resumoInicio=String(j.texto||"").split("\n")[0];
+    $("texto").value=j.texto||"";$("c-texto").classList.remove("erro");
+    if(!afixar){afixar=true;tog("afixar",true);}
+    $("texto").style.height="auto";$("texto").style.height=Math.min(560,$("texto").scrollHeight+4)+"px";
+    msg("msgR",j.ia?"Resumo escrito pela IA a partir dos registos. Confirme em \u201cNova mensagem\u201d e publique.":
+      (j.motivo==="sem registos"?"Não há registos neste dia.":"Resumo feito só com os números — "+(j.motivo||"sem IA")+". Confirme e publique."),!!j.ia||j.motivo!=="sem registos");
+    $("texto").scrollIntoView({behavior:"smooth",block:"center"});
+  }catch(e){msg("msgR",e&&e.estado===404?"A API ainda não tem o resumo (falta a versão 10 no Cloudflare).":(e&&e.message)||"Não foi possível gerar o resumo.",false);}
+  $("resGerar").disabled=false;
+};
+$("texto").addEventListener("input",()=>{if(!$("texto").value.trim())resumoDe="";});
+
 $("publicar").onclick=async()=>{
   const texto=$("texto").value.trim();
   if(!texto){$("c-texto").classList.add("erro");msg("msg","Escreva a mensagem.",false);return;}
@@ -340,9 +376,10 @@ $("publicar").onclick=async()=>{
     /* quem é citado fica avisado, como numa menção */
     if(citar&&citar.c!==CHAVE&&!mencoes.some(p=>p.c===citar.c))mencoes.push({c:citar.c,n:citar.autor});
     const d={k:"m",t:agora.toISOString(),texto,mencoes,cita:citar?{...citar}:null,importante,afixada:afixar,afixadoPor:afixar?S.nome:"",fotos,vistos:{}};
+    if(resumoDe&&texto.startsWith(resumoInicio))d.resumo=resumoDe;  /* não entra nos resumos seguintes */
     if(!LIG.gravar(id,diaDe(agora),d))throw new Error("storage");
     novas.forEach(n=>URL.revokeObjectURL(n.url));novas=[];desenharNovas();
-    $("texto").value="";limparCitacao();importante=afixar=false;tog("importante",false);tog("afixar",false);
+    $("texto").value="";resumoDe="";limparCitacao();importante=afixar=false;tog("importante",false);tog("afixar",false);
     if(document.activeElement&&document.activeElement!==document.body)document.activeElement.blur();
     carregar();assinatura="";render();
     msg("msg","Mensagem publicada"+(d.afixada?" e afixada no topo":"")+(d.mencoes.length?", com menção a "+d.mencoes.map(p=>p.n).join(", "):"")+".",true);
