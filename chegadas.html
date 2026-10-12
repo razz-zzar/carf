@@ -142,6 +142,7 @@ h2{font-family:var(--display);font-size:20px;font-weight:700;text-transform:uppe
 
   <section class="card" id="exportar" hidden>
     <button class="btn enviar" id="email" type="button">Enviar Excel por email</button>
+    <button class="btn enviar" id="repartilhar" type="button" hidden>Partilhar ficheiro</button>
     <button class="btn" id="excel" type="button">Exportar Excel do dia</button>
     <div class="msg" id="msgX" role="status"></div>
       <div class="hint">O Excel inclui as chegadas e as saídas do dia.</div>
@@ -406,33 +407,41 @@ function gerarCsv(dia){
   return {texto:"\ufeff"+l.map(r=>r.map(x=>q(String(x))).join(";")).join("\r\n")+"\r\n",nome:`chegadas-saidas-${y}-${m}-${d}.csv`};
 }
 function saudacao(){const hh=new Date().getHours();return hh<13?"Bom dia":hh<20?"Boa tarde":"Boa noite";}
-async function copiar(t){try{await navigator.clipboard.writeText(t);return true;}catch(e){return false;}}
 function textoMail(dia){
   const [y,m,d]=dia.split("-"),ch=Object.keys(BD.c[dia]||{}).length,sa=Object.keys(BD.s[dia]||{}).length;
   return {assunto:"Chegadas e saídas | "+d+"/"+m+"/"+y+" | "+S.polo.nome,
     corpo:[saudacao()+",","","Segue em anexo o ficheiro com as horas de chegada e saída das voltas do polo de "+S.polo.nome+" do dia "+d+"/"+m+"/"+y+".","",
       "Chegadas registadas: "+ch+" de "+VOLTAS_C.length,"Saídas registadas: "+sa+" de "+VOLTAS_S.length,""].join("\n")};
 }
-$("email").onclick=async()=>{
+let partilhaPendente=null;
+$("email").onclick=()=>{
   const dia=$("dia").value||hoje(),x=gerarExcel(dia);
   if(!x){msg("msgX","Ainda não há chegadas nem saídas registadas neste dia.",false);return;}
   const {assunto,corpo}=textoMail(dia),para=((S.config||{}).emailHorarios||"").trim();
   const pode=f=>{try{return !!(navigator.share&&navigator.canShare&&navigator.canShare({files:[f]}));}catch(e){return false;}};
   let fic=new File([x.bytes],x.nome,{type:MIME_XLSX});
-  if(!pode(fic)){const c=gerarCsv(dia);fic=new File([c.texto],c.nome,{type:"text/csv"});}  /* alguns telemóveis só partilham CSV (abre no Excel) */
-  if(pode(fic)){
-    const copiado=para?await copiar(para):false;
-    try{await navigator.share({title:assunto,text:corpo,files:[fic]});
-      msg("msgX","Email preparado com o ficheiro "+fic.name+"."+(para?(copiado?" O destinatário ("+para+") está copiado: cole-o no campo Para.":" Destinatário: "+para+"."):" Este armazém ainda não tem email para horários definido na gestão."),true);return;}
-    catch(e){if(e&&e.name==="AbortError")return;}
-  }
-  /* sem partilha de ficheiros (computador): descarrega o Excel e abre o email preenchido */
-  const url=URL.createObjectURL(new Blob([x.bytes],{type:MIME_XLSX}));
-  const a=document.createElement("a");a.href=url;a.download=x.nome;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),15000);
+  if(!pode(fic)){const c=gerarCsv(dia);fic=new File([c.texto],c.nome,{type:"text/csv"});}  /* o Chrome no Android só partilha CSV (abre no Excel) */
+  if(pode(fic)){partilhar({fic,assunto,corpo,para});return;}
+  /* este navegador não partilha ficheiros: descarrega o Excel e abre o email preenchido */
+  descarregarX(x);
   const href="mailto:"+encodeURIComponent(para).replace(/%2C/gi,",").replace(/%40/g,"@")+"?subject="+encodeURIComponent(assunto)+"&body="+encodeURIComponent(corpo);
   setTimeout(()=>{const b=document.createElement("a");b.href=href;document.body.appendChild(b);b.click();b.remove();},500);
-  msg("msgX","Email aberto com destinatário, assunto e texto. O Excel foi descarregado ("+x.nome+"): anexe-o ao email.",true);
+  msg("msgX","Este navegador não deixa anexar ficheiros automaticamente. O Excel foi descarregado ("+x.nome+") e o email aberto: anexe-o no clipe do email. (No Android use o Chrome; no iPhone o Safari.)",false);
 };
+function descarregarX(x){const url=URL.createObjectURL(new Blob([x.bytes],{type:MIME_XLSX}));const a=document.createElement("a");a.href=url;a.download=x.nome;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),15000);}
+/* A partilha tem de ser chamada logo no toque (sem esperas antes), senão o telemóvel recusa */
+function partilhar(m){
+  $("repartilhar").hidden=true;partilhaPendente=null;
+  let pr;try{pr=navigator.share({title:m.assunto,text:m.corpo,files:[m.fic]});}catch(e){pr=Promise.reject(e);}
+  if(m.para&&navigator.clipboard)navigator.clipboard.writeText(m.para).catch(()=>{});
+  pr.then(()=>{msg("msgX","Email preparado com o ficheiro "+m.fic.name+"."+(m.para?" O destinatário ("+m.para+") está copiado: cole-o no campo Para.":" Este armazém ainda não tem email para horários definido na gestão."),true);})
+    .catch(e=>{
+      if(e&&e.name==="AbortError"){msg("msgX","");return;}
+      partilhaPendente=m;$("repartilhar").hidden=false;
+      msg("msgX","O telemóvel não abriu a partilha"+(e&&e.name?" ("+e.name+")":"")+". Carregue em “Partilhar ficheiro”.",false);
+    });
+}
+$("repartilhar").onclick=()=>{if(partilhaPendente)partilhar(partilhaPendente);};
 
 /* Registos de antes do online, que ficaram neste telemóvel */
 (()=>{const antigos=[];

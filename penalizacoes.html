@@ -527,12 +527,15 @@ $("mAbrir").onclick=async()=>{
   const fic=new File([c.texto],c.nome,{type:"text/csv"});
   let partilha=false;
   try{partilha=!!(navigator.share&&navigator.canShare&&navigator.canShare({files:[fic],title:m.assunto,text:m.corpo}));}catch(e){}
+  /* a partilha é chamada logo no toque (sem esperas antes), senão o telemóvel recusa */
+  let pr=null;if(partilha){try{pr=navigator.share({title:m.assunto,text:m.corpo,files:[fic]});}catch(e){pr=Promise.reject(e);}}
   const copiado=await copiar(m.assunto);
   if(copiado){$("mCopAss").textContent="Copiado ✓";$("mCopAss").classList.add("ok");}
-  if(partilha){
-    try{await navigator.share({title:m.assunto,text:m.corpo,files:[fic]});fecharMail();
+  if(pr){
+    try{await pr;fecharMail();
       msg("msgX","Email preparado na app escolhida com o ficheiro "+c.nome+"."+(copiado?" O assunto foi copiado — cole-o se não aparecer.":"")+(m.para?" Destinatário: "+m.para+".":""),true);return;}
-    catch(e){if(e&&e.name==="AbortError")return;}
+    catch(e){if(e&&e.name==="AbortError")return;
+      $("mMsg").textContent="O telemóvel não abriu a partilha ("+(e&&e.name||"erro")+"). Carregue de novo em “Abrir email com o ficheiro”.";$("mMsg").className="msg err";return;}
   }
   /* sem partilha de ficheiros: descarrega o Excel e abre o email preenchido para anexar */
   const x=gerarExcel(m.s);if(x)descarregar(new Blob([x.bytes],{type:MIME_XLSX}),x.nome);
