@@ -9,6 +9,45 @@
   const GUIA_ALGARISMOS = 19;
   let detetor = null, ui = null;
 
+  /* ---- Focar ao tocar no ecrã (partilhado com a câmara das etiquetas, em pneus.html) ----
+     Android/Chrome: foca no ponto tocado (pointsOfInterest) ou, se a câmara não deixar escolher o ponto,
+     obriga-a a refocar. iPhone/Safari não deixa controlar a focagem: mostra o anel e a câmara foca sozinha. */
+  const FOCO_CSS = `.carf-foco{position:absolute;width:74px;height:74px;margin:-37px 0 0 -37px;border:2px solid #fff;border-radius:50%;pointer-events:none;box-shadow:0 0 0 1px rgba(0,0,0,.4);animation:carfFoco .9s ease-out forwards}
+@keyframes carfFoco{0%{transform:scale(1.5);opacity:0}25%{transform:scale(1);opacity:1}75%{opacity:1}100%{transform:scale(.9);opacity:0}}
+.carf-dica{position:absolute;left:50%;bottom:12px;transform:translateX(-50%);background:rgba(0,0,0,.55);color:#fff;font:600 13px system-ui,sans-serif;padding:6px 12px;border-radius:999px;pointer-events:none;white-space:nowrap}`;
+  function estiloFoco() {
+    if (document.getElementById("carf-foco-css")) return;
+    const st = document.createElement("style"); st.id = "carf-foco-css"; st.textContent = FOCO_CSS; document.head.appendChild(st);
+  }
+  function focarAoTocar(caixa, video, obterTrack) {
+    estiloFoco();
+    if (!caixa.querySelector(".carf-dica")) { const d = document.createElement("div"); d.className = "carf-dica"; d.textContent = "Toque para focar"; caixa.appendChild(d); }
+    if (caixa.dataset.foco) return; caixa.dataset.foco = "1";
+    let volta = null;
+    caixa.addEventListener("pointerdown", async e => {
+      const r = caixa.getBoundingClientRect(), px = e.clientX - r.left, py = e.clientY - r.top;
+      caixa.querySelectorAll(".carf-foco").forEach(x => x.remove());
+      const anel = document.createElement("div"); anel.className = "carf-foco"; anel.style.left = px + "px"; anel.style.top = py + "px";
+      caixa.appendChild(anel); setTimeout(() => anel.remove(), 1000);
+      const tr = obterTrack(); if (!tr || !tr.getCapabilities) return;
+      let cap = {}; try { cap = tr.getCapabilities(); } catch (err) { return; }
+      /* ponto tocado em coordenadas do vídeo (o vídeo está em object-fit:cover, pode estar cortado) */
+      const vw = video.videoWidth || r.width, vh = video.videoHeight || r.height, esc = Math.max(r.width / vw, r.height / vh);
+      const ox = (r.width - vw * esc) / 2, oy = (r.height - vh * esc) / 2;
+      const ponto = { x: Math.min(1, Math.max(0, (px - ox) / (vw * esc))), y: Math.min(1, Math.max(0, (py - oy) / (vh * esc))) };
+      const modos = cap.focusMode || [], temPonto = "pointsOfInterest" in cap;
+      const aplicar = c => tr.applyConstraints({ advanced: [c] }).catch(() => {});
+      clearTimeout(volta);
+      if (modos.includes("single-shot")) {
+        await aplicar(temPonto ? { pointsOfInterest: [ponto], focusMode: "single-shot" } : { focusMode: "single-shot" });
+        if (modos.includes("continuous")) volta = setTimeout(() => aplicar(temPonto ? { pointsOfInterest: [ponto], focusMode: "continuous" } : { focusMode: "continuous" }), 3000);
+      } else if (modos.includes("continuous")) {
+        if (modos.includes("manual")) await aplicar({ focusMode: "manual" });   /* larga a focagem para a câmara refocar */
+        await aplicar(temPonto ? { pointsOfInterest: [ponto], focusMode: "continuous" } : { focusMode: "continuous" });
+      } else if (temPonto) await aplicar({ pointsOfInterest: [ponto] });
+    });
+  }
+
   function estilos() {
     if (document.getElementById("sjt-leitor-css")) return;
     const st = document.createElement("style"); st.id = "sjt-leitor-css";
@@ -21,6 +60,7 @@
 .sjtl-vid{position:relative;flex:1;min-height:0;border-radius:12px;overflow:hidden;background:#111}
 .sjtl-vid video{width:100%;height:100%;object-fit:cover;display:block}
 .sjtl-mira{position:absolute;inset:32% 7%;border:3px solid #B9D406;border-radius:14px;box-shadow:0 0 0 100vmax rgba(0,0,0,.35);pointer-events:none}
+.sjtl-mira.qr{inset:auto;left:50%;top:50%;width:68%;aspect-ratio:1/1;transform:translate(-50%,-50%)}
 .sjtl-est{margin:0;min-height:40px;font-size:15px;text-align:center}
 .sjtl-est.err{color:#e0574f}
 .sjtl-luz{border-radius:10px;padding:12px;font:700 17px "Roboto Condensed","Arial Narrow",Arial,sans-serif;letter-spacing:.06em;text-transform:uppercase;background:transparent;color:#B9D406;border:2px solid #B9D406}
@@ -40,7 +80,7 @@
       '<form class="sjtl-man"><input type="text" autocomplete="off" aria-label="Escrever o código"><button type="submit">OK</button></form>';
     document.body.appendChild(el);
     ui = { el, tit: el.querySelector("b"), x: el.querySelector(".sjtl-x"), video: el.querySelector("video"), est: el.querySelector(".sjtl-est"),
-           luz: el.querySelector(".sjtl-luz"), form: el.querySelector("form"), input: el.querySelector("input") };
+           luz: el.querySelector(".sjtl-luz"), mira: el.querySelector(".sjtl-mira"), vid: el.querySelector(".sjtl-vid"), form: el.querySelector("form"), input: el.querySelector("input") };
     return ui;
   }
   async function obterDetetor(estado) {
@@ -68,6 +108,7 @@
       }
       const tecla = e => { if (e.key === "Escape") fechar(null); };
       const vis = () => { if (document.hidden) fechar(null); };
+      u.mira.classList.toggle("qr", preferir === "qr");
       u.tit.textContent = titulo; u.input.value = ""; u.input.placeholder = "Ou escreva o código"; u.luz.hidden = true; u.luz.textContent = "Ligar lanterna";
       u.el.hidden = false; document.body.style.overflow = "hidden";
       u.x.onclick = () => fechar(null);
@@ -83,6 +124,7 @@
         u.video.srcObject = stream; try { await u.video.play(); } catch (e) {}
         try { const tr = stream.getVideoTracks()[0], cap = tr.getCapabilities ? tr.getCapabilities() : {}; if (cap.torch) u.luz.hidden = false;
           if (cap.focusMode && cap.focusMode.includes("continuous")) tr.applyConstraints({ advanced: [{ focusMode: "continuous" }] }).catch(() => {}); } catch (e) {}
+        focarAoTocar(u.vid, u.video, () => stream && stream.getVideoTracks()[0]);
         let det;
         try { det = await obterDetetor(estado); } catch (e) { estado("Não foi possível carregar o leitor (precisa de internet da primeira vez). Escreva o código em baixo.", true); return; }
         if (fechado) return;
@@ -115,5 +157,5 @@
     return { num: alg.slice(0, GUIA_ALGARISMOS), origem: "código de barras", cortado: alg.length > GUIA_ALGARISMOS, curto: alg.length < GUIA_ALGARISMOS, todos: alg.length };
   }
 
-  window.SJT_LEITOR = { abrir, numeroGuia };
+  window.SJT_LEITOR = { abrir, numeroGuia, focarAoTocar };
 })();

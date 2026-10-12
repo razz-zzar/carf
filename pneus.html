@@ -113,6 +113,7 @@ input.mono{font-family:var(--mono);letter-spacing:.02em}
 .scan-vid{position:relative;flex:1;min-height:0;border-radius:12px;overflow:hidden;background:#111}
 .scan-vid video{width:100%;height:100%;object-fit:cover;display:block}
 .scan-mira{position:absolute;inset:32% 7%;border:3px solid var(--green);border-radius:14px;box-shadow:0 0 0 100vmax rgba(0,0,0,.35);pointer-events:none}
+.scan-mira.qr{inset:auto;left:50%;top:50%;width:68%;aspect-ratio:1/1;transform:translate(-50%,-50%)}
 .scan-est{margin:0;min-height:40px;font-size:15px;text-align:center;color:var(--fg)}
 .scan-est.err{color:var(--danger)}
 .scan-man{display:grid;grid-template-columns:1fr auto;gap:8px}
@@ -215,6 +216,7 @@ input.mono{font-family:var(--mono);letter-spacing:.02em}
 
 <script src="sjt-listas.js"></script>
 <script src="sjt-online.js"></script>
+<script src="sjt-leitor.js"></script>
 <script>/* Gerador mínimo de .xlsx (sem bibliotecas, funciona offline) */
 const MIME_XLSX="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
 const CRC_T=(()=>{const t=new Uint32Array(256);for(let n=0;n<256;n++){let c=n;for(let k=0;k<8;k++)c=c&1?0xEDB88320^(c>>>1):c>>>1;t[n]=c>>>0;}return t;})();
@@ -788,7 +790,7 @@ async function obterDetetor(){
 }
 const TEXTO_MODO={pneu:["Ler etiqueta","Aponte para o código QR ou de barras da etiqueta."],guia:["Ler guia","Aponte para o código de barras ou QR da guia de transporte."]};
 async function abrirLeitor(modo){
-  modoLeitor=modo==="guia"?"guia":"pneu";$("scanTit").textContent=TEXTO_MODO[modoLeitor][0];
+  modoLeitor=modo==="guia"?"guia":"pneu";$("scanTit").textContent=TEXTO_MODO[modoLeitor][0];document.querySelector(".scan-mira").classList.toggle("qr",modoLeitor==="pneu");
   $("scan").hidden=false;document.body.style.overflow="hidden";lido=false;luz=false;$("scanLuz").hidden=true;$("scanTexto").value="";
   estado("A abrir a câmara…");
   if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){estado("Este navegador não dá acesso à câmara. Escreva o código em baixo.",true);return;}
@@ -799,6 +801,7 @@ async function abrirLeitor(modo){
   const v=$("scanVideo");v.srcObject=stream;try{await v.play();}catch(e){}
   try{const tr=stream.getVideoTracks()[0],cap=tr.getCapabilities?tr.getCapabilities():{};if(cap.torch)$("scanLuz").hidden=false;
     if(cap.focusMode&&cap.focusMode.includes("continuous"))tr.applyConstraints({advanced:[{focusMode:"continuous"}]}).catch(()=>{});}catch(e){}
+  if(window.SJT_LEITOR)SJT_LEITOR.focarAoTocar(document.querySelector(".scan-vid"),v,()=>stream&&stream.getVideoTracks()[0]);
   try{await obterDetetor();}catch(e){estado("Não foi possível carregar o leitor (precisa de internet da primeira vez). Escreva o código em baixo.",true);return;}
   estado(TEXTO_MODO[modoLeitor][1]);
   aLer=true;ciclo();
