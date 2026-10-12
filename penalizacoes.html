@@ -528,7 +528,7 @@ $("mAbrir").onclick=async()=>{
   let partilha=false;
   try{partilha=!!(navigator.share&&navigator.canShare&&navigator.canShare({files:[fic],title:m.assunto,text:m.corpo}));}catch(e){}
   /* a partilha é chamada logo no toque (sem esperas antes), senão o telemóvel recusa */
-  let pr=null;if(partilha){try{pr=navigator.share({title:m.assunto,text:m.corpo,files:[fic]});}catch(e){pr=Promise.reject(e);}}
+  let pr=null;if(partilha){try{pr=navigator.share({title:m.assunto,text:m.corpo,files:[fic]});}catch(e){pr=Promise.reject(e);}pr.catch(()=>{});}
   const copiado=await copiar(m.assunto);
   if(copiado){$("mCopAss").textContent="Copiado ✓";$("mCopAss").classList.add("ok");}
   if(pr){
