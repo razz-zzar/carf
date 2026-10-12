@@ -18,7 +18,7 @@
 // 8. Testar: https://ops-carf-api.<conta>.workers.dev/ deve mostrar {"ok":true,...} ("fotos":"r2" se o R2 estiver ligado)
 // As tabelas da base de dados criam-se sozinhas no primeiro pedido.
 
-const VERSAO = 11;
+const VERSAO = 12;
 const ORIGENS = [
   "https://razz-zzar.github.io",
   "https://raw.githack.com",
@@ -446,9 +446,10 @@ async function resumoDia(request, env, cors, s) {
   const mensagens = [
     { role: "system", content: "És o assistente de operações dos armazéns da CARF, uma empresa de transportes. Escreves em português de Portugal (nunca do Brasil) o resumo de um dia para a passagem de turno entre supervisores. " +
       "Se houver ocorrências ou pedidos (de contacto ou de documentos) de dias anteriores que continuam abertos/pendentes, diz isso claramente, um a um, com a guia e há quantos dias. " +
+      "OBRIGATÓRIO manter o detalhe destes pontos, sem os resumir: cada volta atrasada com o número e os minutos (ex. 1602 +40 min); cada volta sem chegada ou sem saída pelo número; os pneus em falta por volta (volta, quantidade, marca e medida); cada penalização (volta, motivo, valor); cada ocorrência e cada pedido pela guia; cada viatura na oficina pela matrícula. " +
       "Regras: usa APENAS os factos fornecidos; não inventes números, nomes, matrículas, horas nem causas; não acrescentes conselhos genéricos. " +
       "Formato: primeira linha exatamente igual ao título dado; depois uma linha 'Atenção:' com o que precisa de seguimento (se houver); depois tópicos curtos começados por '• '. " +
-      "Máximo 200 palavras. Sem saudações, sem despedida, sem assinatura, sem markdown (nada de ** nem #)." },
+      "Máximo 260 palavras. Sem saudações, sem despedida, sem assinatura, sem markdown (nada de ** nem #)." },
     { role: "user", content: "Título: " + titulo + "\nPontos de atenção: " + (f.atencao.join(", ") || "nenhum") + "\nFactos do dia:\n" + f.factos.map(x => "- " + x).join("\n") }
   ];
   for (const modelo of MODELOS_IA) {
