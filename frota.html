@@ -73,6 +73,19 @@ h2 span{font:600 15px var(--mono);color:var(--muted)}
 .pequenos button{background:none;border:1px solid var(--line);color:var(--muted);border-radius:8px;padding:9px 11px;font:600 13px var(--body);cursor:pointer}
 .pequenos button.confirm{border-color:var(--danger);color:var(--danger)}
 .vazio{font-size:14px;color:var(--muted)}
+/* Oficina e carro de cortesia */
+.oficinaB{background:none;border:2px solid var(--amber);color:var(--amber);border-radius:10px;padding:12px;font:700 16px var(--body);cursor:pointer}
+.estado{display:flex;flex-direction:column;gap:2px;border-radius:8px;padding:8px 10px;font-size:14px;background:rgba(240,180,41,.12);border-left:3px solid var(--amber)}
+.estado b{color:var(--amber);font-weight:700}
+.estado.cort{background:rgba(31,74,168,.14);border-left-color:#5b8def}
+.estado.cort b{color:#7fa6f5}
+.v.na-oficina{border-color:var(--amber);opacity:.92}
+.v.cortesia{border-style:dashed;margin-left:14px}
+.etq{display:inline-block;font:700 11px var(--body);letter-spacing:.06em;text-transform:uppercase;border-radius:4px;padding:3px 7px;margin-left:8px;vertical-align:middle;white-space:nowrap}
+.etq.of{background:var(--amber);color:#111}.etq.co{background:#5b8def;color:#fff}
+.pergunta{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.pergunta button{border-radius:10px;padding:14px;font:700 17px var(--body);cursor:pointer;background:transparent;color:var(--green);border:2px solid var(--green)}
+.pergunta button.p{background:var(--green);color:var(--green-ink)}
 .msg{font-size:14px;min-height:20px}
 .msg.ok{color:var(--green)} .msg.err{color:var(--danger)}
 .hint{font-size:13px;color:var(--muted)}
@@ -124,6 +137,7 @@ dialog::backdrop{background:rgba(0,0,0,.7)}
       <textarea id="obs" rows="3" placeholder="Notas sobre a viatura"></textarea>
     </div>
     <button class="registar" id="guardar" type="button">Registar viatura</button>
+    <button class="oficinaB" id="oficinaB" type="button" hidden>Marcar como na oficina</button>
     <button class="cancelar" id="cancelar" type="button" hidden>Cancelar edição</button>
     <button class="apagarV" id="apagarV" type="button" hidden>Apagar viatura</button>
     <div class="msg" id="msg" role="status"></div>
@@ -161,6 +175,27 @@ dialog::backdrop{background:rgba(0,0,0,.7)}
   </div>
 </dialog>
 
+<dialog id="jOf" aria-labelledby="ofTit">
+  <div class="dl">
+    <div class="cab"><h2 id="ofTit">Viatura na oficina</h2><button class="fechar" id="ofFechar" type="button" aria-label="Fechar">×</button></div>
+    <div class="alvo" id="ofAlvo"></div>
+    <div id="ofPergunta">
+      <p style="margin:0 0 12px;font-size:17px;font-weight:600">Existe carro de cortesia?</p>
+      <div class="pergunta"><button type="button" id="ofNao">Não</button><button type="button" class="p" id="ofSim">Sim</button></div>
+    </div>
+    <div id="ofForm" hidden style="display:flex;flex-direction:column;gap:14px">
+      <div class="campo" id="c-cMarca"><label for="cMarca">Marca e modelo do carro de cortesia</label><input type="text" id="cMarca" autocomplete="off" autocapitalize="words" placeholder="ex. Renault Master"></div>
+      <div class="duas">
+        <div class="campo" id="c-cMat"><label for="cMat">Matrícula</label><input type="text" id="cMat" class="mono" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="12" placeholder="AA-00-AA"></div>
+        <div class="campo" id="c-cKm"><label for="cKm">Km</label><input type="text" id="cKm" class="mono" inputmode="numeric" autocomplete="off" placeholder="ex. 120 500"></div>
+      </div>
+      <div class="campo"><label for="cObs">Observações <i>(opcional)</i></label><textarea id="cObs" rows="2" placeholder="ex. devolver com o depósito cheio"></textarea></div>
+      <div class="botoes"><button class="sec" id="ofVoltar" type="button">Voltar</button><button class="registar" id="ofGuardar" type="button">Guardar</button></div>
+    </div>
+    <div class="msg" id="ofMsg" role="status"></div>
+  </div>
+</dialog>
+
 <script src="sjt-listas.js"></script>
 <script src="sjt-online.js"></script>
 <script>
@@ -195,14 +230,17 @@ function render(){
   if(aEditar&&!BD.some(x=>x.id===aEditar))limparForm(); /* apagada noutro telemóvel */
   pintarApagarV();
   const f=$("filtro").value.trim().toLowerCase(),fk=chaveMat(f);
-  const l=BD.slice().sort((a,b)=>a.matricula.localeCompare(b.matricula,"pt"))
+  /* o carro de cortesia aparece logo a seguir à viatura que substitui */
+  const ordem=v=>{const o=v.substitui&&BD.find(x=>x.id===v.substitui);return o?o.matricula+"\u0001"+v.matricula:v.matricula;};
+  const l=BD.slice().sort((a,b)=>ordem(a).localeCompare(ordem(b),"pt"))
     .filter(v=>!f||v.marca.toLowerCase().includes(f)||(fk&&chaveMat(v.matricula).includes(fk)));
-  $("total").textContent=BD.length;
+  const nOf=BD.filter(v=>v.oficina).length;
+  $("total").textContent=BD.length+(nOf?" · "+nOf+" na oficina":"");
   $("procura").hidden=BD.length<6;
   const el=$("lista");el.textContent="";
   if(!l.length){const p=document.createElement("div");p.className="vazio";p.textContent=BD.length?"Nenhuma viatura corresponde à procura.":"Ainda não há viaturas registadas.";el.appendChild(p);return;}
   l.forEach(v=>{
-    const c=document.createElement("article");c.className="v"+(aEditar===v.id?" ativa":"");
+    const c=document.createElement("article");c.className="v"+(aEditar===v.id?" ativa":"")+(v.oficina?" na-oficina":"")+(v.substitui?" cortesia":"");
     const top=document.createElement("div");top.className="top";
     const info=document.createElement("div");info.style.minWidth="0";
     const m=document.createElement("span");m.className="mat";m.textContent=v.matricula;
@@ -210,11 +248,20 @@ function render(){
     const km=document.createElement("div");km.className="km";km.textContent=fmtKm(v.km)+" km";
     if(v.kmData){const s=document.createElement("small");s.textContent="a "+dataPT(v.kmData);km.appendChild(s);}
     const au=document.createElement("div");au.className="sjt-autor";au.textContent="Registada por "+SJT.autorTxt(v)+(v.pendente?" · a enviar":"");
-    info.append(m,mc,km,au);
+    info.append(m);
+    if(v.oficina){const e=document.createElement("span");e.className="etq of";e.textContent="Na oficina";info.append(e);}
+    if(v.substitui){const e=document.createElement("span");e.className="etq co";e.textContent="Cortesia";info.append(e);}
+    info.append(mc,km,au);
     const peq=document.createElement("div");peq.className="pequenos";
     const be=document.createElement("button");be.type="button";be.textContent="Editar";be.onclick=()=>editar(v.id);
     be.setAttribute("aria-label","Editar viatura "+v.matricula);
     peq.append(be);top.append(info,peq);c.appendChild(top);
+    if(v.oficina){const cort=v.oficina.cortesia&&BD.find(x=>x.id===v.oficina.cortesia);
+      const e=document.createElement("div");e.className="estado";const b=document.createElement("b");b.textContent="Na oficina desde "+dataPT(v.oficina.desde);
+      e.append(b,(cort?"Substituída pelo carro de cortesia "+cort.matricula+" ("+cort.marca+")":"Sem carro de cortesia")+" · marcado por "+(v.oficina.por||"?"));c.appendChild(e);}
+    if(v.substitui){const o=BD.find(x=>x.id===v.substitui);
+      const e=document.createElement("div");e.className="estado cort";const b=document.createElement("b");b.textContent="Carro de cortesia";
+      e.append(b,o?"Substitui "+o.matricula+" ("+o.marca+"), que está na oficina":"Substitui uma viatura que já não está na frota");c.appendChild(e);}
     if(v.obs){const o=document.createElement("div");o.className="obs";o.textContent=v.obs;c.appendChild(o);}
     const ac=document.createElement("div");ac.className="acoes";
     const bi=document.createElement("button");bi.type="button";bi.className="b-int";bi.textContent="Intervenção";bi.onclick=()=>abrirPedido(v.id,"int");
@@ -228,12 +275,13 @@ function limparForm(){
   aEditar=null;["marca","matricula","km","obs"].forEach(k=>$(k).value="");
   ["marca","matricula","km"].forEach(k=>$("c-"+k).classList.remove("erro"));
   $("cartao").classList.remove("editar");$("t-form").textContent="Nova viatura";
-  $("guardar").textContent="Registar viatura";$("cancelar").hidden=true;$("apagarV").hidden=true;
+  $("guardar").textContent="Registar viatura";$("cancelar").hidden=true;$("apagarV").hidden=true;$("oficinaB").hidden=true;
 }
 /* Apagar a viatura que está a ser editada (só quem a registou) */
 function pintarApagarV(){
   const v=aEditar&&BD.find(x=>x.id===aEditar),b=$("apagarV");
-  if(!v){b.hidden=true;return;}
+  if(!v){b.hidden=true;$("oficinaB").hidden=true;return;}
+  const bo=$("oficinaB");bo.hidden=!!v.substitui;bo.textContent=v.oficina?"Saiu da oficina":"Marcar como na oficina";
   b.hidden=false;b.classList.toggle("confirm",aConfirmar===v.id);
   b.textContent=aConfirmar===v.id?"Confirmar: apagar "+v.matricula:"Apagar viatura";
 }
@@ -276,14 +324,66 @@ function apagar(id){
   if(aConfirmar!==id){aConfirmar=id;render();setTimeout(()=>{if(aConfirmar===id){aConfirmar=null;render();}},4000);return;}
   aConfirmar=null;const v=BD.find(x=>x.id===id);
   if(!LIG.apagar(id)){msg("msg","Não foi possível apagar a viatura.",false);render();return;}
+  if(v&&v.oficina&&v.oficina.cortesia)LIG.apagar(v.oficina.cortesia);
+  if(v&&v.substitui){const o=BD.find(x=>x.id===v.substitui);if(o&&o.oficina&&o.oficina.cortesia===id)LIG.mudar(o.id,{"oficina.cortesia":null});}
   if(aEditar===id)limparForm();
   carregar();msg("msg","Viatura "+(v?v.matricula+" ":"")+"apagada.",true);render();
 }
+
+/* ---- Oficina e carro de cortesia ----
+   Viatura na oficina: oficina = {desde, por, cortesia: id do carro de cortesia ou nada}.
+   Carro de cortesia: viatura normal com substitui = id da viatura que está na oficina. */
+const novoId=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6)+SJT.dispositivo().replace(/[^a-z0-9]/gi,"").slice(0,4);
+const abrirJ=d=>{if(typeof d.showModal==="function")d.showModal();else d.setAttribute("open","");};
+const fecharJ=d=>{if(d.close)d.close();else d.removeAttribute("open");};
+let ofAlvo=null,ofConfirmar=false;
+$("oficinaB").onclick=()=>{
+  const v=aEditar&&BD.find(x=>x.id===aEditar);if(!v)return;
+  if(v.oficina){ /* saiu da oficina: o carro de cortesia é devolvido e sai da frota */
+    const cort=v.oficina.cortesia&&BD.find(x=>x.id===v.oficina.cortesia);
+    if(!ofConfirmar){ofConfirmar=true;$("oficinaB").textContent=cort?"Confirmar: saiu e devolve "+cort.matricula:"Confirmar: saiu da oficina";setTimeout(()=>{ofConfirmar=false;pintarApagarV();},4000);return;}
+    ofConfirmar=false;LIG.mudar(v.id,{oficina:null});if(cort)LIG.apagar(cort.id);
+    carregar();limparForm();msg("msg",v.matricula+" saiu da oficina"+(cort?"; o carro de cortesia "+cort.matricula+" foi retirado da frota.":"."),true);render();return;
+  }
+  ofAlvo=v.id;$("ofAlvo").textContent=v.matricula+" · "+v.marca;
+  $("ofPergunta").hidden=false;$("ofForm").hidden=true;msg("ofMsg","");
+  ["cMarca","cMat","cKm","cObs"].forEach(k=>$(k).value="");["cMarca","cMat","cKm"].forEach(k=>$("c-"+k).classList.remove("erro"));
+  abrirJ($("jOf"));setTimeout(()=>$("ofSim").focus(),50);
+};
+$("ofFechar").onclick=()=>fecharJ($("jOf"));
+$("jOf").addEventListener("click",e=>{if(e.target===$("jOf"))fecharJ($("jOf"));});
+function marcarOficina(cortesiaId){
+  const v=BD.find(x=>x.id===ofAlvo);if(!v)return false;
+  const o={desde:new Date().toISOString(),por:S.nome};if(cortesiaId)o.cortesia=cortesiaId;
+  if(!LIG.mudar(v.id,{oficina:o}))return false;
+  fecharJ($("jOf"));carregar();limparForm();render();return v;
+}
+$("ofNao").onclick=()=>{const v=marcarOficina(null);if(v)msg("msg",v.matricula+" marcada como na oficina, sem carro de cortesia.",true);else msg("ofMsg","Não foi possível guardar.",false);};
+$("ofSim").onclick=()=>{$("ofPergunta").hidden=true;$("ofForm").hidden=false;setTimeout(()=>$("cMarca").focus(),50);};
+$("ofVoltar").onclick=()=>{$("ofPergunta").hidden=false;$("ofForm").hidden=true;msg("ofMsg","");};
+["cMarca","cMat","cKm"].forEach(k=>$(k).addEventListener("input",()=>{$("c-"+k).classList.remove("erro");msg("ofMsg","");}));
+$("cMat").addEventListener("blur",()=>{if($("cMat").value.trim())$("cMat").value=normMat($("cMat").value);});
+$("cKm").addEventListener("input",()=>{const d=soDigitos($("cKm").value).slice(0,7);$("cKm").value=d?fmtKm(+d):"";});
+$("ofGuardar").onclick=()=>{
+  const marca=$("cMarca").value.trim().replace(/\s+/g," "),mat=$("cMat").value.trim()?normMat($("cMat").value):"",kmS=soDigitos($("cKm").value),obs=$("cObs").value.trim(),falta=[];
+  if(!marca){falta.push("a marca e modelo");$("c-cMarca").classList.add("erro");}
+  if(!mat){falta.push("a matrícula");$("c-cMat").classList.add("erro");}
+  if(!kmS){falta.push("os km");$("c-cKm").classList.add("erro");}
+  if(falta.length){msg("ofMsg","Falta indicar "+falta.join(", ").replace(/, ([^,]*)$/," e $1")+".",false);return;}
+  const dup=BD.find(v=>chaveMat(v.matricula)===chaveMat(mat));
+  if(dup){$("c-cMat").classList.add("erro");msg("ofMsg","A matrícula "+dup.matricula+" já está na frota.",false);return;}
+  const orig=BD.find(x=>x.id===ofAlvo);if(!orig){fecharJ($("jOf"));return;}
+  const agora=new Date().toISOString(),c={id:novoId(),marca,matricula:mat,km:+kmS,kmData:agora,obs,criado:agora,alterado:agora,substitui:orig.id};
+  if(!LIG.gravar(c.id,"",c)){msg("ofMsg","O telemóvel não deixou guardar.",false);return;}
+  const v=marcarOficina(c.id);
+  if(v)msg("msg",v.matricula+" marcada como na oficina; carro de cortesia "+mat+" acrescentado à frota.",true);
+};
 
 /* ---- Pedidos por email (Intervenção / Revisão) ---- */
 function saudacao(){const h=new Date().getHours();return h<13?"Bom dia":h<20?"Boa tarde":"Boa noite";}
 function dadosViatura(v){
   const l=["Marca e modelo: "+v.marca,"Matrícula: "+v.matricula,"Km atuais: "+fmtKm(v.km)+" km"+(v.kmData?" (registados a "+dataPT(v.kmData)+")":"")];
+  if(v.substitui){const o=BD.find(x=>x.id===v.substitui);if(o)l.push("Carro de cortesia, em substituição de "+o.matricula+" ("+o.marca+")");}
   if(v.obs)l.push("Observações: "+v.obs.replace(/\s*\n\s*/g," "));
   return l.map(x=>"• "+x).join("\n");
 }
