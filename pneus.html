@@ -85,7 +85,9 @@ input.mono{font-family:var(--mono);letter-spacing:.02em}
 .procura .vazio{padding:12px;color:var(--muted);font-size:14px}
 .escolhido{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:50px;padding:6px 6px 6px 14px;border-radius:8px;border:1px solid var(--green);background:color-mix(in srgb,var(--green) 12%,var(--panel));color:var(--fg);font:600 17px var(--body)}
 .escolhido .mono{font-family:var(--mono)}
+.escolhido .acoes{display:flex;flex-shrink:0}
 .escolhido button{background:transparent;border:0;color:var(--green);font:600 14px var(--body);padding:10px;cursor:pointer}
+.escolhido button.limpar{color:var(--muted)}
 .btn{border:0;border-radius:10px;padding:16px;font:700 20px var(--display);letter-spacing:.06em;text-transform:uppercase;cursor:pointer}
 .btn-main{background:var(--green);color:var(--green-ink)}
 .btn-main:active{background:var(--green-dk)}
@@ -632,7 +634,9 @@ function criarProcura(cfg){
   const caixa=document.createElement("div");caixa.className="procura";
   const pill=document.createElement("div");pill.className="escolhido";pill.hidden=true;
   const pv=document.createElement("span");if(cfg.mono)pv.className="mono";
-  const tb=document.createElement("button");tb.type="button";tb.textContent="Trocar";pill.append(pv,tb);
+  const tb=document.createElement("button");tb.type="button";tb.textContent="Trocar";
+  const lb=document.createElement("button");lb.type="button";lb.className="limpar";lb.textContent="Limpar";lb.setAttribute("aria-label","Limpar "+cfg.nome.toLowerCase());
+  const ac=document.createElement("span");ac.className="acoes";ac.append(tb,lb);pill.append(pv,ac);
   const inp=document.createElement("input");inp.type="text";inp.autocomplete="off";inp.placeholder=cfg.ph;inp.setAttribute("aria-label",cfg.nome);
   inp.setAttribute("autocapitalize",cfg.mono?"characters":"words");if(cfg.mono)inp.classList.add("mono");
   const ls=document.createElement("div");ls.className="lista";ls.hidden=true;ls.setAttribute("role","listbox");
@@ -675,6 +679,7 @@ function criarProcura(cfg){
     else{pill.hidden=true;inp.hidden=false;if(document.activeElement===inp)lista();else ls.hidden=true;}
   }
   tb.onclick=()=>{aEditar=true;inp.value="";render();inp.focus();};
+  lb.onclick=()=>{aEditar=false;inp.value="";cfg.limpar();Object.values(PROCURAS).forEach(x=>x.render());};
   inp.addEventListener("focus",lista);
   inp.addEventListener("input",lista);
   inp.addEventListener("blur",()=>setTimeout(()=>{if(document.activeElement===inp)return;ls.hidden=true;if(aEditar&&!inp.value.trim()){aEditar=false;render();}},150));
@@ -685,11 +690,11 @@ function criarProcura(cfg){
   PROCURAS[cfg.grupo]={render,pendente,focar:()=>{if(!inp.hidden){inp.focus({preventScroll:true});}},inp};
   render();
 }
-criarProcura({grupo:"marcas",texto:"marcaOutra",nome:"Marca",ph:"Escreva a marca",nova:"nova marca",campo:r=>r.marca,
+criarProcura({grupo:"marcas",texto:"marcaOutra",nome:"Marca",ph:"Escreva a marca",nova:"nova marca",campo:r=>r.marca,limpar:()=>{limparPneu();construirMarcas();},
   depois:()=>{if(marca==="Outra"||marca)PROCURAS.modelos&&PROCURAS.modelos.render();setTimeout(()=>PROCURAS.modelos.focar(),60);}});
-criarProcura({grupo:"modelos",texto:"modelo",nome:"Modelo",ph:"Escreva o modelo",nova:"novo modelo",campo:r=>r.modelo,
+criarProcura({grupo:"modelos",texto:"modelo",nome:"Modelo",ph:"Escreva o modelo",nova:"novo modelo",campo:r=>r.modelo,limpar:()=>escolherMarca(marca),
   semBotoes:()=>marca==="Outra",depois:()=>setTimeout(()=>PROCURAS.medidas.focar(),60)});
-criarProcura({grupo:"medidas",texto:"medida",nome:"Medida",ph:"Escreva a medida, ex. 205 55 16",nova:"nova medida",campo:r=>r.medida,mono:true});
+criarProcura({grupo:"medidas",texto:"medida",nome:"Medida",ph:"Escreva a medida, ex. 205 55 16",nova:"nova medida",campo:r=>r.medida,limpar:()=>{medida="";medIdx="";$("medida").value="";marcar($("medidas"),null);esconderIndices();},mono:true});
 /* o modelo de "Outra" marca não tem botões: atualizar a caixa quando muda a marca ou o pneu é limpo */
 {const mo=new MutationObserver(()=>PROCURAS.modelos.render());mo.observe($("f-modelo"),{attributes:true,attributeFilter:["hidden"]});mo.observe($("marcaOutra"),{attributes:true});}
 document.addEventListener("click",e=>{if(e.target.closest&&e.target.closest("#guardar,#adicionar"))["marcas","modelos","medidas"].forEach(k=>PROCURAS[k].pendente());},true);
