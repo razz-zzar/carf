@@ -72,6 +72,20 @@ input.mono{font-family:var(--mono);letter-spacing:.02em}
 .chip.alt[aria-pressed=true]{border-style:solid;color:var(--green-ink)}
 .chip .tag{display:block;font-size:11px;font-weight:500;color:var(--muted);letter-spacing:.04em}
 .chip[aria-pressed=true] .tag{color:var(--green-ink)}
+/* Caixa de pesquisa (marca, modelo, medida): substitui as grelhas de botões, que ficam escondidas e continuam a guardar o estado */
+.chips.oculto,.so-dados{display:none!important}
+.procura{position:relative}
+.procura .lista{margin-top:4px;border:1px solid var(--line);border-radius:8px;background:var(--panel);overflow:hidden}
+.procura .op{display:flex;justify-content:space-between;align-items:center;gap:10px;width:100%;text-align:left;background:transparent;color:var(--fg);border:0;border-bottom:1px solid var(--line);padding:13px 12px;font:500 16px var(--body);cursor:pointer}
+.procura .op:last-child{border-bottom:0}
+.procura .op:active{background:var(--panel-hi)}
+.procura .op mark{background:transparent;color:var(--green);font-weight:700}
+.procura .op small{font-size:12px;color:var(--muted);font-weight:500;white-space:nowrap}
+.procura .op.nova{color:var(--muted);font-style:italic}
+.procura .vazio{padding:12px;color:var(--muted);font-size:14px}
+.escolhido{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:50px;padding:6px 6px 6px 14px;border-radius:8px;border:1px solid var(--green);background:color-mix(in srgb,var(--green) 12%,var(--panel));color:var(--fg);font:600 17px var(--body)}
+.escolhido .mono{font-family:var(--mono)}
+.escolhido button{background:transparent;border:0;color:var(--green);font:600 14px var(--body);padding:10px;cursor:pointer}
 .btn{border:0;border-radius:10px;padding:16px;font:700 20px var(--display);letter-spacing:.06em;text-transform:uppercase;cursor:pointer}
 .btn-main{background:var(--green);color:var(--green-ink)}
 .btn-main:active{background:var(--green-dk)}
@@ -602,6 +616,83 @@ $("guardadosLista").addEventListener("click",e=>{
   else{CUST.cargas[r[1]]=CUST.cargas[r[1]].filter(x=>x!==r[2]);if(!CUST.cargas[r[1]].length)delete CUST.cargas[r[1]];}
   gravarCust();if(m)carregarCodigos();limparPneu();construirMarcas();renderGuardados();
 });
+
+/* ===== Caixas de pesquisa para marca, modelo e medida =====
+   Os botões continuam a existir (escondidos) e a ter toda a lógica: a caixa só procura neles e carrega no escolhido.
+   Assim a leitura da etiqueta (que carrega nos mesmos botões) e o resto da app continuam iguais. */
+const cmpTxt=s=>String(s||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9]/g,"");
+const soDig=s=>String(s||"").replace(/\D/g,"");
+/* "20555 16", "2055516" ou "205 55 r16" escritos à pressa → 205/55 R16 (comerciais com C no fim: 215/65 R16C) */
+function medEscrita(q){const d=soDig(q),c=/c\s*$/i.test(q)?"C":"",m=d.match(/^(\d{3})(\d{2})(\d{2})$/);return m&&!/\//.test(q)?`${m[1]}/${m[2]} R${m[3]}${c}`:normMedida(q);}
+const PROCURAS={};
+const chipTxt=b=>((b.firstChild&&b.firstChild.nodeType===3)?b.firstChild.nodeValue:b.textContent).trim();
+function criarProcura(cfg){
+  const g=$(cfg.grupo),txt=$(cfg.texto);
+  g.classList.add("oculto");txt.classList.add("so-dados");
+  const caixa=document.createElement("div");caixa.className="procura";
+  const pill=document.createElement("div");pill.className="escolhido";pill.hidden=true;
+  const pv=document.createElement("span");if(cfg.mono)pv.className="mono";
+  const tb=document.createElement("button");tb.type="button";tb.textContent="Trocar";pill.append(pv,tb);
+  const inp=document.createElement("input");inp.type="text";inp.autocomplete="off";inp.placeholder=cfg.ph;inp.setAttribute("aria-label",cfg.nome);
+  inp.setAttribute("autocapitalize",cfg.mono?"characters":"words");if(cfg.mono)inp.classList.add("mono");
+  const ls=document.createElement("div");ls.className="lista";ls.hidden=true;ls.setAttribute("role","listbox");
+  caixa.append(pill,inp,ls);g.parentNode.insertBefore(caixa,g);
+  let aEditar=false;
+  const chips=()=>[...g.querySelectorAll(".chip")];
+  const alt=()=>chips().find(c=>c.classList.contains("alt"));
+  const premido=()=>chips().find(c=>c.getAttribute("aria-pressed")==="true");
+  const emOutro=()=>{const p=premido();return (p&&p.classList.contains("alt"))||(cfg.semBotoes&&cfg.semBotoes());};
+  function escolhido(){const p=premido();if(p&&!p.classList.contains("alt"))return chipTxt(p);if(emOutro())return txt.value.trim();return "";}
+  function opcoes(){return chips().filter(c=>!c.classList.contains("alt")).map(c=>{const t=c.querySelector(".tag");return {v:chipTxt(c),tag:t?t.textContent:"",b:c};});}
+  function usos(){const n={};registos.forEach(r=>{const v=cfg.campo(r);if(v)n[cmpTxt(v)]=(n[cmpTxt(v)]||0)+(+r.qtd||1);});return n;}
+  function bate(o,q){const a=cmpTxt(o),c=cmpTxt(q);if(c&&a.includes(c))return true;if(cfg.mono){const d=soDig(q);return d.length>=2&&soDig(o).startsWith(d);}return false;}
+  function realce(o,q){const e=esc(o);const n=String(q).trim().toLowerCase();if(!n)return e;const i=o.toLowerCase().indexOf(n);return i<0?e:esc(o.slice(0,i))+"<mark>"+esc(o.slice(i,i+n.length))+"</mark>"+esc(o.slice(i+n.length));}
+  function lista(){
+    const q=inp.value.trim(),ops=opcoes(),u=usos();let r,mais=false;
+    if(q){r=ops.filter(o=>bate(o.v,q)).sort((a,b)=>(cmpTxt(b.v).startsWith(cmpTxt(q))-cmpTxt(a.v).startsWith(cmpTxt(q)))||((u[cmpTxt(b.v)]||0)-(u[cmpTxt(a.v)]||0))).slice(0,8);}
+    else{r=[...ops].sort((a,b)=>(u[cmpTxt(b.v)]||0)-(u[cmpTxt(a.v)]||0));if(r.length>6){r=r.slice(0,5);mais=true;}}
+    let h=r.map((o,i)=>`<button type="button" class="op" data-i="${ops.indexOf(o)}"><span>${realce(o.v,q)}</span><small>${!q&&u[cmpTxt(o.v)]?"mais usada":esc(o.tag)}</small></button>`).join("");
+    const podeNova=alt()||(cfg.semBotoes&&cfg.semBotoes());
+    if(q&&podeNova&&!ops.some(o=>cmpTxt(o.v)===cmpTxt(q)))h+=`<button type="button" class="op nova" data-nova="1"><span>+ Usar "${esc(cfg.mono?medEscrita(q):q)}" como ${cfg.nova}</span></button>`;
+    if(!h)h=`<div class="vazio">${q?"Nada encontrado.":"Sem opções. Escreva para acrescentar."}</div>`;
+    else if(mais)h+=`<div class="vazio">Escreva para ver as outras ${ops.length-5}.</div>`;
+    ls.innerHTML=h;ls.hidden=false;
+    ls.querySelectorAll(".op").forEach(b=>b.addEventListener("pointerdown",e=>e.preventDefault()));
+    ls.querySelectorAll(".op").forEach(b=>b.onclick=()=>{if(b.dataset.nova)usarNovo(inp.value.trim());else escolher(ops[+b.dataset.i]);});
+  }
+  function fim(){aEditar=false;inp.value="";ls.hidden=true;inp.blur();render();if(cfg.depois)cfg.depois();}
+  function escolher(o){o.b.click();fim();}
+  function usarNovo(q){
+    if(!q)return;
+    const a=alt();if(a&&a.getAttribute("aria-pressed")!=="true")a.click();
+    txt.value=cfg.mono?medEscrita(q):q;
+    if(cfg.mono)txt.dispatchEvent(new Event("blur"));
+    fim();
+  }
+  function render(){
+    const v=escolhido();
+    if(v&&!aEditar){pill.hidden=false;pv.textContent=v;inp.hidden=true;ls.hidden=true;if(document.activeElement!==inp)inp.value="";}
+    else{pill.hidden=true;inp.hidden=false;if(document.activeElement===inp)lista();else ls.hidden=true;}
+  }
+  tb.onclick=()=>{aEditar=true;inp.value="";render();inp.focus();};
+  inp.addEventListener("focus",lista);
+  inp.addEventListener("input",lista);
+  inp.addEventListener("blur",()=>setTimeout(()=>{if(document.activeElement===inp)return;ls.hidden=true;if(aEditar&&!inp.value.trim()){aEditar=false;render();}},150));
+  inp.addEventListener("keydown",e=>{if(e.key!=="Enter")return;e.preventDefault();const b=ls.querySelector(".op");if(b)b.click();});
+  new MutationObserver(()=>render()).observe(g,{childList:true,subtree:true,attributes:true,attributeFilter:["aria-pressed"]});
+  /* texto escrito à vista: se carregar em Guardar sem escolher da lista, usa-se o que estiver escrito */
+  function pendente(){const q=inp.value.trim();if(inp.hidden||!q)return;const o=opcoes().find(x=>cmpTxt(x.v)===cmpTxt(q));if(o)escolher(o);else if(alt()||(cfg.semBotoes&&cfg.semBotoes()))usarNovo(q);}
+  PROCURAS[cfg.grupo]={render,pendente,focar:()=>{if(!inp.hidden){inp.focus({preventScroll:true});}},inp};
+  render();
+}
+criarProcura({grupo:"marcas",texto:"marcaOutra",nome:"Marca",ph:"Escreva a marca",nova:"nova marca",campo:r=>r.marca,
+  depois:()=>{if(marca==="Outra"||marca)PROCURAS.modelos&&PROCURAS.modelos.render();setTimeout(()=>PROCURAS.modelos.focar(),60);}});
+criarProcura({grupo:"modelos",texto:"modelo",nome:"Modelo",ph:"Escreva o modelo",nova:"novo modelo",campo:r=>r.modelo,
+  semBotoes:()=>marca==="Outra",depois:()=>setTimeout(()=>PROCURAS.medidas.focar(),60)});
+criarProcura({grupo:"medidas",texto:"medida",nome:"Medida",ph:"Escreva a medida, ex. 205 55 16",nova:"nova medida",campo:r=>r.medida,mono:true});
+/* o modelo de "Outra" marca não tem botões: atualizar a caixa quando muda a marca ou o pneu é limpo */
+{const mo=new MutationObserver(()=>PROCURAS.modelos.render());mo.observe($("f-modelo"),{attributes:true,attributeFilter:["hidden"]});mo.observe($("marcaOutra"),{attributes:true});}
+document.addEventListener("click",e=>{if(e.target.closest&&e.target.closest("#guardar,#adicionar"))["marcas","modelos","medidas"].forEach(k=>PROCURAS[k].pendente());},true);
 render();atualizarQtd();var paginaPronta=true;renderGuardados();
 
 try{navigator.storage&&navigator.storage.persist&&navigator.storage.persist();}catch(e){}
@@ -752,8 +843,8 @@ async function tratarCodigo(cod){
   }
   const falta=preencher(d);codigoAtual=chave;mostrarLido(cod,origem,fichaUE);
   msg("msg",falta.length?"Preenchido pela etiqueta. Falta "+(falta.every(f=>f==="marca"||f==="modelo")?"escrever":"escolher")+": "+falta.join(", ")+".":"Pneu preenchido pela etiqueta. Confirme e guarde.",!falta.length);
-  if(falta.length){const foco={marca:"marcaOutra",modelo:"modelo"}[falta[0]];const alvo={marca:"marcas",modelo:"f-modelo",medida:"f-medida","índice de carga":"f-carga","índice de velocidade":"f-vel"}[falta[0]];
-    if(foco&&!$(foco).hidden){$(foco).focus({preventScroll:true});}if(alvo)irPara(alvo);}
+  if(falta.length){const foco={marca:"marcas",modelo:"modelos",medida:"medidas"}[falta[0]];const alvo={marca:"marcas",modelo:"f-modelo",medida:"f-medida","índice de carga":"f-carga","índice de velocidade":"f-vel"}[falta[0]];
+    if(foco&&PROCURAS[foco]){PROCURAS[foco].render();PROCURAS[foco].focar();}if(alvo)irPara(alvo);}
   else $("guardar").scrollIntoView({behavior:"smooth",block:"center"});
 }
 
