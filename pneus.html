@@ -42,7 +42,7 @@ h2{font-family:var(--display);font-size:20px;font-weight:700;text-transform:uppe
 .row{display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:end}
 .field{display:flex;flex-direction:column;gap:6px;min-width:0}
 label,.lbl{font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
-input[type=text],input[type=number],textarea{width:100%;background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:12px;font:500 18px var(--body)}
+input[type=text],input[type=number]{width:100%;background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:12px;font:500 18px var(--body)}
 input:focus-visible,button:focus-visible{outline:2px solid var(--green);outline-offset:2px}
 input.mono{font-family:var(--mono);letter-spacing:.02em}
 .stepper{display:grid;grid-template-columns:56px 1fr 56px;gap:8px}
@@ -72,8 +72,6 @@ input.mono{font-family:var(--mono);letter-spacing:.02em}
 .chip.alt[aria-pressed=true]{border-style:solid;color:var(--green-ink)}
 .chip .tag{display:block;font-size:11px;font-weight:500;color:var(--muted);letter-spacing:.04em}
 .chip[aria-pressed=true] .tag{color:var(--green-ink)}
-textarea{resize:vertical;min-height:52px;font-size:16px!important;line-height:1.4}
-.item small.obs{font-style:italic;white-space:normal}
 /* Caixa de pesquisa (marca, modelo, medida): substitui as grelhas de botões, que ficam escondidas e continuam a guardar o estado */
 .chips.oculto,.so-dados{display:none!important}
 .procura{position:relative}
@@ -197,7 +195,6 @@ textarea{resize:vertical;min-height:52px;font-size:16px!important;line-height:1.
       <input type="text" id="refOutra" class="mono" maxlength="12" autocapitalize="characters" autocomplete="off" placeholder="ex. RF" hidden aria-labelledby="l-ref">
     </div>
     </div>
-    <div class="field"><label for="obs">Observações (opcional)</label><textarea id="obs" rows="2" maxlength="500" autocomplete="off" placeholder="ex. etiqueta danificada, cliente avisado"></textarea></div>
     <div class="btns">
       <button class="btn btn-ghost" id="adicionar" type="button" hidden>+ Adicionar outro pneu diferente</button>
       <button class="btn btn-main" id="guardar" type="button">Guardar guia</button>
@@ -489,7 +486,7 @@ function render(){
     return `<div class="volta"><div class="volta-h"><strong>Volta ${esc(v)}</strong><span>${tot} pneu${tot===1?"":"s"}</span></div>`+
       Object.keys(porGuia).map(gk=>{const gl=porGuia[gk],gt=gl.reduce((a,r)=>a+(+r.qtd||0),0);
         return `<div class="guia-h"><span>Guia <b>${esc(gk)}</b></span><span>${gt} pneu${gt===1?"":"s"}</span></div>`+
-        gl.map(r=>`<div class="item"><div class="qty">${esc(r.qtd)}</div><div class="t"><b>${esc(r.marca)} ${esc(r.modelo)}</b><small>${esc(medTxt(r))}</small>${r.obs?`<small class="obs">${esc(r.obs)}</small>`:""}<small class="sjt-autor">${esc(SJT.autorTxt(r))}${r.pendente?" · a enviar":""}</small></div>`+
+        gl.map(r=>`<div class="item"><div class="qty">${esc(r.qtd)}</div><div class="t"><b>${esc(r.marca)} ${esc(r.modelo)}</b><small>${esc(medTxt(r))}</small><small class="sjt-autor">${esc(SJT.autorTxt(r))}${r.pendente?" · a enviar":""}</small></div>`+
         (r.exemplo||!r.meu?"<span></span>":`<button class="del${aConfirmar===r.id?" confirm":""}" data-id="${esc(r.id)}">${aConfirmar===r.id?"Confirmar":"Apagar"}</button>`)+`</div>`).join("");}).join("")+`</div>`;
   }).join("");
 }
@@ -536,7 +533,7 @@ $("adicionar").onclick=()=>{
 };
 
 $("guardar").onclick=async()=>{
-  const volta=$("volta").value.trim(),guia=$("guia").value.trim(),dia=$("dia").value||hoje(),obs=$("obs").value.replace(/\s+/g," ").trim();
+  const volta=$("volta").value.trim(),guia=$("guia").value.trim(),dia=$("dia").value||hoje();
   const atual=lerPneu(),flAtual=novoFlags;let linhas=[...pendentes];
   if(!pneuVazio(atual)){const f=faltaPneu(atual);if(f.length){msg("msg","Falta preencher no pneu "+(pendentes.length+1)+": "+f.join(", ")+".",false);return;}linhas.push(atual);}
   const falta=[];if(!volta)falta.push("volta");if(!guia)falta.push("guia");if(!linhas.length)falta.push("pelo menos um pneu");
@@ -547,7 +544,7 @@ $("guardar").onclick=async()=>{
   const agora=Date.now();let feitos=0;
   try{
     for(const [i,p] of linhas.entries()){
-      const r={dia,volta,guia,...p,obs,criado:new Date(agora+i).toISOString()};
+      const r={dia,volta,guia,...p,criado:new Date(agora+i).toISOString()};
       r.id=novoId(i);if(!LIG.gravar(r.id,r.dia,r))throw new Error("storage");
       feitos++;
     }
@@ -555,7 +552,7 @@ $("guardar").onclick=async()=>{
     if(linhas.includes(atual))memorizar(atual,flAtual);
     const tot=linhas.reduce((a,p)=>a+p.qtd,0);
     msg("msg",`Guia ${guia} guardada: ${tot} pneu${tot===1?"":"s"} em ${linhas.length} linha${linhas.length===1?"":"s"} (volta ${volta}).`,true);
-    pendentes=[];$("qtd").value=1;$("qtdL").value=1;limparPneu();construirMarcas();renderPend();renderGuardados();$("guia").value="";$("obs").value="";
+    pendentes=[];$("qtd").value=1;$("qtdL").value=1;limparPneu();construirMarcas();renderPend();renderGuardados();$("guia").value="";
     /* sem pôr o cursor em nenhum campo: no telemóvel isso abria o teclado e fazia saltar o ecrã */
     if(document.activeElement&&document.activeElement!==document.body)document.activeElement.blur();
   }catch(err){
@@ -575,7 +572,7 @@ async function gerarExcel(){
   if(!lista.length){msg("msgX","Não há registos neste dia para exportar.",false);return null;}
   const cab=["Volta","Guia de transporte","Nº pneus em falta","Marca","Modelo","Medida","Registado por","Observações"];
   const medidaTxt=medTxt;
-  const linhas=lista.map(r=>[/^\d+$/.test(r.volta)?+r.volta:r.volta,r.guia,+r.qtd,r.marca,r.modelo,medidaTxt(r),r.autor||"",r.obs||""]);
+  const linhas=lista.map(r=>[/^\d+$/.test(r.volta)?+r.volta:r.volta,r.guia,+r.qtd,r.marca,r.modelo,medidaTxt(r),r.autor||"",""]);
   const total=lista.reduce((a,r)=>a+(+r.qtd||0),0);
   const [y,m,d]=$("dia").value.split("-");
   return {bytes:criarXlsx({titulo:"PNEUS EM FALTA — "+d+"/"+m+"/"+y,cab,linhas,total}),nome:`pneus-em-falta-${y}-${m}-${d}.xlsx`};
