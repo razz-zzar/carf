@@ -191,7 +191,7 @@ body.preso{overflow:hidden}
     <button class="btn enviar" id="email" type="button">Enviar Excel por email</button>
     <button class="btn" id="excel" type="button">Exportar Excel do dia</button>
     <div class="msg" id="msgX" role="status"></div>
-    <div class="hint">O Excel tem duas folhas: Saídas (hora de saída, chegada prevista, ocupação e fotografia de cada viatura) e Chegadas (rota, nome da rota, motorista e hora de chegada). No email, as fotografias da carga vão em anexo. Vai para o email dos horários definido na gestão.</div>
+    <div class="hint">O Excel tem duas folhas: Saídas (hora de saída, chegada prevista, ocupação e fotografia de cada viatura) e Chegadas (rota, nome da rota, motorista e hora de chegada). No email, as fotografias da carga vão em anexo. Vai para o email do bidiário definido na gestão (secção Emails).</div>
   </section>
 </div>
 
@@ -689,7 +689,7 @@ function gerarCsv(dia){
 function descarregarX(x){const url=URL.createObjectURL(new Blob([x.bytes],{type:MIME_XLSX}));const a=document.createElement("a");a.href=url;a.download=x.nome;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),15000);}
 $("excel").onclick=async()=>{try{const x=await gerarExcel($("dia").value||hoje());if(!x){msg("msgX","Ainda não há registos do bidiário neste dia.",false);return;}descarregarX(x);msg("msgX","Excel gerado: "+x.nome+" (ver em Transferências).",true);}catch(err){msg("msgX","Não foi possível gerar o Excel.",false);}};
 
-/* ---- Enviar por email (igual aos Horários; usa o email dos horários da gestão) ---- */
+/* ---- Enviar por email (igual aos Horários; usa o email do bidiário da gestão) ---- */
 function saudacao(){const hh=new Date().getHours();return hh<13?"Bom dia":hh<20?"Boa tarde":"Boa noite";}
 function textoMail(dia){
   const [y,m,d]=dia.split("-"),D=doDia(dia),cg=ROTAS.filter(r=>D.cg[r.k]).length,sv=VIATURAS.filter(v=>D.sv[v.nome]);
@@ -702,11 +702,11 @@ let mailAtual=null;
 $("email").onclick=()=>{
   const dia=$("dia").value||hoje();
   if(!dadosDia(dia).tem){msg("msgX","Ainda não há registos do bidiário neste dia.",false);return;}
-  const {assunto,corpo}=textoMail(dia),cfg=S.config||{},para=(cfg.emailHorarios||"").trim(),cc=(cfg.ccHorarios||"").trim();
+  const {assunto,corpo}=textoMail(dia),cfg=S.config||{},para=(cfg.emailBidiario||"").trim(),cc=(cfg.ccBidiario||"").trim();
   mailAtual={dia,assunto,corpo,para,cc};
   $("mCcCx").hidden=!cc;$("mCc").textContent=cc;$("mParaCx").hidden=!para;$("mPara").textContent=para;$("mAssunto").textContent=assunto;
   ["mCopPara","mCopCc","mCopAss"].forEach(k=>{$(k).textContent="Copiar";$(k).classList.remove("ok");});
-  $("mNota").textContent="O ficheiro vai em CSV (abre diretamente no Excel): a partilha do telemóvel não aceita ficheiros .xlsx. Se precisar do Excel formatado, use Descarregar Excel e anexe-o. Ao abrir o email, o assunto fica copiado: se não aparecer, cole-o."+(para?"":" Este armazém ainda não tem email para horários definido na gestão.");
+  $("mNota").textContent="O ficheiro vai em CSV (abre diretamente no Excel): a partilha do telemóvel não aceita ficheiros .xlsx. Se precisar do Excel formatado, use Descarregar Excel e anexe-o. Ao abrir o email, o assunto fica copiado: se não aparecer, cole-o."+(para?"":" Este armazém ainda não tem email para o bidiário definido na gestão.");
   $("mMsg").textContent="";$("mail").hidden=false;document.body.classList.add("preso");$("mAbrir").focus();
 };
 function fecharMail(){$("mail").hidden=true;document.body.classList.remove("preso");}

@@ -56,6 +56,21 @@ input:focus-visible,textarea:focus-visible,button:focus-visible{outline:2px soli
 .corpoS{display:flex;flex-direction:column;gap:14px}
 #sOpc .msg:empty{display:none}
 @media (prefers-reduced-motion:reduce){.setaS{transition:none}}
+.grupo{background:var(--bg);border:1px solid var(--line);border-radius:12px}
+.grupo>summary{list-style:none;cursor:pointer;padding:14px 44px 14px 14px;position:relative;display:flex;flex-direction:column;gap:2px}
+.grupo>summary::-webkit-details-marker{display:none}
+.grupo>summary::after{content:"›";position:absolute;right:16px;top:50%;margin-top:-13px;font:700 24px/1 var(--body);color:var(--green);transition:transform .15s}
+.grupo[open]>summary::after{transform:rotate(90deg)}
+.grupo[open]{border-color:var(--green)}
+.gT{font:700 18px var(--display);text-transform:uppercase;letter-spacing:.05em;color:var(--fg)}
+.gD{font-size:13px;color:var(--muted)}
+.gC{display:flex;flex-direction:column;gap:16px;padding:4px 14px 16px;border-top:1px solid var(--line);padding-top:16px}
+.emailB{display:flex;flex-direction:column;gap:10px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px}
+.emailT{display:flex;flex-direction:column;gap:2px}
+.emailT b{font-size:16px}.emailT span{font-size:13px;color:var(--muted)}
+.barraG{position:sticky;bottom:0;z-index:5;display:grid;grid-template-columns:1fr 2fr;gap:10px;background:var(--panel);padding:12px 0 calc(12px + env(safe-area-inset-bottom,0px));border-top:1px solid var(--line);margin:0 -16px -16px;padding-left:16px;padding-right:16px;border-radius:0 0 12px 12px}
+.barraG .msg{grid-column:1/-1}.barraG .msg:empty{display:none}
+@media (prefers-reduced-motion:reduce){.grupo>summary::after{transition:none}}
 .dica.alerta{color:var(--danger,#e0574f);font-weight:600}
 .bidi{display:flex;flex-direction:column;gap:8px}
 .rota{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:0 12px}
@@ -134,24 +149,44 @@ input:focus-visible,textarea:focus-visible,button:focus-visible{outline:2px soli
 
   <form class="card" id="fPolo" hidden novalidate>
     <h2 id="tPolo">Novo armazém</h2>
-    <div class="linha">
-      <label for="pNome">Nome<input id="pNome" maxlength="40" placeholder="ex. SJT"></label>
-      <label for="pId">Identificador <small>(letras minúsculas, sem espaços; não muda depois)</small><input id="pId" maxlength="30" autocapitalize="off" placeholder="ex. sjt"></label>
-    </div>
-    <div class="linha">
-      <label for="pCodigo">Código de acesso <small id="cDica">(só números, o que os supervisores escrevem; mín. 4)</small><input id="pCodigo" inputmode="numeric" pattern="[0-9]*" autocomplete="off" autocapitalize="off"></label>
-      <label for="pOrdem">Ordem na lista<input id="pOrdem" type="number" inputmode="numeric" value="0"></label>
-    </div>
-    <label class="chk"><input type="checkbox" id="pAtivo" checked> Armazém ativo (aparece na entrada)</label>
-    <p class="dica">Listas: uma por linha. Ficam como os supervisores as veem nas apps.</p>
-    <label for="lVoltasC">Voltas — chegadas<textarea id="lVoltasC" spellcheck="false"></textarea></label>
-    <label for="lVoltasS">Voltas — saídas<textarea id="lVoltasS" spellcheck="false"></textarea></label>
-    <div class="linha">
-      <label for="lPneus">Voltas que trazem pneus<textarea id="lPneus" spellcheck="false"></textarea></label>
-      <label for="lInter">Carros extra <small>(interruptor nas chegadas)</small><textarea id="lInter" spellcheck="false"></textarea></label>
-    </div>
+    <p class="dica">Toque numa secção para a abrir. Só se guarda ao carregar em <b>Guardar armazém</b>, no fundo.</p>
+
+    <details class="grupo" open>
+      <summary><span class="gT">Armazém</span><span class="gD">Nome, código de entrada e ordem na lista</span></summary>
+      <div class="gC">
+        <div class="linha">
+          <label for="pNome">Nome<input id="pNome" maxlength="40" placeholder="ex. SJT"></label>
+          <label for="pId">Identificador <small>(letras minúsculas, sem espaços; não muda depois)</small><input id="pId" maxlength="30" autocapitalize="off" placeholder="ex. sjt"></label>
+        </div>
+        <div class="linha">
+          <label for="pCodigo">Código de acesso <small id="cDica">(só números, o que os supervisores escrevem; mín. 4)</small><input id="pCodigo" inputmode="numeric" pattern="[0-9]*" autocomplete="off" autocapitalize="off"></label>
+          <label for="pOrdem">Ordem na lista<input id="pOrdem" type="number" inputmode="numeric" value="0"></label>
+        </div>
+        <label class="chk"><input type="checkbox" id="pAtivo" checked> Armazém ativo (aparece na entrada)</label>
+      </div>
+    </details>
+
+    <details class="grupo">
+      <summary><span class="gT">Horários</span><span class="gD">Voltas de chegada e saída, pneus, carros extra e horas previstas</span></summary>
+      <div class="gC">
+        <p class="dica">Uma volta por linha, tal como os supervisores a veem na app.</p>
+        <div class="linha">
+          <label for="lVoltasC">Voltas — chegadas<textarea id="lVoltasC" spellcheck="false"></textarea></label>
+          <label for="lVoltasS">Voltas — saídas<textarea id="lVoltasS" spellcheck="false"></textarea></label>
+        </div>
+        <div class="linha">
+          <label for="lPneus">Voltas que trazem pneus<textarea id="lPneus" spellcheck="false"></textarea></label>
+          <label for="lInter">Carros extra <small>(interruptor nas chegadas)</small><textarea id="lInter" spellcheck="false"></textarea></label>
+        </div>
+        <label for="lPrev">Hora prevista de chegada <small>— uma linha por volta: volta = hora (ex. 1201 = 13:44). Opcional.</small><textarea id="lPrev" spellcheck="false" style="min-height:160px"></textarea></label>
+      </div>
+    </details>
+
+    <details class="grupo">
+      <summary><span class="gT">Bidiário</span><span class="gD">Rotas das recolhas obrigatórias e viaturas para Algarve e Leiria</span></summary>
+      <div class="gC">
     <div class="campoL">
-      <span class="rotL">Bidiário — rotas e recolhas <small>— toque numa rota para a abrir e mudar; a ordem aqui é a ordem na app e no Excel</small></span>
+      <span class="rotL">Rotas e recolhas <small>— toque numa rota para a abrir; a ordem aqui é a ordem na app e no Excel</small></span>
       <div class="bidi" id="bidiEd"></div>
       <div class="btns"><button class="btn sec" type="button" id="bidiNova">+ Nova rota</button><button class="btn sec" type="button" id="bidiColar">Colar do Excel</button></div>
       <div class="bidi-colar" id="bidiColarCx" hidden>
@@ -161,27 +196,59 @@ input:focus-visible,textarea:focus-visible,button:focus-visible{outline:2px soli
       </div>
     </div>
     <div class="campoL">
-      <span class="rotL">Bidiário — viaturas de saída <small>— Viagem = tempo até ao destino, para a hora de chegada (vazio = Leiria 1:23, Algarve 2:06, pelo Google Maps); “Extra” = só aparece se sair</small></span>
+      <span class="rotL">Viaturas de saída <small>— Viagem = tempo até ao destino, para a hora de chegada (vazio = Leiria 1:23, Algarve 2:06, pelo Google Maps); “Extra” = só aparece se sair</small></span>
       <div class="bidi" id="bidiV"></div>
       <button class="btn sec" type="button" id="bidiVNova">+ Viatura</button>
     </div>
-    <label for="lPrev">Hora prevista de chegada <small>— uma linha por volta: volta = hora (ex. 1201 = 13:44). Opcional.</small><textarea id="lPrev" spellcheck="false" style="min-height:160px"></textarea></label>
-    <label for="lMatriz">Subcontratados por volta <small>— uma linha por volta: volta = subcontratado (ex. 1201 = LG)</small><textarea id="lMatriz" spellcheck="false" style="min-height:180px"></textarea></label>
-    <label for="pEmailPen">Email para penalizações <small>— para onde se envia o ficheiro semanal (opcional; vários separados por vírgula)</small><input id="pEmailPen" type="email" inputmode="email" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="ex. operacoes@empresa.pt" multiple></label>
-    <label for="cEmailPen" class="cc">CC — penalizações <small>(opcional; vários separados por vírgula)</small><input id="cEmailPen" type="email" inputmode="email" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="ex. chefia@empresa.pt" multiple></label>
-    <label for="pEmail">Email para ocorrências <small>— para onde se enviam os volumes danificados (opcional; vários separados por vírgula)</small><input id="pEmail" type="email" inputmode="email" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="ex. apoio.cliente@empresa.pt" multiple></label>
-    <label for="cEmail" class="cc">CC — ocorrências <small>(opcional; vários separados por vírgula)</small><input id="cEmail" type="email" inputmode="email" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="ex. chefia@empresa.pt" multiple></label>
-    <label for="pEmailHor">Email para horários <small>— para onde se envia o Excel das chegadas e saídas (opcional; vários separados por vírgula)</small><input id="pEmailHor" type="email" inputmode="email" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="ex. trafego@empresa.pt" multiple></label>
-    <label for="cEmailHor" class="cc">CC — horários <small>(opcional; vários separados por vírgula)</small><input id="cEmailHor" type="email" inputmode="email" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="ex. chefia@empresa.pt" multiple></label>
-    <label for="pEmailCont">Email para pedidos <small>— para onde se pedem contactos e documentos (opcional; vários separados por vírgula)</small><input id="pEmailCont" type="email" inputmode="email" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="ex. apoio.cliente@empresa.pt" multiple></label>
-    <label for="cEmailCont" class="cc">CC — pedidos <small>(opcional; vários separados por vírgula)</small><input id="cEmailCont" type="email" inputmode="email" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="ex. chefia@empresa.pt" multiple></label>
-    <label for="lMotivos">Motivos de penalização <small>— motivo = valor em € (ou nao_pago, ou reembolso). Vazio = lista comum.</small><textarea id="lMotivos" spellcheck="false" style="min-height:160px"></textarea></label>
-    <div class="btns">
-      <button class="btn sec" type="button" id="usarSJT">Auto Preencher com dados Base</button>
+      </div>
+    </details>
+
+    <details class="grupo">
+      <summary><span class="gT">Penalizações</span><span class="gD">Subcontratado de cada volta e motivos com valores</span></summary>
+      <div class="gC">
+        <label for="lMatriz">Subcontratados por volta <small>— uma linha por volta: volta = subcontratado (ex. 1201 = LG)</small><textarea id="lMatriz" spellcheck="false" style="min-height:180px"></textarea></label>
+        <label for="lMotivos">Motivos de penalização <small>— motivo = valor em € (ou nao_pago, ou reembolso). Vazio = lista comum.</small><textarea id="lMotivos" spellcheck="false" style="min-height:160px"></textarea></label>
+        <button class="btn sec" type="button" id="usarSJT">Preencher motivos com a lista comum</button>
+      </div>
+    </details>
+
+    <details class="grupo">
+      <summary><span class="gT">Emails</span><span class="gD">Para onde cada app envia os ficheiros e pedidos</span></summary>
+      <div class="gC">
+        <p class="dica">Vários emails separados por vírgula. Todos são opcionais.</p>
+      <div class="emailB">
+        <div class="emailT"><b>Horários</b><span>Excel das chegadas e saídas das voltas</span></div>
+        <label for="pEmailHor">Para<input id="pEmailHor" type="email" inputmode="email" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="ex. trafego@empresa.pt" multiple></label>
+        <label for="cEmailHor">CC <small>(opcional)</small><input id="cEmailHor" type="email" inputmode="email" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="ex. chefia@empresa.pt" multiple></label>
+      </div>
+      <div class="emailB">
+        <div class="emailT"><b>Bidiário</b><span>Excel das saídas para Algarve e Leiria e das chegadas das rotas</span></div>
+        <label for="pEmailBid">Para<input id="pEmailBid" type="email" inputmode="email" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="ex. trafego@empresa.pt" multiple></label>
+        <label for="cEmailBid">CC <small>(opcional)</small><input id="cEmailBid" type="email" inputmode="email" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="ex. chefia@empresa.pt" multiple></label>
+      </div>
+      <div class="emailB">
+        <div class="emailT"><b>Penalizações</b><span>Ficheiro semanal das penalizações</span></div>
+        <label for="pEmailPen">Para<input id="pEmailPen" type="email" inputmode="email" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="ex. operacoes@empresa.pt" multiple></label>
+        <label for="cEmailPen">CC <small>(opcional)</small><input id="cEmailPen" type="email" inputmode="email" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="ex. chefia@empresa.pt" multiple></label>
+      </div>
+      <div class="emailB">
+        <div class="emailT"><b>Ocorrências</b><span>Volumes danificados, com fotografias</span></div>
+        <label for="pEmail">Para<input id="pEmail" type="email" inputmode="email" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="ex. apoio.cliente@empresa.pt" multiple></label>
+        <label for="cEmail">CC <small>(opcional)</small><input id="cEmail" type="email" inputmode="email" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="ex. chefia@empresa.pt" multiple></label>
+      </div>
+      <div class="emailB">
+        <div class="emailT"><b>Pedidos</b><span>Pedidos de contactos e documentos</span></div>
+        <label for="pEmailCont">Para<input id="pEmailCont" type="email" inputmode="email" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="ex. apoio.cliente@empresa.pt" multiple></label>
+        <label for="cEmailCont">CC <small>(opcional)</small><input id="cEmailCont" type="email" inputmode="email" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="ex. chefia@empresa.pt" multiple></label>
+      </div>
+      </div>
+    </details>
+
+    <div class="barraG">
+      <div class="msg" id="msgP" role="status"></div>
+      <button class="btn sec" type="button" id="cancelar">Cancelar</button>
       <button class="btn" type="submit" id="gravar">Guardar armazém</button>
     </div>
-    <button class="btn sec" type="button" id="cancelar">Cancelar</button>
-    <div class="msg" id="msgP" role="status"></div>
   </form>
 </main>
 <script src="sjt-listas.js"></script>
@@ -337,6 +404,7 @@ function preencher(c){
   $("pEmailHor").value=c.emailHorarios||"";
   $("cEmailCont").value=c.ccContactos||"";
   $("cEmailHor").value=c.ccHorarios||"";
+  $("pEmailBid").value=c.emailBidiario||"";$("cEmailBid").value=c.ccBidiario||"";
   $("cEmail").value=c.ccOcorrencias||"";
   $("cEmailPen").value=c.ccPenalizacoes||"";
 }
@@ -489,6 +557,8 @@ function lerConfig(){
   {const l=$("cEmailPen").value.split(/[,;\s]+/).map(x=>x.trim()).filter(Boolean);l.forEach(x=>{if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(x))erros.push("Email em CC (penalizações) inválido: “"+x+"”");});if(l.length)c.ccPenalizacoes=l.join(", ");}
   {const l=$("cEmail").value.split(/[,;\s]+/).map(x=>x.trim()).filter(Boolean);l.forEach(x=>{if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(x))erros.push("Email em CC (ocorrências) inválido: “"+x+"”");});if(l.length)c.ccOcorrencias=l.join(", ");}
   {const l=$("cEmailHor").value.split(/[,;\s]+/).map(x=>x.trim()).filter(Boolean);l.forEach(x=>{if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(x))erros.push("Email em CC (horários) inválido: “"+x+"”");});if(l.length)c.ccHorarios=l.join(", ");}
+  {const l=$("pEmailBid").value.split(/[,;\s]+/).map(x=>x.trim()).filter(Boolean);l.forEach(x=>{if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(x))erros.push("Email para o bidiário inválido: “"+x+"”");});if(l.length)c.emailBidiario=l.join(", ");}
+  {const l=$("cEmailBid").value.split(/[,;\s]+/).map(x=>x.trim()).filter(Boolean);l.forEach(x=>{if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(x))erros.push("Email em CC (bidiário) inválido: “"+x+"”");});if(l.length)c.ccBidiario=l.join(", ");}
   {const l=$("cEmailCont").value.split(/[,;\s]+/).map(x=>x.trim()).filter(Boolean);l.forEach(x=>{if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(x))erros.push("Email em CC (pedidos) inválido: “"+x+"”");});if(l.length)c.ccContactos=l.join(", ");}
   return {c,erros};
 }
