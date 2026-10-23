@@ -49,6 +49,32 @@ input:focus-visible,textarea:focus-visible,button:focus-visible{outline:2px soli
 .campoL{display:flex;flex-direction:column;gap:8px}.rotL{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}.rotL small{text-transform:none;letter-spacing:0;font-weight:400}
 .btn.perigo{border-color:var(--danger,#e0574f);color:#fff;background:var(--danger,#e0574f)}
 .dica.alerta{color:var(--danger,#e0574f);font-weight:600}
+.bidi{display:flex;flex-direction:column;gap:8px}
+.rota{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:0 12px}
+.rota[open]{padding-bottom:12px;border-color:var(--green)}
+.rota summary{cursor:pointer;padding:13px 0;font:600 15px var(--body);color:var(--fg);list-style:none;display:flex;align-items:center;gap:10px}
+.rota summary::-webkit-details-marker{display:none}
+.rota summary::before{content:"›";color:var(--green);font:700 20px/1 var(--body);transition:transform .15s}
+.rota[open] summary::before{transform:rotate(90deg)}
+.rota-t{min-width:0;overflow-wrap:anywhere}
+.rota>*+*:not(summary){margin-top:10px}
+.rota-top{display:grid;grid-template-columns:110px 1fr;gap:10px}
+.bcampo{gap:4px}
+.rec{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr) 76px 36px;gap:6px;align-items:center}
+.rec.cab span{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.rec input{padding:9px;font-size:15px}
+.rec input.hr{text-align:center;font-family:var(--mono)}
+.rec input.mau{border-color:var(--danger)}
+.rec-x{width:36px;height:36px;border-radius:8px;border:1px solid var(--line);background:none;color:var(--muted);font:600 20px/1 var(--body);cursor:pointer}
+.rota-acoes{display:flex;flex-wrap:wrap;gap:8px}
+.mini{background:none;border:1px solid var(--line);color:var(--green);border-radius:8px;padding:8px 12px;font:600 14px var(--body);cursor:pointer}
+.mini:disabled{color:var(--muted);opacity:.5;cursor:default}
+.mini.perigo{color:var(--danger);border-color:var(--danger)}
+.viat{display:grid;grid-template-columns:minmax(0,1fr) auto 36px;gap:10px;align-items:center}
+.viat .chk{font-size:14px}
+.bidi-colar{display:flex;flex-direction:column;gap:10px}
+@media (max-width:520px){.rec{grid-template-columns:minmax(0,1fr) 72px 36px;padding-top:10px;border-top:1px solid var(--line)}.rec input:first-child{grid-column:1/-1}.rec.cab{display:none}.rota-top{grid-template-columns:90px 1fr}}
+@media (prefers-reduced-motion:reduce){.rota summary::before{transition:none}}
 </style>
 <link rel="stylesheet" href="carf-tema.css">
 <script src="carf-tema.js"></script>
@@ -111,8 +137,21 @@ input:focus-visible,textarea:focus-visible,button:focus-visible{outline:2px soli
       <label for="lPneus">Voltas que trazem pneus<textarea id="lPneus" spellcheck="false"></textarea></label>
       <label for="lInter">Carros extra <small>(interruptor nas chegadas)</small><textarea id="lInter" spellcheck="false"></textarea></label>
     </div>
-    <label for="lBidi">Bidiário — rotas e recolhas <small>— uma linha por cliente: rota | zona | cliente | localidade | hora | motorista. Pode colar diretamente do Excel da folha: as células vazias (juntas) repetem a linha de cima e só uma rota preenchida começa uma rota nova. O motorista basta na primeira linha da rota; o telemóvel pode ir no mesmo campo (ex. Danilson Varela - 934903188).</small><textarea id="lBidi" spellcheck="false" style="min-height:200px"></textarea></label>
-    <label for="lBidiV">Bidiário — viaturas de saída <small>— uma por linha; acrescente (extra) às que só saem às vezes (ex. 2ª viatura Leiria (extra)). Vazio = Algarve, Leiria, Évora.</small><textarea id="lBidiV" spellcheck="false"></textarea></label>
+    <div class="campoL">
+      <span class="rotL">Bidiário — rotas e recolhas <small>— toque numa rota para a abrir e mudar; a ordem aqui é a ordem na app e no Excel</small></span>
+      <div class="bidi" id="bidiEd"></div>
+      <div class="btns"><button class="btn sec" type="button" id="bidiNova">+ Nova rota</button><button class="btn sec" type="button" id="bidiColar">Colar do Excel</button></div>
+      <div class="bidi-colar" id="bidiColarCx" hidden>
+        <p class="dica">Copie no Excel as colunas Rota até Motorista (sem o cabeçalho) e cole aqui. Substitui todas as rotas do bidiário deste armazém.</p>
+        <textarea id="lBidi" spellcheck="false" aria-label="Lista colada do Excel"></textarea>
+        <div class="btns"><button class="btn" type="button" id="bidiImportar">Substituir pelas rotas coladas</button><button class="btn sec" type="button" id="bidiCancelar">Cancelar</button></div>
+      </div>
+    </div>
+    <div class="campoL">
+      <span class="rotL">Bidiário — viaturas de saída <small>— “Extra” = só aparece no resumo se sair (ex. 2ª viatura)</small></span>
+      <div class="bidi" id="bidiV"></div>
+      <button class="btn sec" type="button" id="bidiVNova">+ Viatura</button>
+    </div>
     <label for="lPrev">Hora prevista de chegada <small>— uma linha por volta: volta = hora (ex. 1201 = 13:44). Opcional.</small><textarea id="lPrev" spellcheck="false" style="min-height:160px"></textarea></label>
     <label for="lMatriz">Subcontratados por volta <small>— uma linha por volta: volta = subcontratado (ex. 1201 = LG)</small><textarea id="lMatriz" spellcheck="false" style="min-height:180px"></textarea></label>
     <label for="pEmailPen">Email para penalizações <small>— para onde se envia o ficheiro semanal (opcional; vários separados por vírgula)</small><input id="pEmailPen" type="email" inputmode="email" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="ex. operacoes@empresa.pt" multiple></label>
@@ -270,8 +309,8 @@ function preencher(c){
   $("lPneus").value=(c.voltasPneus||[]).join("\n");$("lInter").value=(c.interruptor||[]).join("\n");
   $("lPrev").value=Object.entries(c.previsoes||{}).map(([v,h])=>v+" = "+h).join("\n");
   $("lMatriz").value=Object.entries(c.matriz||{}).map(([v,s])=>v+" = "+s).join("\n");
-  $("lBidi").value=(c.bidiario||[]).flatMap(g=>g.clientes.map((x,i)=>[i?"":g.rota,i?"":g.zona,x[0],x[1],x[2],i?"":(g.motorista||"")].join(" | ").replace(/(\s\|\s*)+$/,""))).join("\n");
-  $("lBidiV").value=(c.bidiarioViaturas||[]).map(v=>v.nome+(v.extra?" (extra)":"")).join("\n");
+  BIDI=JSON.parse(JSON.stringify(c.bidiario||[]));BIDIV=JSON.parse(JSON.stringify(c.bidiarioViaturas||[]));bidiAbertas=new Set();
+  $("bidiColarCx").hidden=true;$("lBidi").value="";desenharBidi();desenharBidiV();
   $("lMotivos").value=(c.motivos||[]).map(([m,v])=>m+" = "+v).join("\n");
   $("pEmail").value=c.emailOcorrencias||"";
   $("pEmailPen").value=c.emailPenalizacoes||"";
@@ -314,6 +353,86 @@ function lerBidiario(txt){
   const vistos=new Set();grupos.forEach(x=>{const k=x.rota+"|"+x.zona;if(vistos.has(k))erros.push("Bidiário: a rota “"+x.rota+" "+x.zona+"” aparece duas vezes");vistos.add(k);});
   return {grupos:grupos.filter(x=>x.rota),erros};
 }
+/* ---- Editor do bidiário: uma caixa por rota (abre ao tocar), com as recolhas em linhas ---- */
+let BIDI=[],BIDIV=[],bidiAbertas=new Set(),bidiApagar=null;
+const elG=(tag,cls,txt)=>{const e=document.createElement(tag);if(cls)e.className=cls;if(txt!=null)e.textContent=txt;return e;};
+function campoG(rot,val,ph,onInput,extra){const l=elG("label","bcampo"+(extra?" "+extra:""));l.append(rot);const i=document.createElement("input");i.value=val||"";i.placeholder=ph||"";i.autocomplete="off";i.addEventListener("input",()=>onInput(i.value));l.appendChild(i);return [l,i];}
+const horaOk=h=>/^\d{1,2}[:.hH]\d{2}$/.test(h)&&+h.split(/[:.hH]/)[0]<24&&+h.split(/[:.hH]/)[1]<60;
+const horaN=h=>{const m=String(h||"").trim().match(/^(\d{1,2})[:.hH](\d{2})$/);return m?String(+m[1]).padStart(2,"0")+":"+m[2]:String(h||"").trim();};
+function resumoRota(g){const n=(g.clientes||[]).filter(c=>c[0]).length;return [g.rota||"(sem rota)",g.zona,(g.motorista||"").replace(/\s*[-–]?\s*\+?\d[\d ]{7,}\d\s*$/,"")].filter(Boolean).join(" · ")+" — "+n+(n===1?" recolha":" recolhas");}
+function desenharBidi(){
+  const ed=$("bidiEd");ed.textContent="";
+  if(!BIDI.length){ed.appendChild(elG("p","dica","Ainda não há rotas. Carregue em “+ Nova rota” ou em “Colar do Excel”."));return;}
+  BIDI.forEach((g,gi)=>{
+    g.clientes=g.clientes||[];
+    const d=document.createElement("details");d.className="rota";d.open=bidiAbertas.has(gi);
+    d.addEventListener("toggle",()=>{d.open?bidiAbertas.add(gi):bidiAbertas.delete(gi);});
+    const sm=elG("summary",null);const st=elG("span","rota-t",resumoRota(g));sm.appendChild(st);d.appendChild(sm);
+    const atual=()=>{st.textContent=resumoRota(g);};
+    const topo=elG("div","rota-top");
+    topo.append(campoG("Rota",g.rota,"ex. 1205",v=>{g.rota=v;atual();},"curto")[0],campoG("Zona",g.zona,"ex. Amadora",v=>{g.zona=v;atual();})[0]);
+    d.appendChild(topo);
+    d.appendChild(campoG("Motorista",g.motorista,"nome e telemóvel (ex. Paulo Mendes - 912345678)",v=>{g.motorista=v;atual();})[0]);
+    const cab=elG("div","rec cab");cab.append(elG("span",null,"Cliente"),elG("span",null,"Localidade"),elG("span",null,"Hora"),elG("span"));d.appendChild(cab);
+    g.clientes.forEach((c,ci)=>{
+      const r=elG("div","rec");
+      const mk=(k,ph,aria,cls)=>{const i=document.createElement("input");i.value=c[k]||"";i.placeholder=ph;i.autocomplete="off";i.setAttribute("aria-label",aria);if(cls)i.className=cls;
+        i.addEventListener("input",()=>{c[k]=i.value;atual();i.classList.toggle("mau",k===2&&i.value.trim()!==""&&!horaOk(i.value.trim()));});return i;};
+      const h=mk(2,"11:30","Hora da recolha","hr");h.inputMode="numeric";
+      h.addEventListener("blur",()=>{if(horaOk(h.value.trim())){h.value=c[2]=horaN(h.value);}});
+      const x=elG("button","rec-x","×");x.type="button";x.setAttribute("aria-label","Tirar a recolha "+(c[0]||""));
+      x.onclick=()=>{g.clientes.splice(ci,1);bidiAbertas.add(gi);desenharBidi();};
+      r.append(mk(0,"Cliente","Cliente"),mk(1,"Localidade","Localidade"),h,x);d.appendChild(r);
+    });
+    const ac=elG("div","rota-acoes");
+    const add=elG("button","mini","+ Recolha");add.type="button";
+    add.onclick=()=>{const u=g.clientes[g.clientes.length-1];g.clientes.push(["",u?u[1]:"",""]);bidiAbertas.add(gi);desenharBidi();const ins=$("bidiEd").querySelectorAll("details")[gi].querySelectorAll(".rec:not(.cab)");const l=ins[ins.length-1];if(l)l.querySelector("input").focus();};
+    const sobe=elG("button","mini","↑ Subir");sobe.type="button";sobe.disabled=gi===0;
+    sobe.onclick=()=>{[BIDI[gi-1],BIDI[gi]]=[BIDI[gi],BIDI[gi-1]];bidiAbertas=new Set([gi-1]);desenharBidi();};
+    const desce=elG("button","mini","↓ Descer");desce.type="button";desce.disabled=gi===BIDI.length-1;
+    desce.onclick=()=>{[BIDI[gi+1],BIDI[gi]]=[BIDI[gi],BIDI[gi+1]];bidiAbertas=new Set([gi+1]);desenharBidi();};
+    const ap=elG("button","mini perigo",bidiApagar===gi?"Confirmar apagar":"Apagar rota");ap.type="button";
+    ap.onclick=()=>{if(bidiApagar!==gi){bidiApagar=gi;bidiAbertas.add(gi);desenharBidi();setTimeout(()=>{if(bidiApagar===gi){bidiApagar=null;desenharBidi();}},4000);return;}
+      bidiApagar=null;BIDI.splice(gi,1);bidiAbertas=new Set();desenharBidi();};
+    ac.append(add,sobe,desce,ap);d.appendChild(ac);
+    ed.appendChild(d);
+  });
+}
+function desenharBidiV(){
+  const ed=$("bidiV");ed.textContent="";
+  BIDIV.forEach((v,vi)=>{
+    const r=elG("div","viat");
+    const i=document.createElement("input");i.value=v.nome||"";i.placeholder="ex. Algarve";i.autocomplete="off";i.setAttribute("aria-label","Nome da viatura");i.addEventListener("input",()=>{v.nome=i.value;});
+    const l=elG("label","chk");const c=document.createElement("input");c.type="checkbox";c.checked=!!v.extra;c.onchange=()=>{v.extra=c.checked;};l.append(c," Extra");
+    const x=elG("button","rec-x","×");x.type="button";x.setAttribute("aria-label","Tirar a viatura "+(v.nome||""));x.onclick=()=>{BIDIV.splice(vi,1);desenharBidiV();};
+    r.append(i,l,x);ed.appendChild(r);
+  });
+  if(!BIDIV.length)ed.appendChild(elG("p","dica","Sem viaturas: a app usa Algarve, Leiria e Évora."));
+}
+function bidiDoEditor(){
+  const erros=[],grupos=[],vistos=new Set();
+  BIDI.forEach(g=>{
+    const rota=String(g.rota||"").trim(),zona=String(g.zona||"").trim(),motorista=String(g.motorista||"").replace(/\s+/g," ").trim();
+    const clientes=(g.clientes||[]).map(c=>[String(c[0]||"").trim(),String(c[1]||"").trim(),String(c[2]||"").trim()]).filter(c=>c[0]||c[1]||c[2]);
+    if(!rota&&!zona&&!clientes.length&&!motorista)return;
+    if(!rota){erros.push("Bidiário: há uma rota sem número/nome");return;}
+    clientes.forEach(c=>{if(c[2]&&!horaOk(c[2]))erros.push("Bidiário: hora inválida “"+c[2]+"” na rota "+rota);c[2]=horaN(c[2]);if(!c[0])erros.push("Bidiário: falta o cliente numa recolha da rota "+rota);});
+    const k=rota+"|"+zona;if(vistos.has(k))erros.push("Bidiário: a rota “"+rota+(zona?" "+zona:"")+"” aparece duas vezes");vistos.add(k);
+    grupos.push({rota,zona,motorista,clientes});
+  });
+  return {grupos,erros};
+}
+$("bidiNova").onclick=()=>{BIDI.push({rota:"",zona:"",motorista:"",clientes:[["","",""]]});bidiAbertas=new Set([BIDI.length-1]);desenharBidi();const d=$("bidiEd").querySelectorAll("details");const u=d[d.length-1];if(u){u.scrollIntoView({block:"center"});u.querySelector("input").focus();}};
+$("bidiVNova").onclick=()=>{BIDIV.push({nome:"",extra:false});desenharBidiV();const i=$("bidiV").querySelectorAll(".viat input:not([type=checkbox])");i[i.length-1].focus();};
+$("bidiColar").onclick=()=>{$("bidiColarCx").hidden=false;$("lBidi").focus();};
+$("bidiCancelar").onclick=()=>{$("bidiColarCx").hidden=true;$("lBidi").value="";};
+$("bidiImportar").onclick=()=>{
+  const r=lerBidiario($("lBidi").value);
+  if(r.erros.length){msg("msgP",r.erros.slice(0,3).join(" · "),false);return;}
+  if(!r.grupos.length){msg("msgP","Não encontrei rotas no que colou.",false);return;}
+  BIDI=r.grupos;bidiAbertas=new Set();$("bidiColarCx").hidden=true;$("lBidi").value="";desenharBidi();
+  msg("msgP",r.grupos.length+" rotas colocadas. Confira e carregue em Guardar armazém.",true);
+};
 function lerConfig(){
   const erros=[],matriz={},motivos=[];
   linhas($("lMatriz").value).forEach(l=>{const m=l.match(/^(.+?)\s*[=;:\t]\s*(.+)$/);if(m)matriz[m[1].trim()]=m[2].trim();else erros.push("Subcontratados: falta o “=” em “"+l+"”");});
@@ -327,8 +446,8 @@ function lerConfig(){
   if(semVolta.length)erros.push("Hora prevista para voltas que não estão nas voltas de chegada: "+semVolta.join(", ")+" (o nome tem de ser igual)");
   const c={voltasC:linhas($("lVoltasC").value),voltasS:linhas($("lVoltasS").value),voltasPneus:linhas($("lPneus").value),interruptor:linhas($("lInter").value),matriz};
   if(motivos.length)c.motivos=motivos;
-  {const r=lerBidiario($("lBidi").value);erros.push(...r.erros);if(r.grupos.length)c.bidiario=r.grupos;}
-  {const v=linhas($("lBidiV").value).map(l=>{const ex=/\(\s*extra\s*\)\s*$/i.test(l);return {nome:l.replace(/\(\s*extra\s*\)\s*$/i,"").replace(/[\s-]+$/,"").trim(),extra:ex};}).filter(v=>v.nome);if(v.length)c.bidiarioViaturas=v;}
+  {const r=bidiDoEditor();erros.push(...r.erros);if(r.grupos.length)c.bidiario=r.grupos;}
+  {const v=BIDIV.map(x=>({nome:String(x.nome||"").replace(/\s+/g," ").trim(),extra:!!x.extra})).filter(x=>x.nome);if(v.length)c.bidiarioViaturas=v;}
   if(Object.keys(previsoes).length)c.previsoes=previsoes;
   const em=$("pEmail").value.split(/[,;\s]+/).map(x=>x.trim()).filter(Boolean);
   em.forEach(x=>{if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(x))erros.push("Email para ocorrências inválido: “"+x+"”");});
