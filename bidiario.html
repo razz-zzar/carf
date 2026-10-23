@@ -131,6 +131,7 @@ body.preso{overflow:hidden}
 .thumb img{width:100%;height:100%;object-fit:cover;display:block}
 .thumb-w{position:relative}
 .thumb-x{position:absolute;top:-8px;right:-8px;width:30px;height:30px;border-radius:50%;border:2px solid var(--bg);background:var(--danger);color:#fff;font:700 18px/1 var(--body);cursor:pointer;padding:0}
+.prevh{font:600 17px var(--mono);color:var(--fg)}
 .sem-foto{font-size:13px;color:var(--muted);font-style:italic}
 .ed-pct{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}
 .ed-pct button{background:var(--panel);color:var(--fg);border:1px solid var(--line);border-radius:999px;padding:9px 2px;font:600 14px var(--body);cursor:pointer}
@@ -190,7 +191,7 @@ body.preso{overflow:hidden}
     <button class="btn enviar" id="email" type="button">Enviar Excel por email</button>
     <button class="btn" id="excel" type="button">Exportar Excel do dia</button>
     <div class="msg" id="msgX" role="status"></div>
-    <div class="hint">O Excel tem duas folhas: as recolhas de cada rota (hora da última chamada, hora de chegada e motorista) e a saída das viaturas (hora, carga e n.º de fotografias). No email, as fotografias da carga vão em anexo. Vai para o email dos horários definido na gestão.</div>
+    <div class="hint">O Excel tem duas folhas: as saídas das viaturas (hora de saída, chegada prevista, ocupação e fotografia) e as recolhas de cada rota (hora da última chamada, hora de chegada e motorista). No email, as fotografias da carga vão em anexo. Vai para o email dos horários definido na gestão.</div>
   </section>
 </div>
 
@@ -237,6 +238,11 @@ const ROTAS=SJT.lista("bidiario",S).map(g=>{
   return {...g,k:g.rota+"|"+g.zona,ultima:hs.length?Math.max(...hs):null,primeira:hs.length?Math.min(...hs):null};
 });
 const VIATURAS=(()=>{const v=SJT.lista("bidiarioViaturas",S);return v.length?v:[{nome:"Algarve"},{nome:"Leiria"},{nome:"Évora"}];})();
+/* Tempo de viagem a partir de São João da Talha (Google Maps): Leiria 1h23, Algarve 2h06; a gestão pode mudar por viatura */
+const VIAGEM_BASE=[[/leiria/i,83],[/algarve/i,126]];
+const viagemDe=v=>{const m=minDe(v.viagem);if(m!=null)return m;const b=VIAGEM_BASE.find(([re])=>re.test(v.nome||""));return b?b[1]:null;};
+const chegadaPrev=(v,x)=>{const m=viagemDe(v);return m==null?null:new Date(new Date(x.t).getTime()+m*60000).toISOString();};
+
 const hm=m=>m==null?"":pad(Math.floor(m/60))+":"+pad(m%60);
 
 /* Motorista: "Nome - 934903188" → nome e telefone */
@@ -374,6 +380,7 @@ function cartaoViatura(v,dia,eHoje,D){
   const aEd=aEditar&&aEditar.k===v.nome&&aEditar.c==="sv";
   if(s&&!aEd){
     const lc=el("div","lin");lc.append(botaoHora(s,eHoje,"Editar a saída de "+v.nome,()=>abrirSaida(v,s)),"Saiu");lc.appendChild(autor(s));info.appendChild(lc);
+    const chP=chegadaPrev(v,s);if(chP){const lp=el("div","lin");lp.append("Chegada prevista ");lp.appendChild(el("b","prevh",hora(chP)));info.appendChild(lp);}
     if(s.carga!=null){const c=el("div","carga");c.append(el("b",null,s.carga+"%"),el("span",null,"de carga"));const br=el("div","cbar");const ii=el("i");ii.style.width=Math.min(100,s.carga)+"%";br.appendChild(ii);c.appendChild(br);info.appendChild(c);}
     const fs=s.fotos||[];
     if(fs.length){const g=el("div","thumbs");fs.forEach((fid,k)=>g.appendChild(miniatura(fid,()=>verFotos(fs,k,v.nome))));info.appendChild(g);}
@@ -582,7 +589,8 @@ function zipStore(files){
 function criarXlsx(folhas){
   const X=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
   const L="ABCDEFGHIJ",NS='xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"',H='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>';
-  const folha=({titulo,cab,linhas,larguras,pct=[]})=>{
+  const folha=({titulo,cab,linhas,larguras,pct=[],xml})=>{
+    if(xml)return xml;
     const nc=cab.length,ult=3+linhas.length;
     const cel=(r,c,v,s)=>v===""||v==null?`<c r="${L[c]}${r}" s="${s}"/>`:typeof v==="number"?`<c r="${L[c]}${r}" s="${s}"><v>${v}</v></c>`:`<c r="${L[c]}${r}" s="${s}" t="inlineStr"><is><t xml:space="preserve">${X(v)}</t></is></c>`;
     let rows=`<row r="1" ht="26" customHeight="1">`+cab.map((_,c)=>cel(1,c,c?"":titulo,1)).join("")+`</row><row r="2"/>`;
@@ -593,15 +601,25 @@ function criarXlsx(folhas){
   };
   const fill=c=>`<fill><patternFill patternType="solid"><fgColor rgb="FF${c}"/><bgColor indexed="64"/></patternFill></fill>`;
   const bd=`<border><left style="thin"><color rgb="FFC3CCBD"/></left><right style="thin"><color rgb="FFC3CCBD"/></right><top style="thin"><color rgb="FFC3CCBD"/></top><bottom style="thin"><color rgb="FFC3CCBD"/></bottom><diagonal/></border>`;
+  const bdP=`<border><left style="thin"><color rgb="FF000000"/></left><right style="thin"><color rgb="FF000000"/></right><top style="thin"><color rgb="FF000000"/></top><bottom style="thin"><color rgb="FF000000"/></bottom><diagonal/></border>`;
   const xf=(f,fi,b,h)=>`<xf numFmtId="0" fontId="${f}" fillId="${fi}" borderId="${b}" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="${h}" vertical="center"/></xf>`;
-  const styles=`${H}<styleSheet ${NS}><fonts count="3"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="14"/><color rgb="FF1F3B2A"/><name val="Calibri"/></font><font><b/><sz val="11"/><color rgb="FF1F3B2A"/><name val="Calibri"/></font></fonts><fills count="5"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill>${fill("E2EBD5")}${fill("FFFFFF")}${fill("F4F7EF")}</fills><borders count="2"><border><left/><right/><top/><bottom/><diagonal/></border>${bd}</borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="7"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>${xf(1,2,0,"left")}${xf(2,2,1,"center")}${xf(0,3,1,"center")}${xf(0,4,1,"center")}${xf(0,3,1,"center").replace('numFmtId="0"','numFmtId="9"').replace("applyFont",'applyNumberFormat="1" applyFont')}${xf(0,4,1,"center").replace('numFmtId="0"','numFmtId="9"').replace("applyFont",'applyNumberFormat="1" applyFont')}</cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>`;
-  const wb=`${H}<workbook ${NS} xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets>${folhas.map((f,i)=>`<sheet name="${X(f.folha)}" sheetId="${i+1}" r:id="rId${i+1}"/>`).join("")}</sheets><definedNames>${folhas.map((f,i)=>`<definedName name="_xlnm._FilterDatabase" localSheetId="${i}" hidden="1">'${X(f.folha)}'!$A$3:$${L[f.cab.length-1]}$${3+f.linhas.length}</definedName>`).join("")}</definedNames></workbook>`;
+  const styles=`${H}<styleSheet ${NS}><fonts count="4"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="14"/><color rgb="FF1F3B2A"/><name val="Calibri"/></font><font><b/><sz val="11"/><color rgb="FF1F3B2A"/><name val="Calibri"/></font><font><b/><sz val="12"/><color rgb="FF000000"/><name val="Calibri"/></font></fonts><fills count="7"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill>${fill("E2EBD5")}${fill("FFFFFF")}${fill("F4F7EF")}${fill("D9D9D9")}${fill("FF0000")}</fills><borders count="3"><border><left/><right/><top/><bottom/><diagonal/></border>${bd}${bdP}</borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="12"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>${xf(1,2,0,"left")}${xf(2,2,1,"center")}${xf(0,3,1,"center")}${xf(0,4,1,"center")}${xf(0,3,1,"center").replace('numFmtId="0"','numFmtId="9"').replace("applyFont",'applyNumberFormat="1" applyFont')}${xf(0,4,1,"center").replace('numFmtId="0"','numFmtId="9"').replace("applyFont",'applyNumberFormat="1" applyFont')}${xf(3,5,2,"center")}${xf(3,3,2,"center")}${xf(3,3,2,"center").replace('numFmtId="0"','numFmtId="10"').replace("applyFont",'applyNumberFormat="1" applyFont')}${xf(3,6,2,"center")}${xf(3,0,2,"left")}</cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>`;
+  const wb=`${H}<workbook ${NS} xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets>${folhas.map((f,i)=>`<sheet name="${X(f.folha)}" sheetId="${i+1}" r:id="rId${i+1}"/>`).join("")}</sheets><definedNames>${folhas.map((f,i)=>f.xml?"":`<definedName name="_xlnm._FilterDatabase" localSheetId="${i}" hidden="1">'${X(f.folha)}'!$A$3:$${L[f.cab.length-1]}$${3+f.linhas.length}</definedName>`).join("")}</definedNames></workbook>`;
   const R="http://schemas.openxmlformats.org/officeDocument/2006/relationships",P="http://schemas.openxmlformats.org/package/2006/relationships";
   const ct=`${H}<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>${folhas.map((_,i)=>`<Override PartName="/xl/worksheets/sheet${i+1}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`).join("")}<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>`;
   const rels=`${H}<Relationships xmlns="${P}"><Relationship Id="rId1" Type="${R}/officeDocument" Target="xl/workbook.xml"/></Relationships>`;
   const wrels=`${H}<Relationships xmlns="${P}">${folhas.map((_,i)=>`<Relationship Id="rId${i+1}" Type="${R}/worksheet" Target="worksheets/sheet${i+1}.xml"/>`).join("")}<Relationship Id="rId${folhas.length+1}" Type="${R}/styles" Target="styles.xml"/></Relationships>`;
-  const e=new TextEncoder();
-  return zipStore([["[Content_Types].xml",e.encode(ct)],["_rels/.rels",e.encode(rels)],["xl/workbook.xml",e.encode(wb)],["xl/_rels/workbook.xml.rels",e.encode(wrels)],["xl/styles.xml",e.encode(styles)],...folhas.map((f,i)=>["xl/worksheets/sheet"+(i+1)+".xml",e.encode(folha(f))])]);
+  const e=new TextEncoder(),extra=[];let nImg=0;
+  /* fotografias dentro das células (uma drawing por folha) */
+  folhas.forEach((f,i)=>{if(!f.imgs||!f.imgs.length)return;const n=i+1,EMU=9525;
+    const anc=f.imgs.map((im,k)=>`<xdr:oneCellAnchor><xdr:from><xdr:col>${im.col}</xdr:col><xdr:colOff>${im.ox*EMU}</xdr:colOff><xdr:row>${im.row}</xdr:row><xdr:rowOff>${im.oy*EMU}</xdr:rowOff></xdr:from><xdr:ext cx="${im.cx*EMU}" cy="${im.cy*EMU}"/><xdr:pic><xdr:nvPicPr><xdr:cNvPr id="${k+2}" name="Foto ${k+1}"/><xdr:cNvPicPr><a:picLocks noChangeAspect="1"/></xdr:cNvPicPr></xdr:nvPicPr><xdr:blipFill><a:blip r:embed="rId${k+1}"/><a:stretch><a:fillRect/></a:stretch></xdr:blipFill><xdr:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="${im.cx*EMU}" cy="${im.cy*EMU}"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></xdr:spPr></xdr:pic><xdr:clientData/></xdr:oneCellAnchor>`).join("");
+    extra.push(["xl/drawings/drawing"+n+".xml",e.encode(`${H}<xdr:wsDr xmlns:xdr="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="${R}">${anc}</xdr:wsDr>`)]);
+    extra.push(["xl/drawings/_rels/drawing"+n+".xml.rels",e.encode(`${H}<Relationships xmlns="${P}">${f.imgs.map((im,k)=>`<Relationship Id="rId${k+1}" Type="${R}/image" Target="../media/image${nImg+k+1}.jpeg"/>`).join("")}</Relationships>`)]);
+    f.imgs.forEach((im,k)=>extra.push(["xl/media/image"+(nImg+k+1)+".jpeg",im.bytes]));nImg+=f.imgs.length;
+    extra.push(["xl/worksheets/_rels/sheet"+n+".xml.rels",e.encode(`${H}<Relationships xmlns="${P}"><Relationship Id="rId1" Type="${R}/drawing" Target="../drawings/drawing${n}.xml"/></Relationships>`)]);
+  });
+  const ct2=ct.replace('<Default Extension="xml" ContentType="application/xml"/>','<Default Extension="xml" ContentType="application/xml"/><Default Extension="jpeg" ContentType="image/jpeg"/>').replace("</Types>",folhas.map((f,i)=>f.imgs&&f.imgs.length?`<Override PartName="/xl/drawings/drawing${i+1}.xml" ContentType="application/vnd.openxmlformats-officedocument.drawing+xml"/>`:"").join("")+"</Types>");
+  return zipStore([["[Content_Types].xml",e.encode(ct2)],["_rels/.rels",e.encode(rels)],["xl/workbook.xml",e.encode(wb)],["xl/_rels/workbook.xml.rels",e.encode(wrels)],["xl/styles.xml",e.encode(styles)],...folhas.map((f,i)=>["xl/worksheets/sheet"+(i+1)+".xml",e.encode(folha(f))]),...extra]);
 }
 /* Linhas iguais à folha em papel: uma por cliente; chamada, chegada e motorista na primeira linha de cada rota */
 function dadosDia(dia){
@@ -612,12 +630,35 @@ function dadosDia(dia){
   const tem=Object.keys(D.cg).length+Object.keys(D.ch).length+Object.keys(D.sv).length>0;
   return {rec,vi,tem};
 }
+/* Folha das saídas, no formato da folha de controlo: Destinatário, Transportadora, Hora de Saída,
+   Horário de Chegada (saída + tempo de viagem), Ocupação e Foto (a primeira fotografia da carga, dentro da célula) */
+async function folhaSaidas(dia){
+  const D=doDia(dia),[y,m,d]=dia.split("-");
+  const X=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+  const cel=(ref,v,st)=>v===""||v==null?`<c r="${ref}" s="${st}"/>`:typeof v==="number"?`<c r="${ref}" s="${st}"><v>${v}</v></c>`:`<c r="${ref}" s="${st}" t="inlineStr"><is><t xml:space="preserve">${X(v)}</t></is></c>`;
+  const C="BCDEFG",ALT=96,LARG_G=34; /* altura da linha (pontos) e largura da coluna Foto (caracteres) */
+  let rows=`<row r="2" ht="22" customHeight="1">${cel("B2","DATA",7)}${cel("C2",d+"/"+m+"/"+y,8)}${["D","E","F","G"].map(c=>cel(c+"2","",11)).join("")}</row>`;
+  rows+=`<row r="3" ht="22" customHeight="1">${[..."BCDEFG"].map(c=>cel(c+"3","",11)).join("")}</row>`;
+  rows+=`<row r="4" ht="24" customHeight="1">`+["Destinatário","Transportadora","Hora de Saída","Horário Chegada","Ocupação","Foto"].map((t,i)=>cel(C[i]+"4",t,7)).join("")+`</row>`;
+  const vi=VIATURAS.filter(v=>!v.extra||D.sv[v.nome]),imgs=[];
+  for(let i=0;i<vi.length;i++){
+    const v=vi[i],x=D.sv[v.nome],r=5+i,ch=x?chegadaPrev(v,x):null,fid=x&&(x.fotos||[])[0];
+    let temFoto=false;
+    if(fid){try{const b=await FOTOS.blob(fid),bm=await createImageBitmap(b);
+      const W=LARG_G*7+5-8,Hh=ALT*96/72-8,k=Math.min(W/bm.width,Hh/bm.height),cx=Math.round(bm.width*k),cy=Math.round(bm.height*k);
+      imgs.push({bytes:new Uint8Array(await b.arrayBuffer()),col:6,row:r-1,cx,cy,ox:Math.round((W+8-cx)/2),oy:Math.round((Hh+8-cy)/2)});if(bm.close)bm.close();temFoto=true;}catch(e){}}
+    rows+=`<row r="${r}" ht="${temFoto?ALT:24}" customHeight="1">${cel("B"+r,v.nome,7)}${cel("C"+r,"CARF",8)}${cel("D"+r,x?hora(x.t):"",8)}${cel("E"+r,ch?hora(ch):"",8)}${cel("F"+r,x&&x.carga!=null?x.carga/100:"",x&&x.carga!=null?9:8)}${cel("G"+r,x&&!temFoto?((x.fotos||[]).length?"(fotografia não disponível neste telemóvel)":"sem fotografia"):"",8)}</row>`;
+  }
+  const W=[["A",3],["B",18],["C",17],["D",16],["E",18],["F",15],["G",LARG_G]];
+  const cols=W.map(([c,w])=>{const n="ABCDEFG".indexOf(c)+1;return `<col min="${n}" max="${n}" width="${w}" customWidth="1"/>`;}).join("");
+  const NS='xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"';
+  return {folha:"Saídas",cab:[],linhas:[],imgs,xml:`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet ${NS}><sheetViews><sheetView workbookViewId="0" showGridLines="0"/></sheetViews><sheetFormatPr defaultRowHeight="15"/><cols>${cols}</cols><sheetData>${rows}</sheetData><mergeCells count="2"><mergeCell ref="D2:G3"/><mergeCell ref="B3:C3"/></mergeCells><pageMargins left="0.5" right="0.5" top="0.6" bottom="0.6" header="0.3" footer="0.3"/><pageSetup paperSize="9" orientation="landscape"/>${imgs.length?'<drawing r:id="rId1"/>':""}</worksheet>`};
+}
 const CAB_R=["Rota","Zona","Cliente","Localidade","Hora da recolha","Hora da última chamada","Hora de chegada","Motorista"];
-function gerarExcel(dia){
+async function gerarExcel(dia){
   const x=dadosDia(dia);if(!x.tem)return null;const [y,m,d]=dia.split("-");
-  return {bytes:criarXlsx([
-    {titulo:"RECOLHAS OBRIGATÓRIAS PARA ALGARVE E LEIRIA — "+d+"/"+m+"/"+y+" — "+S.polo.nome,folha:"Recolhas",cab:CAB_R,linhas:x.rec,larguras:[10,20,22,22,12,14,12,28]},
-    {titulo:"SAÍDA DAS VIATURAS — "+d+"/"+m+"/"+y,folha:"Viaturas",cab:["Viatura","Hora de saída","Carga","Fotografias"],linhas:x.vi,larguras:[26,16,12,14],pct:[2]}]),nome:`bidiario-${y}-${m}-${d}.xlsx`};
+  return {bytes:criarXlsx([await folhaSaidas(dia),
+    {titulo:"RECOLHAS OBRIGATÓRIAS PARA ALGARVE E LEIRIA — "+d+"/"+m+"/"+y+" — "+S.polo.nome,folha:"Recolhas",cab:CAB_R,linhas:x.rec,larguras:[10,20,22,22,12,14,12,28]}]),nome:`bidiario-${y}-${m}-${d}.xlsx`};
 }
 function gerarCsv(dia){
   const x=dadosDia(dia);if(!x.tem)return null;const [y,m,d]=dia.split("-");
@@ -626,7 +667,7 @@ function gerarCsv(dia){
   return {texto:"﻿"+l.map(r=>r.map(v=>q(String(v))).join(";")).join("\r\n")+"\r\n",nome:`bidiario-${y}-${m}-${d}.csv`};
 }
 function descarregarX(x){const url=URL.createObjectURL(new Blob([x.bytes],{type:MIME_XLSX}));const a=document.createElement("a");a.href=url;a.download=x.nome;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),15000);}
-$("excel").onclick=()=>{try{const x=gerarExcel($("dia").value||hoje());if(!x){msg("msgX","Ainda não há registos do bidiário neste dia.",false);return;}descarregarX(x);msg("msgX","Excel gerado: "+x.nome+" (ver em Transferências).",true);}catch(err){msg("msgX","Não foi possível gerar o Excel.",false);}};
+$("excel").onclick=async()=>{try{const x=await gerarExcel($("dia").value||hoje());if(!x){msg("msgX","Ainda não há registos do bidiário neste dia.",false);return;}descarregarX(x);msg("msgX","Excel gerado: "+x.nome+" (ver em Transferências).",true);}catch(err){msg("msgX","Não foi possível gerar o Excel.",false);}};
 
 /* ---- Enviar por email (igual aos Horários; usa o email dos horários da gestão) ---- */
 function saudacao(){const hh=new Date().getHours();return hh<13?"Bom dia":hh<20?"Boa tarde":"Boa noite";}
@@ -640,7 +681,7 @@ async function copiar(t){try{await navigator.clipboard.writeText(t);return true;
 let mailAtual=null;
 $("email").onclick=()=>{
   const dia=$("dia").value||hoje();
-  if(!gerarExcel(dia)){msg("msgX","Ainda não há registos do bidiário neste dia.",false);return;}
+  if(!dadosDia(dia).tem){msg("msgX","Ainda não há registos do bidiário neste dia.",false);return;}
   const {assunto,corpo}=textoMail(dia),cfg=S.config||{},para=(cfg.emailHorarios||"").trim(),cc=(cfg.ccHorarios||"").trim();
   mailAtual={dia,assunto,corpo,para,cc};
   $("mCcCx").hidden=!cc;$("mCc").textContent=cc;$("mParaCx").hidden=!para;$("mPara").textContent=para;$("mAssunto").textContent=assunto;
@@ -657,7 +698,7 @@ async function botaoCopiar(id,txt){const ok=await copiar(txt);$(id).textContent=
 $("mCopPara").onclick=()=>botaoCopiar("mCopPara",mailAtual.para);
 $("mCopCc").onclick=()=>botaoCopiar("mCopCc",mailAtual.cc);
 $("mCopAss").onclick=()=>botaoCopiar("mCopAss",mailAtual.assunto);
-$("mXlsx").onclick=()=>{const x=gerarExcel(mailAtual.dia);if(x){descarregarX(x);$("mMsg").textContent="Excel descarregado: "+x.nome+" (ver em Transferências).";$("mMsg").className="msg ok";}};
+$("mXlsx").onclick=async()=>{const x=await gerarExcel(mailAtual.dia);if(x){descarregarX(x);$("mMsg").textContent="Excel descarregado: "+x.nome+" (ver em Transferências).";$("mMsg").className="msg ok";}};
 const mailEnc=t=>encodeURIComponent(t).replace(/%2C/gi,",").replace(/%40/g,"@");
 $("mAbrir").onclick=async()=>{
   const m=mailAtual;if(!m)return;const c=gerarCsv(m.dia);if(!c)return;
@@ -674,7 +715,7 @@ $("mAbrir").onclick=async()=>{
     try{await pr;fecharMail();msg("msgX","Email preparado na app escolhida com o ficheiro "+c.nome+(usar.length>1?" e "+(usar.length-1)+" fotografia"+(usar.length>2?"s":""):"")+"."+(copiado?" O assunto foi copiado — cole-o se não aparecer.":"")+(m.para?" Destinatário: "+m.para+".":""),true);return;}
     catch(e){if(e&&e.name==="AbortError")return;$("mMsg").textContent="O telemóvel não abriu a partilha ("+(e&&e.name||"erro")+"). Carregue de novo em “Abrir email com o ficheiro”.";$("mMsg").className="msg err";return;}
   }
-  const x=gerarExcel(m.dia);if(x)descarregarX(x);
+  const x=await gerarExcel(m.dia);if(x)descarregarX(x);
   const href="mailto:"+mailEnc(m.para)+"?"+(m.cc?"cc="+mailEnc(m.cc)+"&":"")+"subject="+encodeURIComponent(m.assunto)+"&body="+encodeURIComponent(m.corpo);
   setTimeout(()=>{const a=document.createElement("a");a.href=href;document.body.appendChild(a);a.click();a.remove();},500);
   fecharMail();msg("msgX","Email aberto com destinatário, assunto e texto. O Excel foi descarregado (ver Transferências): anexe-o ao email.",true);
