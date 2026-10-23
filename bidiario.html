@@ -289,7 +289,7 @@ function render(){
     $("sOk").textContent=ok;$("sFalta").textContent=ROTAS.length-ok;$("barra").style.width=(ROTAS.length?ok/ROTAS.length*100:0)+"%";
     if(!ROTAS.length){vazio("Este armazém ainda não tem as rotas do bidiário. Peça ao administrador para as acrescentar na gestão (Bidiário — rotas e recolhas).");return;}
     const ordem=new Map(ROTAS.map((r,i)=>[r.k,i])),um=r=>r.ultima==null?1e9:r.ultima;
-    const porChegar=ROTAS.filter(r=>!D.cg[r.k]).sort((a,b)=>um(a)-um(b)||ordem.get(a.k)-ordem.get(b.k));
+    const porChegar=ROTAS.filter(r=>!D.cg[r.k]); /* pela ordem da gestão */
     const chegaram=ROTAS.filter(r=>D.cg[r.k]).sort((a,b)=>String(D.cg[b.k].t).localeCompare(String(D.cg[a.k].t)));
     const semChamada=eHoje?porChegar.filter(r=>{const x=passou(dia,r.ultima);return x!=null&&x>0&&!D.ch[r.k];}).length:0;
     cab("Por chegar"+(semChamada?" · "+semChamada+" sem chamada":""),porChegar.length);
