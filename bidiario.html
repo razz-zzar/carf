@@ -349,7 +349,7 @@ function cartaoRota(r,dia,eHoje,D){
   const lr=el("div","lin"),nCli=(r.clientes||[]).length;
   lr.append(nCli+(nCli===1?" recolha":" recolhas")+(r.ultima!=null?" · até "+hm(r.ultima):""));
   if(!cg&&eHoje){const x=passou(dia,r.ultima);if(x!=null&&x>0){lr.appendChild(el("span","d "+(x>60?"mau":x>30?"aviso":"bom"),"última recolha há "+durTxt(x)));if(x>60)row.classList.add("atras");}}
-  const tg=el("button","lk",abertos.has(r.k)?"Esconder clientes":"Ver clientes");tg.type="button";tg.setAttribute("aria-expanded",abertos.has(r.k));
+  const tg=el("button","lk",abertos.has(r.k)?"Esconder recolhas":"Ver recolhas");tg.type="button";tg.setAttribute("aria-expanded",abertos.has(r.k));
   tg.onclick=()=>{abertos.has(r.k)?abertos.delete(r.k):abertos.add(r.k);render();};lr.appendChild(tg);info.appendChild(lr);
   if(abertos.has(r.k)){const ul=el("ul","cli");[...(r.clientes||[])].sort((a,b)=>(minDe(a[2])??9999)-(minDe(b[2])??9999)).forEach(c=>{const li=el("li");li.append(el("b",null,c[0]),el("span",null,c[1]||""),el("i",null,c[2]||"—"));ul.appendChild(li);});info.appendChild(ul);}
   /* chegada */
