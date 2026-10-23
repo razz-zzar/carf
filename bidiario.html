@@ -579,30 +579,6 @@ function zipStore(files){
   const all=[...parts,...central,end],out=new Uint8Array(all.reduce((a,p)=>a+p.length,0));let o=0;
   for(const p of all){out.set(p,o);o+=p.length;}return out;
 }
-function criarXlsx(folhas){
-  const X=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-  const L="ABCDEFGHIJ",NS='xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"',H='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>';
-  const folha=({titulo,cab,linhas,larguras,pct=[]})=>{
-    const nc=cab.length,ult=3+linhas.length;
-    const cel=(r,c,v,s)=>v===""||v==null?`<c r="${L[c]}${r}" s="${s}"/>`:typeof v==="number"?`<c r="${L[c]}${r}" s="${s}"><v>${v}</v></c>`:`<c r="${L[c]}${r}" s="${s}" t="inlineStr"><is><t xml:space="preserve">${X(v)}</t></is></c>`;
-    let rows=`<row r="1" ht="26" customHeight="1">`+cab.map((_,c)=>cel(1,c,c?"":titulo,1)).join("")+`</row><row r="2"/>`;
-    rows+=`<row r="3" ht="24" customHeight="1">`+cab.map((v,c)=>cel(3,c,v,2)).join("")+`</row>`;
-    linhas.forEach((l,i)=>{const r=4+i;rows+=`<row r="${r}">`+l.map((v,c)=>cel(r,c,v,(pct.includes(c)&&typeof v==="number"?5:3)+i%2)).join("")+`</row>`;});
-    const W=larguras.map((w,i)=>`<col min="${i+1}" max="${i+1}" width="${w}" customWidth="1"/>`).join("");
-    return `${H}<worksheet ${NS}><sheetViews><sheetView workbookViewId="0" showGridLines="0"><pane ySplit="3" topLeftCell="A4" activePane="bottomLeft" state="frozen"/><selection pane="bottomLeft"/></sheetView></sheetViews><sheetFormatPr defaultRowHeight="15"/><cols>${W}</cols><sheetData>${rows}</sheetData><autoFilter ref="A3:${L[nc-1]}${ult}"/><mergeCells count="1"><mergeCell ref="A1:${L[nc-1]}1"/></mergeCells></worksheet>`;
-  };
-  const fill=c=>`<fill><patternFill patternType="solid"><fgColor rgb="FF${c}"/><bgColor indexed="64"/></patternFill></fill>`;
-  const bd=`<border><left style="thin"><color rgb="FFC3CCBD"/></left><right style="thin"><color rgb="FFC3CCBD"/></right><top style="thin"><color rgb="FFC3CCBD"/></top><bottom style="thin"><color rgb="FFC3CCBD"/></bottom><diagonal/></border>`;
-  const xf=(f,fi,b,h)=>`<xf numFmtId="0" fontId="${f}" fillId="${fi}" borderId="${b}" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="${h}" vertical="center"/></xf>`;
-  const styles=`${H}<styleSheet ${NS}><fonts count="3"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="14"/><color rgb="FF1F3B2A"/><name val="Calibri"/></font><font><b/><sz val="11"/><color rgb="FF1F3B2A"/><name val="Calibri"/></font></fonts><fills count="5"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill>${fill("E2EBD5")}${fill("FFFFFF")}${fill("F4F7EF")}</fills><borders count="2"><border><left/><right/><top/><bottom/><diagonal/></border>${bd}</borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="7"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>${xf(1,2,0,"left")}${xf(2,2,1,"center")}${xf(0,3,1,"center")}${xf(0,4,1,"center")}${xf(0,3,1,"center").replace('numFmtId="0"','numFmtId="9"').replace("applyFont",'applyNumberFormat="1" applyFont')}${xf(0,4,1,"center").replace('numFmtId="0"','numFmtId="9"').replace("applyFont",'applyNumberFormat="1" applyFont')}</cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>`;
-  const wb=`${H}<workbook ${NS} xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets>${folhas.map((f,i)=>`<sheet name="${X(f.folha)}" sheetId="${i+1}" r:id="rId${i+1}"/>`).join("")}</sheets><definedNames>${folhas.map((f,i)=>`<definedName name="_xlnm._FilterDatabase" localSheetId="${i}" hidden="1">'${X(f.folha)}'!$A$3:$${L[f.cab.length-1]}$${3+f.linhas.length}</definedName>`).join("")}</definedNames></workbook>`;
-  const R="http://schemas.openxmlformats.org/officeDocument/2006/relationships",P="http://schemas.openxmlformats.org/package/2006/relationships";
-  const ct=`${H}<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>${folhas.map((_,i)=>`<Override PartName="/xl/worksheets/sheet${i+1}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`).join("")}<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>`;
-  const rels=`${H}<Relationships xmlns="${P}"><Relationship Id="rId1" Type="${R}/officeDocument" Target="xl/workbook.xml"/></Relationships>`;
-  const wrels=`${H}<Relationships xmlns="${P}">${folhas.map((_,i)=>`<Relationship Id="rId${i+1}" Type="${R}/worksheet" Target="worksheets/sheet${i+1}.xml"/>`).join("")}<Relationship Id="rId${folhas.length+1}" Type="${R}/styles" Target="styles.xml"/></Relationships>`;
-  const e=new TextEncoder();
-  return zipStore([["[Content_Types].xml",e.encode(ct)],["_rels/.rels",e.encode(rels)],["xl/workbook.xml",e.encode(wb)],["xl/_rels/workbook.xml.rels",e.encode(wrels)],["xl/styles.xml",e.encode(styles)],...folhas.map((f,i)=>["xl/worksheets/sheet"+(i+1)+".xml",e.encode(folha(f))])]);
-}
 /* Linhas iguais à folha em papel: uma por cliente; chamada, chegada e motorista na primeira linha de cada rota */
 function dadosDia(dia){
   const D=doDia(dia),h=x=>x?hora(x.t):"";
@@ -613,11 +589,82 @@ function dadosDia(dia){
   return {rec,vi,tem};
 }
 const CAB_R=["Rota","Zona","Cliente","Localidade","Hora da recolha","Hora da última chamada","Hora de chegada","Motorista"];
+/* Excel igual à folha "Controlo Diário Algarve Leiria": rotas com células juntas, uma linha por cliente,
+   hora da última chamada, hora de chegada e motorista; ao lado, o horário de saída das viaturas.
+   Segunda folha com o detalhe das saídas (hora, carga e fotografias). */
+function gerarControloXlsx(dia){
+  const D=doDia(dia),[y,m,d]=dia.split("-"),h=x=>x?hora(x.t):"";
+  const X=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+  const NS='xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"',H='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>';
+  const COL="ABCDEFGHIJKLMNOP";
+  const cel=(ref,v,s)=>v===""||v==null?`<c r="${ref}" s="${s}"/>`:typeof v==="number"?`<c r="${ref}" s="${s}"><v>${v}</v></c>`:`<c r="${ref}" s="${s}" t="inlineStr"><is><t xml:space="preserve">${X(v)}</t></is></c>`;
+  /* ---- folha 1 ---- */
+  const linhas={},alt={},merges=[];
+  const pôr=(r,c,v,s)=>{(linhas[r]=linhas[r]||{})[c]=[v,s];};
+  pôr(2,"C","Recolhas Obrigatórias para Algarve e Leiria",1);["D","E","F","G"].forEach(c=>pôr(2,c,"",1));
+  pôr(2,"H",d+"/"+m+"/"+y,2);["I","J"].forEach(c=>pôr(2,c,"",2));
+  ["C","D","E","F","G","H","I","J"].forEach(c=>pôr(3,c,"",c<"H"?1:2));
+  merges.push("C2:G3","H2:J3");
+  const CAB=[["C","Rota"],["D","Zona"],["E","Cliente"],["F","Localidade"],["G","Hora da Recolha"],["H","Hora da última chamada"],["I","Hora de Chegada"],["J","Motorista"]];
+  CAB.forEach(([c,t])=>{pôr(4,c,t,3);pôr(5,c,"",3);merges.push(c+"4:"+c+"5");});
+  alt[4]=alt[5]=20;
+  let r=6;
+  ROTAS.forEach((g,i)=>{
+    const cinza=i%2===0,sR=cinza?5:4,sC=cinza?7:6,cl=g.clientes.length?g.clientes:[["","",""]],n=cl.length,mo=D.mo[g.k];
+    const mot=mo&&mo.nome?mo.nome:(g.motorista||"");
+    cl.forEach((c,k)=>{
+      const rr=r+k;
+      pôr(rr,"C",k?"":(/^\d+$/.test(g.rota)?+g.rota:g.rota),sR);pôr(rr,"D",k?"":g.zona,sR);
+      pôr(rr,"E",c[0],sC);pôr(rr,"F",c[1],sC);pôr(rr,"G",c[2],sC);
+      pôr(rr,"H",k?"":h(D.ch[g.k]),sR);pôr(rr,"I",k?"":h(D.cg[g.k]),sR);pôr(rr,"J",k?"":mot,sR);
+      alt[rr]=n===1?36:22;
+    });
+    if(n>1)["C","D","H","I","J"].forEach(c=>merges.push(c+r+":"+c+(r+n-1)));
+    r+=n;
+  });
+  /* horário de saída das viaturas, ao lado (como na folha) */
+  let lr=6;const lado=(t,s)=>{pôr(lr,"L",t,s);lr+=2;};
+  lado("Horário de saída das viaturas",9);
+  VIATURAS.forEach(v=>{const x=D.sv[v.nome];if(v.extra&&!x)return;lado(v.nome+" - "+(x?hora(x.t)+(x.carga!=null?"  ("+x.carga+"%)":""):""),8);});
+  const ult=Math.max(r-1,lr);
+  let rows="";
+  for(let i=2;i<=ult;i++){const L=linhas[i];if(!L){continue;}
+    rows+=`<row r="${i}"${alt[i]?` ht="${alt[i]}" customHeight="1"`:""}>`+Object.keys(L).sort().map(c=>cel(c+i,L[c][0],L[c][1])).join("")+`</row>`;}
+  const W=[["A",2],["B",2],["C",12],["D",20],["E",24],["F",22],["G",11],["H",15],["I",13],["J",30],["K",3],["L",38]];
+  const cols=W.map(([c,w])=>{const n=COL.indexOf(c)+1;return `<col min="${n}" max="${n}" width="${w}" customWidth="1"/>`;}).join("");
+  const s1=`${H}<worksheet ${NS}><sheetPr><pageSetUpPr fitToPage="1"/></sheetPr><sheetViews><sheetView workbookViewId="0" showGridLines="0"><pane ySplit="5" topLeftCell="A6" activePane="bottomLeft" state="frozen"/><selection pane="bottomLeft"/></sheetView></sheetViews><sheetFormatPr defaultRowHeight="15"/><cols>${cols}</cols><sheetData>${rows}</sheetData><mergeCells count="${merges.length}">${merges.map(x=>`<mergeCell ref="${x}"/>`).join("")}</mergeCells><printOptions horizontalCentered="1"/><pageMargins left="0.3" right="0.3" top="0.4" bottom="0.4" header="0.2" footer="0.2"/><pageSetup paperSize="9" orientation="landscape" fitToWidth="1" fitToHeight="1"/></worksheet>`;
+  /* ---- folha 2: saídas das viaturas ---- */
+  const vi=VIATURAS.filter(v=>!v.extra||D.sv[v.nome]);
+  let r2=`<row r="1" ht="26" customHeight="1">${cel("A1","Saída das viaturas — "+d+"/"+m+"/"+y+" — "+S.polo.nome,10)}</row><row r="3" ht="22" customHeight="1">`+["Viatura","Hora de saída","Carga","Fotografias","Registado por"].map((t,i)=>cel(COL[i]+"3",t,11)).join("")+`</row>`;
+  vi.forEach((v,i)=>{const x=D.sv[v.nome],rr=4+i,a=i%2;
+    r2+=`<row r="${rr}">`+cel("A"+rr,v.nome,12+a)+cel("B"+rr,x?hora(x.t):"",12+a)+cel("C"+rr,x&&x.carga!=null?x.carga/100:"",14+a)+cel("D"+rr,x?(x.fotos||[]).length:"",12+a)+cel("E"+rr,x?x.autor||"":"",12+a)+`</row>`;});
+  const s2=`${H}<worksheet ${NS}><sheetViews><sheetView workbookViewId="0" showGridLines="0"/></sheetViews><sheetFormatPr defaultRowHeight="15"/><cols><col min="1" max="1" width="26" customWidth="1"/><col min="2" max="4" width="14" customWidth="1"/><col min="5" max="5" width="22" customWidth="1"/></cols><sheetData>${r2}</sheetData></worksheet>`;
+  /* ---- estilos ---- */
+  const fill=c=>`<fill><patternFill patternType="solid"><fgColor rgb="FF${c}"/><bgColor indexed="64"/></patternFill></fill>`;
+  const lado2=(t,c)=>`<${t} style="${c}"><color rgb="FF000000"/></${t}>`;
+  const bMed=`<border>${lado2("left","medium")}${lado2("right","medium")}${lado2("top","medium")}${lado2("bottom","medium")}<diagonal/></border>`;
+  const bFin=`<border>${lado2("left","thin")}${lado2("right","thin")}${lado2("top","thin")}${lado2("bottom","thin")}<diagonal/></border>`;
+  const bVer=`<border><left style="thin"><color rgb="FFC3CCBD"/></left><right style="thin"><color rgb="FFC3CCBD"/></right><top style="thin"><color rgb="FFC3CCBD"/></top><bottom style="thin"><color rgb="FFC3CCBD"/></bottom><diagonal/></border>`;
+  const xf=(f,fi,b,hz,nf)=>`<xf numFmtId="${nf||0}" fontId="${f}" fillId="${fi}" borderId="${b}" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"${nf?' applyNumberFormat="1"':""}><alignment horizontal="${hz}" vertical="center" wrapText="1"/></xf>`;
+  const fonts=`<fonts count="6"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="18"/><name val="Calibri"/></font><font><b/><sz val="20"/><name val="Calibri"/></font><font><b/><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="14"/><name val="Calibri"/></font><font><b/><sz val="14"/><color rgb="FF1F3B2A"/><name val="Calibri"/></font></fonts>`;
+  const fills=`<fills count="7"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill>${fill("D9D9D9")}${fill("BFBFBF")}${fill("FFFFFF")}${fill("E2EBD5")}${fill("F4F7EF")}</fills>`;
+  const xfs=[`<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>`,
+    xf(1,4,1,"center"),xf(2,4,1,"center"),xf(3,2,1,"center"),xf(4,4,1,"center"),xf(4,3,1,"center"),xf(3,4,2,"center"),xf(3,3,2,"center"),
+    xf(4,0,0,"left"),xf(4,0,0,"left"),
+    xf(5,0,0,"left"),xf(3,5,3,"center"),xf(0,4,3,"center"),xf(0,6,3,"center"),xf(0,4,3,"center",9),xf(0,6,3,"center",9)];
+  const styles=`${H}<styleSheet ${NS}>${fonts}${fills}<borders count="4"><border><left/><right/><top/><bottom/><diagonal/></border>${bMed}${bFin}${bVer}</borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="${xfs.length}">${xfs.join("")}</cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>`;
+  const F1="Algarve - Leiria",F2="Saída das viaturas";
+  const wb=`${H}<workbook ${NS} xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="${F1}" sheetId="1" r:id="rId1"/><sheet name="${F2}" sheetId="2" r:id="rId2"/></sheets><definedNames><definedName name="_xlnm.Print_Area" localSheetId="0">'${F1}'!$B$2:$L$${ult}</definedName></definedNames></workbook>`;
+  const R="http://schemas.openxmlformats.org/officeDocument/2006/relationships",P="http://schemas.openxmlformats.org/package/2006/relationships",WS="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml";
+  const ct=`${H}<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="${WS}"/><Override PartName="/xl/worksheets/sheet2.xml" ContentType="${WS}"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>`;
+  const rels=`${H}<Relationships xmlns="${P}"><Relationship Id="rId1" Type="${R}/officeDocument" Target="xl/workbook.xml"/></Relationships>`;
+  const wrels=`${H}<Relationships xmlns="${P}"><Relationship Id="rId1" Type="${R}/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="${R}/worksheet" Target="worksheets/sheet2.xml"/><Relationship Id="rId3" Type="${R}/styles" Target="styles.xml"/></Relationships>`;
+  const e=new TextEncoder();
+  return zipStore([["[Content_Types].xml",e.encode(ct)],["_rels/.rels",e.encode(rels)],["xl/workbook.xml",e.encode(wb)],["xl/_rels/workbook.xml.rels",e.encode(wrels)],["xl/styles.xml",e.encode(styles)],["xl/worksheets/sheet1.xml",e.encode(s1)],["xl/worksheets/sheet2.xml",e.encode(s2)]]);
+}
 function gerarExcel(dia){
   const x=dadosDia(dia);if(!x.tem)return null;const [y,m,d]=dia.split("-");
-  return {bytes:criarXlsx([
-    {titulo:"RECOLHAS OBRIGATÓRIAS PARA ALGARVE E LEIRIA — "+d+"/"+m+"/"+y+" — "+S.polo.nome,folha:"Recolhas",cab:CAB_R,linhas:x.rec,larguras:[10,20,22,22,12,14,12,28]},
-    {titulo:"SAÍDA DAS VIATURAS — "+d+"/"+m+"/"+y,folha:"Viaturas",cab:["Viatura","Hora de saída","Carga","Fotografias"],linhas:x.vi,larguras:[26,16,12,14],pct:[2]}]),nome:`bidiario-${y}-${m}-${d}.xlsx`};
+  return {bytes:gerarControloXlsx(dia),nome:`Controlo Diário_Algarve_Leiria ${d}-${m}-${y}.xlsx`};
 }
 function gerarCsv(dia){
   const x=dadosDia(dia);if(!x.tem)return null;const [y,m,d]=dia.split("-");
