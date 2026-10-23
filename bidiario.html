@@ -12,7 +12,7 @@
 <link rel="icon" href="carf-icon-192.png">
 <link rel="apple-touch-icon" href="carf-icon-192.png">
 <style>
-/* Layout: igual aos Horários — separadores Rotas e Viaturas, resumo do dia, lista com botão grande por rota */
+/* Layout: igual aos Horários — separadores Chegadas e Saídas, resumo do dia, lista com botão grande por rota */
 :root{
   --bg:#0c0f0d; --panel:#151a17; --line:#26302a; --fg:#eef3ef; --muted:#93a39a;
   --green:#B9D406; --green-dk:#94aa05; --green-ink:#0a0a0a; --danger:#e0574f;
@@ -165,8 +165,8 @@ body.preso{overflow:hidden}
   </header>
 
   <div class="abas" role="tablist" aria-label="Registo">
-    <button type="button" role="tab" id="abaR" aria-selected="true">Rotas</button>
-    <button type="button" role="tab" id="abaV" aria-selected="false">Viaturas</button>
+    <button type="button" role="tab" id="abaR" aria-selected="true">Chegadas</button>
+    <button type="button" role="tab" id="abaV" aria-selected="false">Saídas</button>
   </div>
 
   <section class="card" aria-labelledby="t-res">
@@ -222,7 +222,7 @@ body.preso{overflow:hidden}
 /* Bidiário — recolhas obrigatórias para Algarve, Leiria e Évora.
    As rotas, clientes, horas de recolha e motoristas vêm do armazém (página de gestão).
    Por rota regista-se a hora da última chamada ao motorista e a hora de chegada ao armazém;
-   no separador Viaturas regista-se a hora de saída de cada viatura. */
+   no separador Saídas regista-se a hora de saída de cada viatura. */
 const S=SJT.exigirSessao();
 const $=id=>document.getElementById(id);
 const pad=n=>String(n).padStart(2,"0");
