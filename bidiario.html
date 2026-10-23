@@ -1,0 +1,690 @@
+<!doctype html>
+<html lang="pt-PT">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0c0f0d">
+<meta name="application-name" content="OPS CARF">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Bidiário</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="carf-icon-192.png">
+<link rel="apple-touch-icon" href="carf-icon-192.png">
+<style>
+/* Layout: igual aos Horários — separadores Rotas e Viaturas, resumo do dia, lista com botão grande por rota */
+:root{
+  --bg:#0c0f0d; --panel:#151a17; --line:#26302a; --fg:#eef3ef; --muted:#93a39a;
+  --green:#B9D406; --green-dk:#94aa05; --green-ink:#0a0a0a; --danger:#e0574f;
+  --display:"Roboto Condensed","sans-serif-condensed","Arial Narrow",Arial,sans-serif;
+  --body:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --mono:"Roboto Mono",ui-monospace,Menlo,Consolas,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+img{max-width:100%}
+button{-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--fg)}
+body{font-family:var(--body);font-size:16px;line-height:1.4;padding-inline:16px;padding-block:0 40px}
+.wrap{max-width:560px;margin:0 auto;display:flex;flex-direction:column;gap:20px}
+header{padding-block:calc(14px + env(safe-area-inset-top,0px)) 12px;border-bottom:2px solid var(--green);display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:10px;min-width:0}
+.logo{height:40px;width:auto;max-width:42%;background:#fff;border-radius:8px;padding:5px 8px;flex:none}
+h1{font-family:var(--display);font-weight:700;font-size:24px;letter-spacing:.02em;text-transform:uppercase;margin:0;line-height:1}
+.voltar{display:inline-flex;align-items:center;min-height:36px;color:var(--green);font:600 15px var(--body);text-decoration:none;letter-spacing:.02em}
+.datebox input{background:var(--panel);color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:8px;font:500 14px var(--mono)}
+:focus-visible{outline:2px solid var(--green);outline-offset:2px}
+section.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:14px}
+h2{font-family:var(--display);font-size:20px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;margin:0;color:var(--green)}
+.summary{display:flex;gap:12px}
+.stat{flex:1;border-left:3px solid var(--green);padding-left:10px}
+.stat.falta{border-left-color:var(--line)}
+.stat b{display:block;font:600 28px var(--mono);font-variant-numeric:tabular-nums}
+.stat span{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
+.barra{height:6px;background:var(--bg);border-radius:3px;overflow:hidden}
+.barra i{display:block;height:100%;width:0;background:var(--green);transition:width .3s}
+@media (prefers-reduced-motion:reduce){.barra i{transition:none}}
+.aviso{font-size:14px;color:var(--muted);background:var(--bg);border-radius:8px;padding:10px 12px}
+#lista{display:flex;flex-direction:column;gap:8px}
+.grupo-h{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin:18px 2px 8px;font:700 15px var(--display);letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.grupo-h:first-child{margin-top:0}
+.grupo-h b{font:600 15px var(--mono);color:var(--fg)}
+.grupo-h.feitos{border-top:1px solid var(--line);padding-top:16px;color:var(--green)}
+.grupo-vazio{color:var(--muted);font-size:14px;padding:6px 2px 2px}
+/* Cartão de uma rota: rota e zona em cima, motorista e chamada no meio, recolhas em baixo; botão Chegou à direita */
+.v{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"num btn" "info info";column-gap:12px;row-gap:8px;align-items:center;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:12px 10px 12px 14px}
+.v.ok{border-color:var(--ok-line,#3a4a12)}
+.v.atras{border-color:rgba(224,87,79,.6)}
+.v.extra{border-style:dashed}
+.v>.num{grid-area:num}.v>.btnz{grid-area:btn;display:flex;flex-direction:column;align-items:flex-end;gap:6px}.v>.info{grid-area:info}
+.num{font:700 26px/1 var(--display);letter-spacing:.03em;font-variant-numeric:tabular-nums;min-width:0;overflow-wrap:break-word}
+.num.txt{font-size:22px;line-height:1.1}
+.num small{display:block;font:600 11px var(--body);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:3px}
+.num .zona{display:block;font:600 15px var(--body);letter-spacing:0;text-transform:none;color:var(--fg);margin-top:4px}
+.info{display:flex;flex-direction:column;gap:6px;min-width:0;font-size:14px;color:var(--muted)}
+.lin{display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px;min-width:0}
+.mot{font:600 16px var(--body);color:var(--fg);overflow-wrap:anywhere}
+.mot.sem{color:var(--muted);font-weight:500;font-style:italic}
+.ligar{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--green);color:var(--green);background:none;border-radius:999px;padding:7px 12px;font:600 14px var(--body);text-decoration:none;cursor:pointer}
+.ligar:active{background:var(--green);color:var(--green-ink)}
+.ligar:disabled{border-color:var(--line);color:var(--muted);cursor:default}
+.lk{background:none;border:0;padding:4px 0;color:var(--green);font:600 13px var(--body);text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+.lk.fraco{color:var(--muted)}
+.cham{display:inline-flex;align-items:baseline;gap:6px;background:none;border:0;padding:0;font:600 14px var(--body);color:var(--fg);cursor:pointer;text-align:left}
+.cham b{font:600 16px var(--mono);font-variant-numeric:tabular-nums}
+.cham:disabled{cursor:default}
+.d{font:700 12px var(--body);border-radius:4px;padding:2px 6px;white-space:nowrap}
+.d.aviso{background:#e0a84f;color:var(--green-ink,#0a0a0a)}.d.mau{background:var(--danger,#e0574f);color:#fff}.d.bom{background:rgba(185,212,6,.15);color:var(--green)}
+.cli{list-style:none;margin:2px 0 0;padding:0;display:flex;flex-direction:column;border-top:1px solid var(--line)}
+.cli li{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 10px;padding:7px 0;border-bottom:1px solid var(--line)}
+.cli li b{font-weight:600;color:var(--fg);overflow-wrap:anywhere}
+.cli li span{grid-column:1;font-size:13px}
+.cli li i{grid-row:1/3;grid-column:2;align-self:center;font:600 15px var(--mono);font-style:normal;color:var(--fg)}
+.chegou{border:0;border-radius:10px;padding:14px 14px;min-width:100px;font:700 19px var(--display);letter-spacing:.06em;text-transform:uppercase;cursor:pointer;background:var(--green);color:var(--green-ink)}
+.chegou:active{background:var(--green-dk)}
+.chegou:disabled{background:var(--line);color:var(--muted);cursor:default}
+.anular{background:none;border:1px solid var(--line);color:var(--muted);border-radius:8px;padding:10px 12px;font:600 13px var(--body);cursor:pointer}
+.anular.confirm{border-color:var(--danger);color:var(--danger)}
+.hora{display:inline-flex;align-items:baseline;gap:8px;background:none;border:0;padding:2px 0;margin:0;font:600 22px var(--mono);color:var(--green);font-variant-numeric:tabular-nums;cursor:pointer}
+.hora:disabled{cursor:default}
+.lapis{font:600 12px var(--body);color:var(--muted);text-decoration:underline;text-underline-offset:3px}
+.editor{display:flex;flex-direction:column;gap:8px;min-width:0;border-top:1px solid var(--line);padding-top:10px}
+.ed-rot{font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.ed-hora{display:flex;align-items:center;gap:6px}
+.ed-hora input{width:72px;text-align:center;background:var(--panel);color:var(--fg);border:1px solid var(--green);border-radius:10px;padding:10px 6px;font:700 28px var(--mono);font-variant-numeric:tabular-nums}
+.ed-hora span{font:700 28px var(--mono);color:var(--muted)}
+.ed-txt{width:100%;background:var(--panel);color:var(--fg);border:1px solid var(--green);border-radius:10px;padding:12px;font:500 16px var(--body)}
+.ed-atalhos{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+.ed-atalhos button{background:var(--panel);color:var(--fg);border:1px solid var(--line);border-radius:999px;padding:8px 4px;white-space:nowrap;font:600 14px var(--body);cursor:pointer}
+.ed-btns{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
+.ed-btns .esq{margin-right:auto}
+.guardar{border:0;border-radius:8px;padding:10px 18px;font:700 17px var(--display);letter-spacing:.06em;text-transform:uppercase;background:var(--green);color:var(--green-ink);cursor:pointer}
+.abas{display:grid;grid-template-columns:1fr 1fr;gap:6px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:6px}
+.abas button{border:0;border-radius:8px;padding:14px 8px;background:transparent;color:var(--muted);font:700 19px var(--display);letter-spacing:.06em;text-transform:uppercase;cursor:pointer}
+.abas button[aria-selected=true]{background:var(--green);color:var(--green-ink)}
+.btn.enviar{background:var(--green);color:var(--green-ink);border-color:var(--green)}
+.btn{border-radius:10px;padding:16px;font:700 20px var(--display);letter-spacing:.06em;text-transform:uppercase;cursor:pointer;background:transparent;color:var(--green);border:2px solid var(--green)}
+.msg{font-size:14px;min-height:20px}
+.msg.ok{color:var(--green)} .msg.err{color:var(--danger)}
+.hint{font-size:13px;color:var(--muted)}
+body.preso{overflow:hidden}
+.mveu{position:fixed;inset:0;background:rgba(0,0,0,.7);display:flex;align-items:flex-end;justify-content:center;z-index:10;padding:16px 16px calc(16px + env(safe-area-inset-bottom,0px))}
+.mjan{width:100%;max-width:560px;max-height:calc(100dvh - 32px);overflow:auto;background:var(--panel);border:1px solid var(--green);border-radius:14px;padding:18px 16px;display:flex;flex-direction:column;gap:14px}
+.mjan h2{margin:0}
+.mjan .acoes2{display:grid;grid-template-columns:1fr 1.4fr;gap:10px}
+.mjan .btn{padding:14px 10px;font-size:18px}
+.mabrir{border:0;border-radius:10px;padding:14px 10px;font:700 18px var(--display);letter-spacing:.06em;cursor:pointer;background:var(--green);color:var(--green-ink);width:100%}
+.mcampo{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"rot btn" "val btn";column-gap:10px;align-items:center;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 10px 10px 12px}
+.mrot{grid-area:rot;font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.mval{grid-area:val;font-size:15px;overflow-wrap:anywhere;user-select:all}
+.mcop{grid-area:btn;background:none;border:1px solid var(--green);color:var(--green);border-radius:8px;padding:10px 14px;font:600 14px var(--body);cursor:pointer;min-width:84px}
+.mcop.ok{background:var(--green);color:var(--green-ink)}
+.mnota{font-size:13px;color:var(--muted)}
+/* Saída das viaturas: carga e fotografias */
+.carga{display:grid;grid-template-columns:auto 1fr;align-items:baseline;column-gap:8px;row-gap:6px}
+.carga b{font:600 22px var(--mono);color:var(--fg);font-variant-numeric:tabular-nums}
+.cbar{grid-column:1/-1;height:8px;background:var(--panel);border:1px solid var(--line);border-radius:4px;overflow:hidden}
+.cbar i{display:block;height:100%;background:var(--green)}
+.thumbs{display:flex;flex-wrap:wrap;gap:8px}
+.thumb{width:76px;height:76px;padding:0;border:1px solid var(--line);border-radius:8px;background:var(--panel);overflow:hidden;cursor:pointer;color:var(--danger);font:700 20px var(--body)}
+.thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.thumb-w{position:relative}
+.thumb-x{position:absolute;top:-8px;right:-8px;width:30px;height:30px;border-radius:50%;border:2px solid var(--bg);background:var(--danger);color:#fff;font:700 18px/1 var(--body);cursor:pointer;padding:0}
+.sem-foto{font-size:13px;color:var(--muted);font-style:italic}
+.ed-pct{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}
+.ed-pct button{background:var(--panel);color:var(--fg);border:1px solid var(--line);border-radius:999px;padding:9px 2px;font:600 14px var(--body);cursor:pointer}
+.ed-pct button[aria-pressed=true]{background:var(--green);color:var(--green-ink);border-color:var(--green)}
+.ed-carga{display:flex;align-items:center;gap:6px}
+.ed-carga input{width:96px;text-align:center;background:var(--panel);color:var(--fg);border:1px solid var(--green);border-radius:10px;padding:10px 6px;font:700 28px var(--mono)}
+.ed-carga span{font:700 24px var(--mono);color:var(--muted)}
+.ed-fotos{display:grid;grid-template-columns:1.4fr 1fr;gap:8px}
+.foto-btn{border:0;border-radius:10px;padding:13px 8px;font:700 16px var(--display);letter-spacing:.05em;text-transform:uppercase;background:var(--green);color:var(--green-ink);cursor:pointer}
+.foto-btn.sec{background:transparent;color:var(--green);border:2px solid var(--green)}
+.foto-btn:disabled{background:var(--line);color:var(--muted);border-color:var(--line);cursor:default}
+.ver{position:fixed;inset:0;z-index:20;background:#000;display:flex;flex-direction:column;padding:calc(10px + env(safe-area-inset-top,0px)) 12px calc(12px + env(safe-area-inset-bottom,0px));gap:10px}
+.ver-top{display:flex;align-items:center;gap:10px;color:#fff}
+.ver-top b{font:700 18px var(--display);text-transform:uppercase;letter-spacing:.04em}
+.ver-top span{color:#aaa;font-size:14px;margin-right:auto}
+.ver-x{width:44px;height:44px;border-radius:50%;border:1px solid #555;background:none;color:#fff;font:400 28px/1 var(--body);cursor:pointer}
+.ver img{flex:1;min-height:0;width:100%;object-fit:contain}
+.ver-nav{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.ver-nav .btn{padding:12px}
+</style>
+<link rel="stylesheet" href="carf-tema.css">
+<script src="carf-tema.js"></script>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brand">
+      <img class="logo" alt="Logotipo" src="data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0idXRmLTgiPz4KPCEtLSBHZW5lcmF0b3I6IEFkb2JlIElsbHVzdHJhdG9yIDI3LjAuMCwgU1ZHIEV4cG9ydCBQbHVnLUluIC4gU1ZHIFZlcnNpb246IDYuMDAgQnVpbGQgMCkgIC0tPgo8c3ZnIHZlcnNpb249IjEuMSIgaWQ9IkxheWVyXzEiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgeG1sbnM6eGxpbms9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkveGxpbmsiIHg9IjBweCIgeT0iMHB4IgoJIHZpZXdCb3g9IjAgMCA0NTYgMTg0LjMiIHN0eWxlPSJlbmFibGUtYmFja2dyb3VuZDpuZXcgMCAwIDQ1NiAxODQuMzsiIHhtbDpzcGFjZT0icHJlc2VydmUiPgo8c3R5bGUgdHlwZT0idGV4dC9jc3MiPgoJLnN0MHtmaWxsOiNCOUQ0MDY7fQoJLnN0MXtmaWxsOiMwMDdCN0Y7fQoJLnN0MntmaWxsOiMzRjlCOUU7fQo8L3N0eWxlPgo8Zz4KCTxwYXRoIGNsYXNzPSJzdDAiIGQ9Ik00NDQuMiw3Mi43Yy0yMy40LDcuNi00Ni41LDE1LjEtNjkuNywyMi43Yy0zLTMuNC00LjItNy40LTUuNi0xMS4yYy0zLjQtOS4xLTQuOS0xOC42LTUuMS0yOC4zCgkJYy0wLjMtMTcuOCwxMC4zLTI5LjksMjMuOC0zNC4yYzIyLjMtNy4xLDQ0LjUtMTQuMyw2Ni43LTIxLjVjMC41LTAuMSwxLTAuMSwxLjUtMC4yQzQ1Ni41LDMuNiw0NDguNSw1My41LDQ0NC4yLDcyLjd6Ii8+Cgk8cGF0aCBjbGFzcz0ic3QxIiBkPSJNNDU1LDE0Ny4xYy04LjcsNi43LTE4LjEsMTIuMy0yNy4xLDE4LjZjLTguMyw1LjgtMTYuOSwxMS4zLTI1LjMsMTdjLTEuNiwxLjEtMywxLjktNSwxLjQKCQljLTE2LjItNC4xLTMwLjYtMTEuMS00MS0yNC43Yy01LjEtNi43LTguMy0xNC40LTkuNy0yMi43Yy0wLjQtMi4xLTAuNC00LjQtMC4xLTYuNWMyLTE0LDQuMi0yNy45LDYuMy00MS45CgkJYzEuMy04LjYsMi42LTE3LjMsNC4xLTI1LjljMS40LDcuNCwxLjksMTQuOCw0LjMsMjJjMTEuMiwzMi43LDMzLjIsNTMuMyw2Ny4yLDYwLjhjNi45LDEuNSwxMy44LDEuOCwyMC44LDEuOAoJCUM0NTEuMywxNDYuNSw0NTMuMiwxNDYuMiw0NTUsMTQ3LjF6Ii8+Cgk8cGF0aCBjbGFzcz0ic3QyIiBkPSJNNDU1LDE0Ny4xYy0xLjgtMC4xLTMuNy0wLjEtNS41LTAuMmMyLTEuNCw0LjMtMC43LDYuNS0wLjljMCwwLjQsMCwwLjgtMC4xLDAuOQoJCUM0NTUuNywxNDcuMSw0NTUuMywxNDcuMSw0NTUsMTQ3LjF6Ii8+Cgk8cGF0aCBkPSJNMzMzLjIsNTMuNmMtMTUuMywwLTMwLjctMC40LTQ2LDAuMWMtMTQuMywwLjQtMjUuOSwxMC43LTI4LjQsMjQuM2MtMS41LDgtMi44LDE2LjEtNC4zLDI0LjFjLTEuNyw5LjItMy41LDE4LjQtNS4zLDI4LjIKCQljLTYuNS00LjctMTIuNi05LjEtMTkuMS0xMy44YzEuOS0xLjMsMy4zLTIuMiw0LjYtMy4xYzguMi01LjgsMTMuOC0xMy40LDE2LjMtMjMuMWM1LTE5LjItNy4xLTM1LjYtMjQuOS0zNi4zCgkJYy05LjMtMC40LTE4LjcsMC0yOC0wLjNjLTE2LjMtMC41LTI5LDExLTMxLjUsMjYuMmMtMi4yLDEzLjEtNC45LDI2LjEtNy4zLDM5LjFjLTAuMywwLTAuNiwwLjEtMC45LDAuMQoJCWMtMy44LTIxLjYtNy42LTQzLjMtMTEuNS02NC45Yy04LjMsMC0xNi4xLDAtMjQuMywwYy03LjksMTEuMS0xNiwyMi4zLTI0LDMzLjZjLTgsMTEuMi0xNiwyMi40LTI0LDMzLjZjLTExLjUsMC0yMi42LDAuMS0zMy44LDAKCQljLTE0LjEtMC4xLTIyLjUtMTEuNS0xOC44LTI1LjFjMy4yLTExLjgsMTUuNC0yMS44LDI4LjEtMjEuNWMxMi4zLDAuMiwyNC43LDAuMSwzNywwYzEuNiwwLDMuMywwLjQsNC42LTEuMgoJCWM1LjEtNi4zLDEwLjMtMTIuNiwxNS43LTE5LjJjLTEuNC0wLjEtMi4yLTAuMi0zLTAuMmMtMTksMC0zOCwwLTU3LDBjLTIuMiwwLTQuMywwLjEtNi40LDAuNmMtMTUuMywzLjQtMjYuMywxMi4zLTM0LDI1LjYKCQljLTYsMTAuNC04LjcsMjEuNi02LjIsMzMuNmMzLjQsMTYuOSwxNy43LDI4LjIsMzUuNiwyOC41YzEwLjMsMC4yLDIwLjcsMCwzMSwwYzYuMiwwLDEyLjMsMCwxOC40LDBjNS4yLTcuMiwxMC4yLTE0LjIsMTUuMi0yMS4yCgkJYzUuOC0wLjEsMTEuMSwxLjQsMTYuMiwzLjRjOS4zLDMuOCwxNi44LDkuOSwyMi44LDE3LjRjMTIuNCwwLDI0LjMsMCwzNi4yLDBjMi40LTEyLjgsNC44LTI1LjMsNy4zLTM4LjNjMS45LDEuNCwzLjIsMi40LDQuNSwzLjQKCQljMTMuOSwxMC45LDI3LjgsMjEuOCw0MS42LDMyLjhjMi4yLDEuOCw0LjQsMi42LDcuMiwyLjZjOS4yLTAuMiwxOC4zLDAsMjcuNS0wLjFjMS4zLDAsMi43LDAuNCwzLjktMC44CgkJYzIuMi0xMS42LDQuNC0yMy4zLDYuNy0zNS41YzE0LDAsMjcuNywwLDQxLjYsMGMxLjYtNi44LDMuMS0xMy4yLDQuNy0yMC4yYy0xNC41LDAtMjguNCwwLTQyLjYsMGMwLjMtMS41LDAuNi0yLjUsMC43LTMuNAoJCWMxLjMtNy41LDIuMy04LjQsOS42LTguNGMxMi43LDAsMjUuMywwLDM4LDBjMS40LDAsMywwLjUsNC40LTAuOGMwLjktNi4yLDIuOC0xMi41LDMuMy0xOC45QzMzNC4xLDUzLjksMzMzLjcsNTMuNiwzMzMuMiw1My42egoJCSBNMTA4LjIsMTExLjJjNy05LjksMTMuNy0xOS4yLDIxLTI5LjVjMi4xLDExLjcsMy45LDIyLjQsNS45LDMzLjVDMTI2LjMsMTEyLjEsMTE3LjcsMTExLjIsMTA4LjIsMTExLjJ6IE0yMTcuMiwxMDAuMgoJCWMtMi44LDAuNC01LjYsMC4zLTguNSwwLjNjLTcuOCwwLTE1LjYsMC0yMy43LDBjLTEtMi43LDAuMi00LjcsMC41LTYuOGMwLjgtNC42LDEuNi05LjIsMi42LTEzLjdjMS00LjgsMi42LTYuMSw3LjUtNi4xCgkJYzguMywwLDE2LjcsMCwyNSwwYzguNCwwLDEzLjMsNi41LDEwLjYsMTQuNEMyMjksOTUsMjI0LjMsOTkuMiwyMTcuMiwxMDAuMnoiLz4KPC9nPgo8L3N2Zz4K">
+      <div style="min-width:0"><h1>Bidiário</h1><a class="voltar" href="./">‹ Início</a></div>
+    </div>
+    <div class="datebox"><input type="date" id="dia" aria-label="Dia"></div>
+  </header>
+
+  <div class="abas" role="tablist" aria-label="Registo">
+    <button type="button" role="tab" id="abaR" aria-selected="true">Rotas</button>
+    <button type="button" role="tab" id="abaV" aria-selected="false">Viaturas</button>
+  </div>
+
+  <section class="card" aria-labelledby="t-res">
+    <h2 id="t-res">Resumo do dia</h2>
+    <div class="summary">
+      <div class="stat"><b id="sOk">0</b><span id="lOk">Chegaram</span></div>
+      <div class="stat falta"><b id="sFalta">0</b><span id="lFalta">Por chegar</span></div>
+    </div>
+    <div class="barra" aria-hidden="true"><i id="barra"></i></div>
+  </section>
+
+  <section class="card" aria-labelledby="t-lista">
+    <h2 id="t-lista">Recolhas obrigatórias</h2>
+    <div class="aviso" id="aviso" hidden>Está a ver outro dia. Só é possível fazer registos no dia de hoje.</div>
+    <div class="msg" id="msg" role="status"></div>
+    <div id="lista"></div>
+    <div class="hint" id="dica"></div>
+  </section>
+
+  <section class="card" id="exportar" hidden>
+    <button class="btn enviar" id="email" type="button">Enviar Excel por email</button>
+    <button class="btn" id="excel" type="button">Exportar Excel do dia</button>
+    <div class="msg" id="msgX" role="status"></div>
+    <div class="hint">O Excel tem duas folhas: as recolhas de cada rota (hora da última chamada, hora de chegada e motorista) e a saída das viaturas (hora, carga e n.º de fotografias). No email, as fotografias da carga vão em anexo. Vai para o email dos horários definido na gestão.</div>
+  </section>
+</div>
+
+<input type="file" id="fCam" accept="image/*" capture="environment" hidden>
+<input type="file" id="fGal" accept="image/*" multiple hidden>
+
+<div class="ver" id="ver" hidden role="dialog" aria-modal="true" aria-labelledby="verT">
+  <div class="ver-top"><b id="verT"></b><span id="verN"></span><button type="button" class="ver-x" id="verFechar" aria-label="Fechar">×</button></div>
+  <img id="verImg" alt="Fotografia da carga">
+  <div class="ver-nav"><button type="button" class="btn" id="verAnt">‹ Anterior</button><button type="button" class="btn" id="verSeg">Seguinte ›</button></div>
+</div>
+
+<div class="mveu" id="mail" hidden>
+  <div class="mjan" role="dialog" aria-modal="true" aria-labelledby="t-mail">
+    <h2 id="t-mail">Enviar por email</h2>
+    <div class="mcampo" id="mParaCx"><div class="mrot">Para</div><div class="mval" id="mPara"></div><button type="button" class="mcop" id="mCopPara">Copiar</button></div>
+    <div class="mcampo" id="mCcCx"><div class="mrot">CC</div><div class="mval" id="mCc"></div><button type="button" class="mcop" id="mCopCc">Copiar</button></div>
+    <div class="mcampo"><div class="mrot">Assunto</div><div class="mval" id="mAssunto"></div><button type="button" class="mcop" id="mCopAss">Copiar</button></div>
+    <div class="mnota" id="mNota"></div>
+    <button class="mabrir" id="mAbrir" type="button">Abrir email com o ficheiro</button>
+    <div class="acoes2"><button class="btn" id="mFechar" type="button">Fechar</button><button class="btn" id="mXlsx" type="button">Descarregar Excel</button></div>
+    <div class="msg" id="mMsg" role="status"></div>
+  </div>
+</div>
+
+<script src="sjt-listas.js"></script>
+<script src="sjt-online.js"></script>
+<script>
+/* Bidiário — recolhas obrigatórias para Algarve, Leiria e Évora.
+   As rotas, clientes, horas de recolha e motoristas vêm do armazém (página de gestão).
+   Por rota regista-se a hora da última chamada ao motorista e a hora de chegada ao armazém;
+   no separador Viaturas regista-se a hora de saída de cada viatura. */
+const S=SJT.exigirSessao();
+const $=id=>document.getElementById(id);
+const pad=n=>String(n).padStart(2,"0");
+const diaDe=d=>d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate());
+const hoje=()=>diaDe(new Date());
+const hora=iso=>{const d=new Date(iso);return pad(d.getHours())+":"+pad(d.getMinutes());};
+const minDe=hm=>{const m=/^(\d{1,2}):(\d{2})$/.exec(hm||"");return m?+m[1]*60+ +m[2]:null;};
+const durTxt=x=>x>=60?Math.floor(x/60)+"h"+pad(x%60):x+" min";
+
+const ROTAS=SJT.lista("bidiario",S).map(g=>{
+  const hs=(g.clientes||[]).map(c=>minDe(c[2])).filter(x=>x!=null);
+  return {...g,k:g.rota+"|"+g.zona,ultima:hs.length?Math.max(...hs):null,primeira:hs.length?Math.min(...hs):null};
+});
+const VIATURAS=(()=>{const v=SJT.lista("bidiarioViaturas",S);return v.length?v:[{nome:"Algarve"},{nome:"Leiria"},{nome:"Évora"}];})();
+const hm=m=>m==null?"":pad(Math.floor(m/60))+":"+pad(m%60);
+
+/* Motorista: "Nome - 934903188" → nome e telefone */
+function motDe(txt){
+  txt=String(txt||"").trim();const m=txt.match(/(\+?\d[\d ]{7,}\d)/);
+  const tel=m?m[1].replace(/\s/g,""):"";
+  const nome=(m?txt.replace(m[1],""):txt).replace(/[\s\-–·,:/]+$/,"").replace(/^[\s\-–·,:/]+/,"").trim();
+  return {nome,tel,txt};
+}
+
+/* Registos partilhados (um por informação, para duas pessoas não se apagarem uma à outra):
+   cg|dia|rota = chegada · ch|dia|rota = última chamada · mo|dia|rota = motorista do dia · sv|dia|viatura = saída */
+let BD={};
+const LIG=SJT.ligar("bidiario",{aoMudar:()=>{carregar();if(!aEditar)render();}});
+function carregar(){
+  BD={};
+  LIG.registos().forEach(r=>{const d=r.dados||{};const chave=d.tipo==="sv"?d.v:d.k;if(!d.tipo||!chave)return;
+    const x=BD[r.dia]=BD[r.dia]||{cg:{},ch:{},mo:{},sv:{}};if(!x[d.tipo])return;
+    x[d.tipo][chave]={...d,autor:r.autor,meu:r.meu,alteradoPor:r.alteradoPor,pendente:!!r.pendente};});
+}
+carregar();
+const doDia=dia=>BD[dia]||{cg:{},ch:{},mo:{},sv:{}};
+const idDe=(t,dia,k)=>t+"|"+dia+"|"+k;
+const gravar=(t,dia,k,dados)=>LIG.gravar(idDe(t,dia,k),dia,{tipo:t,...(t==="sv"?{v:k}:{k}),...dados});
+
+let modo="r",aEditar=null,aConfirmar=null,abertos=new Set(),diaAberto=hoje();
+try{if(localStorage.getItem("bidiario_aba")==="v")modo="v";}catch(e){}
+function msg(id,t,ok){const m=$(id);m.textContent=t||"";m.className="msg "+(ok?"ok":"err");}
+function mudarAba(m){modo=m;aEditar=null;ED=null;aConfirmar=null;msg("msg","");msg("msgX","");try{localStorage.setItem("bidiario_aba",m);}catch(e){}render();}
+$("dia").value=diaAberto;
+$("abaR").onclick=()=>mudarAba("r");$("abaV").onclick=()=>mudarAba("v");
+$("dia").addEventListener("change",()=>{aEditar=null;ED=null;aConfirmar=null;msg("msg","");msg("msgX","");render();});
+
+const el=(tag,cls,txt)=>{const e=document.createElement(tag);if(cls)e.className=cls;if(txt!=null)e.textContent=txt;return e;};
+/* minutos passados desde uma hora do dia (positivo = já passou) */
+function passou(dia,m){if(m==null)return null;const [y,mo,d]=dia.split("-").map(Number);return Math.round((Date.now()-new Date(y,mo-1,d,0,m))/60000);}
+
+function render(){
+  const dia=$("dia").value||hoje(),eHoje=dia===hoje(),D=doDia(dia);
+  $("abaR").setAttribute("aria-selected",modo==="r");$("abaV").setAttribute("aria-selected",modo==="v");
+  $("aviso").hidden=eHoje;if(!eHoje)aEditar=null;
+  $("exportar").hidden=modo!=="v";
+  const l=$("lista");l.textContent="";
+  const cab=(txt,n,cls)=>{const h=el("div","grupo-h"+(cls?" "+cls:""),txt);h.appendChild(el("b",null,n));l.appendChild(h);};
+  const vazio=txt=>l.appendChild(el("div","grupo-vazio",txt));
+  if(modo==="r"){
+    $("t-lista").textContent="Recolhas obrigatórias";$("lOk").textContent="Chegaram";$("lFalta").textContent="Por chegar";
+    $("dica").textContent="Carregue em “Ligar” para telefonar ao motorista: a hora da chamada fica registada (sem telemóvel na lista, use “Liguei”). Quando a rota chegar ao armazém, carregue em “Chegou”. Toque numa hora para a corrigir. Os registos são partilhados com todo o armazém; sem internet ficam no telemóvel e são enviados quando a rede voltar.";
+    const ok=ROTAS.filter(r=>D.cg[r.k]).length;
+    $("sOk").textContent=ok;$("sFalta").textContent=ROTAS.length-ok;$("barra").style.width=(ROTAS.length?ok/ROTAS.length*100:0)+"%";
+    if(!ROTAS.length){vazio("Este armazém ainda não tem as rotas do bidiário. Peça ao administrador para as acrescentar na gestão (Bidiário — rotas e recolhas).");return;}
+    const ordem=new Map(ROTAS.map((r,i)=>[r.k,i])),um=r=>r.ultima==null?1e9:r.ultima;
+    const porChegar=ROTAS.filter(r=>!D.cg[r.k]).sort((a,b)=>um(a)-um(b)||ordem.get(a.k)-ordem.get(b.k));
+    const chegaram=ROTAS.filter(r=>D.cg[r.k]).sort((a,b)=>String(D.cg[b.k].t).localeCompare(String(D.cg[a.k].t)));
+    const semChamada=eHoje?porChegar.filter(r=>{const x=passou(dia,r.ultima);return x!=null&&x>0&&!D.ch[r.k];}).length:0;
+    cab("Por chegar"+(semChamada?" · "+semChamada+" sem chamada":""),porChegar.length);
+    if(porChegar.length)porChegar.forEach(r=>l.appendChild(cartaoRota(r,dia,eHoje,D)));else vazio("Já chegaram todas as rotas.");
+    cab("Já chegaram",chegaram.length,"feitos");
+    if(chegaram.length)chegaram.forEach(r=>l.appendChild(cartaoRota(r,dia,eHoje,D)));else vazio("Ainda não chegou nenhuma rota.");
+  }else{
+    $("t-lista").textContent="Saída das viaturas";$("lOk").textContent="Saíram";$("lFalta").textContent="Por sair";
+    $("dica").textContent="Carregue em “Saiu” quando a viatura sair: indique a percentagem de carga e tire a fotografia da carga (a hora fica a de agora, ou corrija-a). As viaturas extra (tracejado) só contam se saírem. Toque numa hora para editar a saída. As fotografias ficam guardadas para todo o armazém e vão no email do dia.";
+    const fixas=VIATURAS.filter(v=>!v.extra),ok=fixas.filter(v=>D.sv[v.nome]).length;
+    $("sOk").textContent=ok;$("sFalta").textContent=fixas.length-ok;$("barra").style.width=(fixas.length?ok/fixas.length*100:0)+"%";
+    const por=VIATURAS.filter(v=>!D.sv[v.nome]),sai=VIATURAS.filter(v=>D.sv[v.nome]).sort((a,b)=>String(D.sv[b.nome].t).localeCompare(String(D.sv[a.nome].t)));
+    const chg=ROTAS.filter(r=>D.cg[r.k]).length;
+    if(ROTAS.length&&eHoje&&chg<ROTAS.length){const a=el("div","aviso","Ainda faltam chegar "+(ROTAS.length-chg)+" de "+ROTAS.length+" rotas do bidiário.");l.appendChild(a);}
+    cab("Por sair",por.length);
+    if(por.length)por.forEach(v=>l.appendChild(cartaoViatura(v,dia,eHoje,D)));else vazio("Já saíram todas as viaturas.");
+    cab("Já saíram",sai.length,"feitos");
+    if(sai.length)sai.forEach(v=>l.appendChild(cartaoViatura(v,dia,eHoje,D)));else vazio("Ainda não saiu nenhuma viatura.");
+  }
+}
+
+function botaoHora(r,eHoje,rot,abrir){
+  const b=el("button","hora");b.type="button";b.disabled=!eHoje;b.setAttribute("aria-label",rot);b.textContent=hora(r.t);
+  if(eHoje)b.appendChild(el("span","lapis","Editar"));b.onclick=abrir;return b;
+}
+function autor(r){return el("span","sjt-autor",SJT.autorTxt(r)+(r.pendente?" · a enviar":""));}
+
+function cartaoRota(r,dia,eHoje,D){
+  const cg=D.cg[r.k],ch=D.ch[r.k],mo=D.mo[r.k];
+  const row=el("div","v"+(cg?" ok":""));
+  const n=el("div","num"+(/^\d+$/.test(r.rota)?"":" txt"));n.appendChild(el("small",null,"Rota"));n.append(r.rota);n.appendChild(el("span","zona",r.zona));
+  const info=el("div","info");
+  /* motorista do dia (muda-se só neste dia; vazio = o da gestão) */
+  const m=motDe(mo&&mo.nome?mo.nome:r.motorista);
+  const lm=el("div","lin");
+  if(aEditar&&aEditar.k===r.k&&aEditar.c==="mo"){info.appendChild(editorTexto(r,dia,m.txt));}
+  else{
+    lm.appendChild(el("span","mot"+(m.nome||m.tel?"":" sem"),m.nome||(m.tel?"Motorista":"Sem motorista")));
+    if(!cg){
+      if(m.tel){const a=el("a","ligar");a.href="tel:"+m.tel;a.innerHTML='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.79 19.79 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.9.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/></svg>';
+        a.append("Ligar");a.setAttribute("aria-label","Ligar a "+(m.nome||"motorista")+" — rota "+r.rota);
+        if(eHoje)a.addEventListener("click",()=>chamou(r));lm.appendChild(a);}
+      else if(eHoje){const b=el("button","ligar","Liguei");b.type="button";b.setAttribute("aria-label","Registar chamada à rota "+r.rota);b.onclick=()=>chamou(r);lm.appendChild(b);}
+    }
+    if(eHoje){const b=el("button","lk fraco",m.nome||m.tel?"Mudar":"Indicar");b.type="button";b.setAttribute("aria-label","Mudar o motorista da rota "+r.rota);b.onclick=()=>abrir(r.k,"mo");lm.appendChild(b);}
+    info.appendChild(lm);
+  }
+  /* última chamada */
+  if(aEditar&&aEditar.k===r.k&&aEditar.c==="ch")info.appendChild(editorHora(r,dia,"ch",ch));
+  else if(ch){
+    const lc=el("div","lin"),b=el("button","cham");b.type="button";b.disabled=!eHoje;b.setAttribute("aria-label","Corrigir hora da última chamada");
+    b.append("Última chamada ");b.appendChild(el("b",null,hora(ch.t)));if(ch.n>1)b.append(" · "+ch.n+" chamadas");
+    if(eHoje)b.appendChild(el("span","lapis","Editar"));b.onclick=()=>abrir(r.k,"ch");lc.appendChild(b);
+    if(eHoje&&!cg){const x=Math.round((Date.now()-new Date(ch.t))/60000);lc.appendChild(el("span",null,x<1?"agora mesmo":"há "+durTxt(x)));}
+    lc.appendChild(autor(ch));info.appendChild(lc);
+  }
+  /* recolhas: resumo com a última hora; a lista dos clientes abre ao tocar */
+  const lr=el("div","lin"),nCli=(r.clientes||[]).length;
+  lr.append(nCli+(nCli===1?" recolha":" recolhas")+(r.ultima!=null?" · até "+hm(r.ultima):""));
+  if(!cg&&eHoje){const x=passou(dia,r.ultima);if(x!=null&&x>0){lr.appendChild(el("span","d "+(x>60?"mau":x>30?"aviso":"bom"),"última recolha há "+durTxt(x)));if(x>60)row.classList.add("atras");}}
+  const tg=el("button","lk",abertos.has(r.k)?"Esconder clientes":"Ver clientes");tg.type="button";tg.setAttribute("aria-expanded",abertos.has(r.k));
+  tg.onclick=()=>{abertos.has(r.k)?abertos.delete(r.k):abertos.add(r.k);render();};lr.appendChild(tg);info.appendChild(lr);
+  if(abertos.has(r.k)){const ul=el("ul","cli");[...(r.clientes||[])].sort((a,b)=>(minDe(a[2])??9999)-(minDe(b[2])??9999)).forEach(c=>{const li=el("li");li.append(el("b",null,c[0]),el("span",null,c[1]||""),el("i",null,c[2]||"—"));ul.appendChild(li);});info.appendChild(ul);}
+  /* chegada */
+  const bz=el("div","btnz");
+  if(aEditar&&aEditar.k===r.k&&aEditar.c==="cg"){info.appendChild(editorHora(r,dia,"cg",cg));}
+  if(cg){
+    const lc=el("div","lin");lc.append(botaoHora(cg,eHoje,"Corrigir hora de chegada da rota "+r.rota,()=>abrir(r.k,"cg")),"Chegou");
+    if(r.ultima!=null){const x=Math.round((new Date(cg.t)-(()=>{const [y,mo2,d]=dia.split("-").map(Number);return new Date(y,mo2-1,d,0,r.ultima);})())/60000);if(x>0)lc.appendChild(el("span",null,durTxt(x)+" depois da última recolha"));}
+    lc.appendChild(autor(cg));info.insertBefore(lc,info.firstChild);
+    if(eHoje&&cg.meu){const b=el("button","anular"+(aConfirmar===r.k?" confirm":""),aConfirmar===r.k?"Confirmar":"Anular");b.type="button";b.onclick=()=>anular(r);bz.appendChild(b);}
+  }else{
+    const b=el("button","chegou","Chegou");b.type="button";b.disabled=!eHoje;b.setAttribute("aria-label","Rota "+r.rota+" chegou");b.onclick=()=>chegou(r);bz.appendChild(b);
+    if(eHoje){const i=el("button","lk","Indicar hora");i.type="button";i.onclick=()=>abrir(r.k,"cg");bz.appendChild(i);}
+  }
+  row.append(n,bz,info);return row;
+}
+
+function cartaoViatura(v,dia,eHoje,D){
+  const s=D.sv[v.nome],row=el("div","v"+(s?" ok":"")+(v.extra?" extra":""));
+  const n=el("div","num txt");n.appendChild(el("small",null,v.extra?"Viatura extra":"Viatura"));n.append(v.nome);
+  const info=el("div","info"),bz=el("div","btnz");
+  const aEd=aEditar&&aEditar.k===v.nome&&aEditar.c==="sv";
+  if(s&&!aEd){
+    const lc=el("div","lin");lc.append(botaoHora(s,eHoje,"Editar a saída de "+v.nome,()=>abrirSaida(v,s)),"Saiu");lc.appendChild(autor(s));info.appendChild(lc);
+    if(s.carga!=null){const c=el("div","carga");c.append(el("b",null,s.carga+"%"),el("span",null,"de carga"));const br=el("div","cbar");const ii=el("i");ii.style.width=Math.min(100,s.carga)+"%";br.appendChild(ii);c.appendChild(br);info.appendChild(c);}
+    const fs=s.fotos||[];
+    if(fs.length){const g=el("div","thumbs");fs.forEach((fid,k)=>g.appendChild(miniatura(fid,()=>verFotos(fs,k,v.nome))));info.appendChild(g);}
+    else info.appendChild(el("span","sem-foto","Sem fotografia"));
+    if(eHoje&&s.meu){const b=el("button","anular"+(aConfirmar===v.nome?" confirm":""),aConfirmar===v.nome?"Confirmar":"Anular");b.type="button";b.onclick=()=>anularV(v,s);bz.appendChild(b);}
+  }else if(!s){
+    const b=el("button","chegou","Saiu");b.type="button";b.disabled=!eHoje||aEd;b.setAttribute("aria-label",v.nome+" saiu");b.onclick=()=>abrirSaida(v,null);bz.appendChild(b);
+  }
+  if(aEd)info.appendChild(editorSaida(v,dia,s));
+  row.append(n,bz);if(info.childNodes.length)row.appendChild(info);return row;
+}
+/* Miniatura de uma fotografia (do telemóvel ou descarregada do servidor) */
+function miniatura(fid,onclick){
+  const t=el("button","thumb");t.type="button";t.setAttribute("aria-label","Ver fotografia");t.onclick=onclick;
+  (fid instanceof Blob?Promise.resolve(URL.createObjectURL(fid)):FOTOS.url(fid)).then(u=>{const im=document.createElement("img");im.src=u;im.alt="";t.appendChild(im);}).catch(()=>{t.classList.add("erro");t.textContent="!";});
+  return t;
+}
+
+/* ---- Saída de uma viatura: hora, percentagem de carga e fotografias ---- */
+const FOTOS=SJT.fotos(),MAX_FOTOS=4;
+let ED=null; /* {nome,h,m,carga,manter:[ids],novas:[{blob,url}]} */
+function abrirSaida(v,s){
+  const base=s?new Date(s.t):new Date();
+  ED={nome:v.nome,h:pad(base.getHours()),m:pad(base.getMinutes()),agora:!s,carga:s&&s.carga!=null?String(s.carga):"",manter:[...((s&&s.fotos)||[])],novas:[]};
+  aEditar={k:v.nome,c:"sv"};aConfirmar=null;msg("msg","");render();
+  setTimeout(()=>{const e=document.querySelector(".editor");if(e)e.scrollIntoView({block:"nearest",behavior:"smooth"});},50);
+}
+function fecharSaida(){if(ED)ED.novas.forEach(n=>URL.revokeObjectURL(n.url));ED=null;fechar();}
+function editorSaida(v,dia,s){
+  const w=el("div","editor");
+  /* hora: por omissão agora; só se escreve se não foi agora */
+  const lh=el("div","ed-rot","Hora de saída");lh.id="lSai";
+  const campo=(k,rot,max)=>{const i=document.createElement("input");i.type="text";i.inputMode="numeric";i.autocomplete="off";i.maxLength=2;i.setAttribute("pattern","[0-9]*");i.setAttribute("aria-label",rot);i.value=ED[k];
+    i.addEventListener("focus",()=>i.select());i.addEventListener("input",()=>{i.value=i.value.replace(/\D/g,"").slice(0,2);ED[k]=i.value;ED.agora=false;if(k==="h"&&(i.value.length===2||+i.value>2))mm.focus();});
+    i.addEventListener("blur",()=>{i.value=pad(Math.min(max,Math.max(0,parseInt(i.value,10)||0)));ED[k]=i.value;});return i;};
+  const hh=campo("h","Horas",23),mm=campo("m","Minutos",59);
+  const hr=el("div","ed-hora");hr.setAttribute("role","group");hr.setAttribute("aria-labelledby","lSai");const dp=el("span",null,":");dp.setAttribute("aria-hidden","true");hr.append(hh,dp,mm);
+  const at=el("div","ed-atalhos");
+  [["Agora",0],["−5 min",5],["−15 min",15],["−30 min",30]].forEach(([t,min])=>{const b=el("button",null,t);b.type="button";b.onclick=()=>{const d=new Date(Date.now()-min*60000);ED.h=hh.value=pad(d.getHours());ED.m=mm.value=pad(d.getMinutes());ED.agora=!min;};at.appendChild(b);});
+  /* percentagem de carga: atalhos e campo */
+  const lc=el("label","ed-rot","Carga da viatura (%)");lc.htmlFor="edCarga";
+  const cl=el("div","ed-carga");
+  const ic=document.createElement("input");ic.type="text";ic.inputMode="numeric";ic.id="edCarga";ic.maxLength=3;ic.autocomplete="off";ic.placeholder="—";ic.value=ED.carga;
+  const pc=el("span",null,"%");pc.setAttribute("aria-hidden","true");
+  const bts=el("div","ed-pct");
+  const marcar=()=>bts.querySelectorAll("button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.v===ED.carga));
+  [25,50,75,90,100].forEach(x=>{const b=el("button",null,x+"%");b.type="button";b.dataset.v=String(x);b.onclick=()=>{ED.carga=ic.value=String(x);marcar();};bts.appendChild(b);});
+  ic.addEventListener("input",()=>{ic.value=ic.value.replace(/\D/g,"").slice(0,3);ED.carga=ic.value;marcar();});
+  ic.addEventListener("focus",()=>ic.select());
+  cl.append(ic,pc);marcar();
+  /* fotografias */
+  const lf=el("div","ed-rot","Fotografia da carga ("+(ED.manter.length+ED.novas.length)+" de "+MAX_FOTOS+")");
+  const g=el("div","thumbs");
+  ED.manter.forEach((fid,k)=>{const t=miniatura(fid,()=>verFotos(ED.manter,k,v.nome));g.appendChild(tirarX(t,()=>{ED.manter.splice(k,1);render();}));});
+  ED.novas.forEach((n,k)=>{const t=miniatura(n.blob,()=>verFotos(ED.novas.map(x=>x.blob),k,v.nome));g.appendChild(tirarX(t,()=>{URL.revokeObjectURL(n.url);ED.novas.splice(k,1);render();}));});
+  const cheio=ED.manter.length+ED.novas.length>=MAX_FOTOS;
+  const fb=el("div","ed-fotos");
+  const bc=el("button","foto-btn","Tirar fotografia");bc.type="button";bc.disabled=cheio;bc.onclick=()=>$("fCam").click();
+  const bg=el("button","foto-btn sec","Galeria");bg.type="button";bg.disabled=cheio;bg.onclick=()=>$("fGal").click();
+  fb.append(bc,bg);
+  /* botões */
+  const gd=el("button","guardar",s?"Guardar":"Registar saída");gd.type="button";gd.onclick=()=>guardarSaida(v,dia,s,gd);
+  const x=el("button","anular","Cancelar");x.type="button";x.onclick=fecharSaida;
+  const bs=el("div","ed-btns");bs.append(x,gd);
+  w.append(lh,hr,at,lc,bts,cl,lf);if(g.childNodes.length)w.appendChild(g);w.append(fb,bs);
+  return w;
+}
+function tirarX(t,fn){const c=el("div","thumb-w");const b=el("button","thumb-x","×");b.type="button";b.setAttribute("aria-label","Tirar fotografia");b.onclick=fn;c.append(t,b);return c;}
+async function juntarFotos(lista){
+  if(!ED)return;
+  for(const f of lista){
+    if(ED.manter.length+ED.novas.length>=MAX_FOTOS){msg("msg","Máximo de "+MAX_FOTOS+" fotografias por viatura.",false);break;}
+    try{const blob=await FOTOS.reduzir(f);ED.novas.push({blob,url:URL.createObjectURL(blob)});}
+    catch(e){msg("msg",e.message||"Não foi possível ler a fotografia.",false);}
+  }
+  render();
+}
+$("fCam").addEventListener("change",e=>{juntarFotos([...e.target.files]);e.target.value="";});
+$("fGal").addEventListener("change",e=>{juntarFotos([...e.target.files]);e.target.value="";});
+async function guardarSaida(v,dia,s,btn){
+  if(!ED)return;
+  let dt;
+  if(ED.agora&&!s)dt=new Date();
+  else{const h=Math.min(23,parseInt(ED.h,10)||0),m=Math.min(59,parseInt(ED.m,10)||0),[y,mo,d]=dia.split("-").map(Number);dt=new Date(y,mo-1,d,h,m,0);
+    if(dt.getTime()>Date.now()+60000){msg("msg","A hora "+pad(h)+":"+pad(m)+" ainda não chegou. Indique uma hora até agora.",false);return;}}
+  const c=ED.carga===""?null:parseInt(ED.carga,10);
+  if(c==null||isNaN(c)){msg("msg","Indique a percentagem de carga da viatura.",false);document.getElementById("edCarga")&&document.getElementById("edCarga").focus();return;}
+  if(c>100){msg("msg","A carga não pode passar de 100%.",false);return;}
+  btn.disabled=true;
+  const id=idDe("sv",dia,v.nome),fotos=[...ED.manter];
+  try{for(const n of ED.novas)fotos.push(await FOTOS.guardar(id,n.blob));}
+  catch(e){btn.disabled=false;msg("msg","O telemóvel não deixou guardar a fotografia (sem espaço?).",false);return;}
+  const tiradas=((s&&s.fotos)||[]).filter(f=>!ED.manter.includes(f));
+  if(!gravar("sv",dia,v.nome,{t:dt.toISOString(),carga:c,fotos})){btn.disabled=false;msg("msg","O telemóvel não deixou guardar.",false);return;}
+  if(tiradas.length)FOTOS.apagar(tiradas);
+  ED.novas.forEach(n=>URL.revokeObjectURL(n.url));ED=null;
+  carregar();aEditar=null;aConfirmar=null;
+  msg("msg",v.nome+(s?": saída atualizada":" saiu às "+hora(dt.toISOString()))+" · carga "+c+"%"+(fotos.length?" · "+fotos.length+" fotografia"+(fotos.length>1?"s":""):" · sem fotografia")+".",true);render();
+}
+
+/* Ver fotografias em ecrã inteiro */
+let verL=[],verI=0;
+async function mostrarFoto(){
+  const f=verL[verI];$("verImg").removeAttribute("src");$("verN").textContent=(verI+1)+" de "+verL.length;
+  try{$("verImg").src=f instanceof Blob?URL.createObjectURL(f):await FOTOS.url(f);}catch(e){$("verN").textContent=e.message;}
+  $("verAnt").hidden=$("verSeg").hidden=verL.length<2;
+}
+function verFotos(lista,i,titulo){verL=lista;verI=i;$("verT").textContent=titulo;$("ver").hidden=false;document.body.classList.add("preso");mostrarFoto();$("verFechar").focus();}
+function fecharVer(){$("ver").hidden=true;document.body.classList.remove("preso");}
+$("verFechar").onclick=fecharVer;
+$("verAnt").onclick=()=>{verI=(verI-1+verL.length)%verL.length;mostrarFoto();};
+$("verSeg").onclick=()=>{verI=(verI+1)%verL.length;mostrarFoto();};
+document.addEventListener("keydown",e=>{if($("ver").hidden)return;if(e.key==="Escape")fecharVer();if(e.key==="ArrowLeft")$("verAnt").click();if(e.key==="ArrowRight")$("verSeg").click();});
+
+function abrir(k,c){aEditar={k,c};aConfirmar=null;msg("msg","");render();}
+function fechar(){aEditar=null;if(ED){ED.novas.forEach(n=>URL.revokeObjectURL(n.url));ED=null;}render();}
+const NOMES={cg:"Hora de chegada",ch:"Hora da última chamada",sv:"Hora de saída"};
+/* Editor da hora: horas e minutos com teclado numérico e atalhos (igual aos Horários) */
+function editorHora(r,dia,c,atual){
+  const w=el("div","editor"),lb=el("div","ed-rot",NOMES[c]);lb.id="lEd";
+  const base=atual?new Date(atual.t):new Date();
+  const campo=(val,rot)=>{const i=document.createElement("input");i.type="text";i.inputMode="numeric";i.autocomplete="off";i.maxLength=2;i.setAttribute("pattern","[0-9]*");i.setAttribute("aria-label",rot);i.value=pad(val);i.addEventListener("focus",()=>i.select());return i;};
+  const hh=campo(base.getHours(),"Horas"),mm=campo(base.getMinutes(),"Minutos");
+  const so2=i=>{i.value=i.value.replace(/\D/g,"").slice(0,2);};
+  hh.addEventListener("input",()=>{so2(hh);if(hh.value.length===2||+hh.value>2)mm.focus();});mm.addEventListener("input",()=>so2(mm));
+  const fix=(i,max)=>{i.value=pad(Math.min(max,Math.max(0,parseInt(i.value,10)||0)));};
+  hh.addEventListener("blur",()=>fix(hh,23));mm.addEventListener("blur",()=>fix(mm,59));
+  const valor=()=>{fix(hh,23);fix(mm,59);return hh.value+":"+mm.value;};
+  const lh=el("div","ed-hora");lh.setAttribute("role","group");lh.setAttribute("aria-labelledby","lEd");const dp=el("span",null,":");dp.setAttribute("aria-hidden","true");lh.append(hh,dp,mm);
+  const at=el("div","ed-atalhos");
+  [["Agora",0],["−5 min",5],["−15 min",15],["−30 min",30]].forEach(([t,min])=>{const b=el("button",null,t);b.type="button";b.onclick=()=>{const d=new Date(Date.now()-min*60000);hh.value=pad(d.getHours());mm.value=pad(d.getMinutes());};at.appendChild(b);});
+  const g=el("button","guardar","Guardar");g.type="button";g.onclick=()=>guardarHora(r,dia,c,valor(),atual);
+  const x=el("button","anular","Cancelar");x.type="button";x.onclick=fechar;
+  [hh,mm].forEach(i=>i.addEventListener("keydown",e=>{if(e.key==="Enter")guardarHora(r,dia,c,valor(),atual);if(e.key==="Escape")fechar();}));
+  const bs=el("div","ed-btns");
+  if(c==="ch"&&atual&&atual.meu){const a=el("button","anular esq","Apagar chamada");a.type="button";a.onclick=()=>{LIG.apagar(idDe("ch",dia,r.k));carregar();aEditar=null;msg("msg","Chamada da rota "+r.rota+" apagada.",true);render();};bs.appendChild(a);}
+  bs.append(x,g);w.append(lb,lh,at,bs);return w;
+}
+function guardarHora(r,dia,c,val,atual){
+  const m=/^(\d{1,2}):(\d{2})/.exec(val||"");if(!m){msg("msg","Escreva a hora (horas e minutos).",false);return;}
+  const [y,mo,d]=dia.split("-").map(Number),dt=new Date(y,mo-1,d,+m[1],+m[2],0);
+  if(dt.getTime()>Date.now()+60000){msg("msg","A hora "+val+" ainda não chegou. Indique uma hora até agora.",false);return;}
+  const dados={t:dt.toISOString()};if(c==="ch")dados.n=(atual&&atual.n)||1;
+  if(!gravar(c,dia,r.k,dados)){msg("msg","O telemóvel não deixou guardar (sem espaço ou armazenamento bloqueado).",false);return;}
+  carregar();aEditar=null;
+  msg("msg",(c==="sv"?r.rota+": saída":"Rota "+r.rota+": "+(c==="cg"?"chegada":"última chamada"))+" registada às "+hora(dados.t)+".",true);render();
+}
+/* Editor do motorista do dia: nome e, se quiser, telemóvel no mesmo campo */
+function editorTexto(r,dia,atual){
+  const w=el("div","editor"),lb=el("label","ed-rot","Motorista de hoje (nome e telemóvel)");
+  const i=document.createElement("input");i.className="ed-txt";i.value=atual||"";i.maxLength=80;i.autocomplete="off";i.placeholder="ex. Paulo Mendes - 912345678";i.id="edMot";lb.htmlFor="edMot";
+  const g=el("button","guardar","Guardar");g.type="button";
+  const ok=()=>{const v=i.value.replace(/\s+/g," ").trim();
+    if(!gravar("mo",dia,r.k,{nome:v===String(r.motorista||"").trim()?"":v})){msg("msg","O telemóvel não deixou guardar.",false);return;}
+    carregar();aEditar=null;msg("msg","Rota "+r.rota+": motorista de hoje "+(v?"— "+motDe(v).nome:"igual ao da lista")+".",true);render();};
+  g.onclick=ok;i.addEventListener("keydown",e=>{if(e.key==="Enter")ok();if(e.key==="Escape")fechar();});
+  const x=el("button","anular","Cancelar");x.type="button";x.onclick=fechar;
+  const bs=el("div","ed-btns");
+  if(r.motorista){const p=el("button","anular esq","Repor da lista");p.type="button";p.onclick=()=>{i.value=r.motorista;ok();};bs.appendChild(p);}
+  bs.append(x,g);w.append(lb,i,bs);setTimeout(()=>i.focus(),0);return w;
+}
+function chamou(r){
+  const agora=new Date(),dia=diaDe(agora);if($("dia").value!==dia)$("dia").value=dia;
+  const ant=doDia(dia).ch[r.k];
+  if(!gravar("ch",dia,r.k,{t:agora.toISOString(),n:((ant&&ant.n)||0)+1})){msg("msg","O telemóvel não deixou guardar a chamada.",false);return;}
+  carregar();msg("msg","Rota "+r.rota+": chamada registada às "+hora(agora.toISOString())+".",true);
+  setTimeout(render,300); /* deixa o telefone abrir primeiro */
+}
+function chegou(r){
+  const agora=new Date(),dia=diaDe(agora);if($("dia").value!==dia)$("dia").value=dia;
+  if(doDia(dia).cg[r.k]){render();return;}
+  if(!gravar("cg",dia,r.k,{t:agora.toISOString()})){msg("msg","O telemóvel não deixou guardar (sem espaço ou armazenamento bloqueado).",false);render();return;}
+  carregar();aEditar=null;aConfirmar=null;msg("msg","Rota "+r.rota+" chegou às "+hora(agora.toISOString())+".",true);render();
+}
+function confirmar(k){if(aConfirmar!==k){aConfirmar=k;render();setTimeout(()=>{if(aConfirmar===k){aConfirmar=null;render();}},4000);return false;}aConfirmar=null;return true;}
+function anular(r){if(!confirmar(r.k))return;const dia=$("dia").value;
+  if(!LIG.apagar(idDe("cg",dia,r.k))){msg("msg","Só quem registou esta hora a pode anular.",false);render();return;}
+  carregar();msg("msg","Chegada da rota "+r.rota+" anulada.",true);render();}
+function anularV(v,s){if(!confirmar(v.nome))return;const dia=$("dia").value;
+  if(!LIG.apagar(idDe("sv",dia,v.nome))){msg("msg","Só quem registou esta hora a pode anular.",false);render();return;}
+  if(s&&s.fotos&&s.fotos.length)FOTOS.apagar(s.fotos);
+  carregar();msg("msg","Saída de "+v.nome+" anulada.",true);render();}
+
+document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible"&&$("dia").value===diaAberto&&hoje()!==diaAberto){diaAberto=hoje();$("dia").value=diaAberto;}if(document.visibilityState==="visible"&&!aEditar)render();});
+setInterval(()=>{if($("dia").value===diaAberto&&hoje()!==diaAberto){diaAberto=hoje();$("dia").value=diaAberto;}if(!aEditar&&$("dia").value===hoje())render();},60000);
+
+/* ---- Excel (sem bibliotecas, funciona offline) ---- */
+const MIME_XLSX="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+const CRC_T=(()=>{const t=new Uint32Array(256);for(let n=0;n<256;n++){let c=n;for(let k=0;k<8;k++)c=c&1?0xEDB88320^(c>>>1):c>>>1;t[n]=c>>>0;}return t;})();
+function crc32(b){let c=0xFFFFFFFF;for(let i=0;i<b.length;i++)c=CRC_T[(c^b[i])&255]^(c>>>8);return (c^0xFFFFFFFF)>>>0;}
+function zipStore(files){
+  const enc=new TextEncoder(),parts=[],central=[];let off=0;
+  const u16=n=>[n&255,(n>>8)&255],u32=n=>[n&255,(n>>8)&255,(n>>16)&255,(n>>>24)&255];
+  for(const [name,data] of files){
+    const nb=enc.encode(name),crc=crc32(data);
+    const lh=new Uint8Array([0x50,0x4b,3,4,...u16(20),...u16(0x0800),...u16(0),...u16(0),...u16(0x21),...u32(crc),...u32(data.length),...u32(data.length),...u16(nb.length),...u16(0)]);
+    parts.push(lh,nb,data);
+    central.push(new Uint8Array([0x50,0x4b,1,2,...u16(20),...u16(20),...u16(0x0800),...u16(0),...u16(0),...u16(0x21),...u32(crc),...u32(data.length),...u32(data.length),...u16(nb.length),...u16(0),...u16(0),...u16(0),...u16(0),...u32(0),...u32(off)]),nb);
+    off+=lh.length+nb.length+data.length;
+  }
+  const cdSize=central.reduce((a,p)=>a+p.length,0);
+  const end=new Uint8Array([0x50,0x4b,5,6,...u16(0),...u16(0),...u16(files.length),...u16(files.length),...u32(cdSize),...u32(off),...u16(0)]);
+  const all=[...parts,...central,end],out=new Uint8Array(all.reduce((a,p)=>a+p.length,0));let o=0;
+  for(const p of all){out.set(p,o);o+=p.length;}return out;
+}
+function criarXlsx(folhas){
+  const X=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+  const L="ABCDEFGHIJ",NS='xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"',H='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>';
+  const folha=({titulo,cab,linhas,larguras,pct=[]})=>{
+    const nc=cab.length,ult=3+linhas.length;
+    const cel=(r,c,v,s)=>v===""||v==null?`<c r="${L[c]}${r}" s="${s}"/>`:typeof v==="number"?`<c r="${L[c]}${r}" s="${s}"><v>${v}</v></c>`:`<c r="${L[c]}${r}" s="${s}" t="inlineStr"><is><t xml:space="preserve">${X(v)}</t></is></c>`;
+    let rows=`<row r="1" ht="26" customHeight="1">`+cab.map((_,c)=>cel(1,c,c?"":titulo,1)).join("")+`</row><row r="2"/>`;
+    rows+=`<row r="3" ht="24" customHeight="1">`+cab.map((v,c)=>cel(3,c,v,2)).join("")+`</row>`;
+    linhas.forEach((l,i)=>{const r=4+i;rows+=`<row r="${r}">`+l.map((v,c)=>cel(r,c,v,(pct.includes(c)&&typeof v==="number"?5:3)+i%2)).join("")+`</row>`;});
+    const W=larguras.map((w,i)=>`<col min="${i+1}" max="${i+1}" width="${w}" customWidth="1"/>`).join("");
+    return `${H}<worksheet ${NS}><sheetViews><sheetView workbookViewId="0" showGridLines="0"><pane ySplit="3" topLeftCell="A4" activePane="bottomLeft" state="frozen"/><selection pane="bottomLeft"/></sheetView></sheetViews><sheetFormatPr defaultRowHeight="15"/><cols>${W}</cols><sheetData>${rows}</sheetData><autoFilter ref="A3:${L[nc-1]}${ult}"/><mergeCells count="1"><mergeCell ref="A1:${L[nc-1]}1"/></mergeCells></worksheet>`;
+  };
+  const fill=c=>`<fill><patternFill patternType="solid"><fgColor rgb="FF${c}"/><bgColor indexed="64"/></patternFill></fill>`;
+  const bd=`<border><left style="thin"><color rgb="FFC3CCBD"/></left><right style="thin"><color rgb="FFC3CCBD"/></right><top style="thin"><color rgb="FFC3CCBD"/></top><bottom style="thin"><color rgb="FFC3CCBD"/></bottom><diagonal/></border>`;
+  const xf=(f,fi,b,h)=>`<xf numFmtId="0" fontId="${f}" fillId="${fi}" borderId="${b}" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="${h}" vertical="center"/></xf>`;
+  const styles=`${H}<styleSheet ${NS}><fonts count="3"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="14"/><color rgb="FF1F3B2A"/><name val="Calibri"/></font><font><b/><sz val="11"/><color rgb="FF1F3B2A"/><name val="Calibri"/></font></fonts><fills count="5"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill>${fill("E2EBD5")}${fill("FFFFFF")}${fill("F4F7EF")}</fills><borders count="2"><border><left/><right/><top/><bottom/><diagonal/></border>${bd}</borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="7"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>${xf(1,2,0,"left")}${xf(2,2,1,"center")}${xf(0,3,1,"center")}${xf(0,4,1,"center")}${xf(0,3,1,"center").replace('numFmtId="0"','numFmtId="9"').replace("applyFont",'applyNumberFormat="1" applyFont')}${xf(0,4,1,"center").replace('numFmtId="0"','numFmtId="9"').replace("applyFont",'applyNumberFormat="1" applyFont')}</cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>`;
+  const wb=`${H}<workbook ${NS} xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets>${folhas.map((f,i)=>`<sheet name="${X(f.folha)}" sheetId="${i+1}" r:id="rId${i+1}"/>`).join("")}</sheets><definedNames>${folhas.map((f,i)=>`<definedName name="_xlnm._FilterDatabase" localSheetId="${i}" hidden="1">'${X(f.folha)}'!$A$3:$${L[f.cab.length-1]}$${3+f.linhas.length}</definedName>`).join("")}</definedNames></workbook>`;
+  const R="http://schemas.openxmlformats.org/officeDocument/2006/relationships",P="http://schemas.openxmlformats.org/package/2006/relationships";
+  const ct=`${H}<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>${folhas.map((_,i)=>`<Override PartName="/xl/worksheets/sheet${i+1}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`).join("")}<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>`;
+  const rels=`${H}<Relationships xmlns="${P}"><Relationship Id="rId1" Type="${R}/officeDocument" Target="xl/workbook.xml"/></Relationships>`;
+  const wrels=`${H}<Relationships xmlns="${P}">${folhas.map((_,i)=>`<Relationship Id="rId${i+1}" Type="${R}/worksheet" Target="worksheets/sheet${i+1}.xml"/>`).join("")}<Relationship Id="rId${folhas.length+1}" Type="${R}/styles" Target="styles.xml"/></Relationships>`;
+  const e=new TextEncoder();
+  return zipStore([["[Content_Types].xml",e.encode(ct)],["_rels/.rels",e.encode(rels)],["xl/workbook.xml",e.encode(wb)],["xl/_rels/workbook.xml.rels",e.encode(wrels)],["xl/styles.xml",e.encode(styles)],...folhas.map((f,i)=>["xl/worksheets/sheet"+(i+1)+".xml",e.encode(folha(f))])]);
+}
+/* Linhas iguais à folha em papel: uma por cliente; chamada, chegada e motorista na primeira linha de cada rota */
+function dadosDia(dia){
+  const D=doDia(dia),h=x=>x?hora(x.t):"";
+  const rec=[];ROTAS.forEach(r=>{const mo=D.mo[r.k],mot=mo&&mo.nome?mo.nome:(r.motorista||"");
+    (r.clientes.length?r.clientes:[["","",""]]).forEach((c,i)=>rec.push([i?"":(/^\d+$/.test(r.rota)?+r.rota:r.rota),i?"":r.zona,c[0],c[1],c[2],i?"":h(D.ch[r.k]),i?"":h(D.cg[r.k]),i?"":mot]));});
+  const vi=VIATURAS.filter(v=>!v.extra||D.sv[v.nome]).map(v=>{const x=D.sv[v.nome];return [v.nome,h(x),x&&x.carga!=null?x.carga/100:"",x?(x.fotos||[]).length:""];});
+  const tem=Object.keys(D.cg).length+Object.keys(D.ch).length+Object.keys(D.sv).length>0;
+  return {rec,vi,tem};
+}
+const CAB_R=["Rota","Zona","Cliente","Localidade","Hora da recolha","Hora da última chamada","Hora de chegada","Motorista"];
+function gerarExcel(dia){
+  const x=dadosDia(dia);if(!x.tem)return null;const [y,m,d]=dia.split("-");
+  return {bytes:criarXlsx([
+    {titulo:"RECOLHAS OBRIGATÓRIAS PARA ALGARVE E LEIRIA — "+d+"/"+m+"/"+y+" — "+S.polo.nome,folha:"Recolhas",cab:CAB_R,linhas:x.rec,larguras:[10,20,22,22,12,14,12,28]},
+    {titulo:"SAÍDA DAS VIATURAS — "+d+"/"+m+"/"+y,folha:"Viaturas",cab:["Viatura","Hora de saída","Carga","Fotografias"],linhas:x.vi,larguras:[26,16,12,14],pct:[2]}]),nome:`bidiario-${y}-${m}-${d}.xlsx`};
+}
+function gerarCsv(dia){
+  const x=dadosDia(dia);if(!x.tem)return null;const [y,m,d]=dia.split("-");
+  const q=t=>/[";\n]/.test(t)?'"'+t.replace(/"/g,'""')+'"':t;
+  const l=[CAB_R,...x.rec,[],["Viatura","Hora de saída","Carga (%)","Fotografias"],...x.vi.map(r=>[r[0],r[1],r[2]===""?"":Math.round(r[2]*100),r[3]])];
+  return {texto:"﻿"+l.map(r=>r.map(v=>q(String(v))).join(";")).join("\r\n")+"\r\n",nome:`bidiario-${y}-${m}-${d}.csv`};
+}
+function descarregarX(x){const url=URL.createObjectURL(new Blob([x.bytes],{type:MIME_XLSX}));const a=document.createElement("a");a.href=url;a.download=x.nome;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),15000);}
+$("excel").onclick=()=>{try{const x=gerarExcel($("dia").value||hoje());if(!x){msg("msgX","Ainda não há registos do bidiário neste dia.",false);return;}descarregarX(x);msg("msgX","Excel gerado: "+x.nome+" (ver em Transferências).",true);}catch(err){msg("msgX","Não foi possível gerar o Excel.",false);}};
+
+/* ---- Enviar por email (igual aos Horários; usa o email dos horários da gestão) ---- */
+function saudacao(){const hh=new Date().getHours();return hh<13?"Bom dia":hh<20?"Boa tarde":"Boa noite";}
+function textoMail(dia){
+  const [y,m,d]=dia.split("-"),D=doDia(dia),cg=ROTAS.filter(r=>D.cg[r.k]).length,sv=VIATURAS.filter(v=>D.sv[v.nome]);
+  return {assunto:"Bidiário | "+d+"/"+m+"/"+y+" | "+S.polo.nome,
+    corpo:[saudacao()+",","","Segue em anexo o ficheiro do bidiário (recolhas obrigatórias para Algarve e Leiria) do polo de "+S.polo.nome+" do dia "+d+"/"+m+"/"+y+".","",
+      "Rotas chegadas: "+cg+" de "+ROTAS.length,...sv.map(v=>{const x=D.sv[v.nome];return "Saída "+v.nome+": "+hora(x.t)+(x.carga!=null?" · carga "+x.carga+"%":"");}),...(sv.some(v=>(D.sv[v.nome].fotos||[]).length)?["","As fotografias da carga seguem em anexo."]:[]),""].join("\n")};
+}
+async function copiar(t){try{await navigator.clipboard.writeText(t);return true;}catch(e){return false;}}
+let mailAtual=null;
+$("email").onclick=()=>{
+  const dia=$("dia").value||hoje();
+  if(!gerarExcel(dia)){msg("msgX","Ainda não há registos do bidiário neste dia.",false);return;}
+  const {assunto,corpo}=textoMail(dia),cfg=S.config||{},para=(cfg.emailHorarios||"").trim(),cc=(cfg.ccHorarios||"").trim();
+  mailAtual={dia,assunto,corpo,para,cc};
+  $("mCcCx").hidden=!cc;$("mCc").textContent=cc;$("mParaCx").hidden=!para;$("mPara").textContent=para;$("mAssunto").textContent=assunto;
+  ["mCopPara","mCopCc","mCopAss"].forEach(k=>{$(k).textContent="Copiar";$(k).classList.remove("ok");});
+  $("mNota").textContent="O ficheiro vai em CSV (abre diretamente no Excel): a partilha do telemóvel não aceita ficheiros .xlsx. Se precisar do Excel formatado, use Descarregar Excel e anexe-o. Ao abrir o email, o assunto fica copiado: se não aparecer, cole-o."+(para?"":" Este armazém ainda não tem email para horários definido na gestão.");
+  $("mMsg").textContent="";$("mail").hidden=false;document.body.classList.add("preso");$("mAbrir").focus();
+};
+function fecharMail(){$("mail").hidden=true;document.body.classList.remove("preso");}
+$("mFechar").onclick=fecharMail;
+$("mail").addEventListener("click",e=>{if(e.target===$("mail"))fecharMail();});
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("mail").hidden)fecharMail();});
+async function botaoCopiar(id,txt){const ok=await copiar(txt);$(id).textContent=ok?"Copiado ✓":"Selecione";$(id).classList.toggle("ok",ok);
+  ["mCopPara","mCopCc","mCopAss"].filter(k=>k!==id).forEach(k=>{$(k).textContent="Copiar";$(k).classList.remove("ok");});}
+$("mCopPara").onclick=()=>botaoCopiar("mCopPara",mailAtual.para);
+$("mCopCc").onclick=()=>botaoCopiar("mCopCc",mailAtual.cc);
+$("mCopAss").onclick=()=>botaoCopiar("mCopAss",mailAtual.assunto);
+$("mXlsx").onclick=()=>{const x=gerarExcel(mailAtual.dia);if(x){descarregarX(x);$("mMsg").textContent="Excel descarregado: "+x.nome+" (ver em Transferências).";$("mMsg").className="msg ok";}};
+const mailEnc=t=>encodeURIComponent(t).replace(/%2C/gi,",").replace(/%40/g,"@");
+$("mAbrir").onclick=async()=>{
+  const m=mailAtual;if(!m)return;const c=gerarCsv(m.dia);if(!c)return;
+  const fic=new File([c.texto],c.nome,{type:"text/csv"}),fics=[fic];
+  /* as fotografias da carga vão também no email (as que este telemóvel conseguir obter) */
+  const Dd=doDia(m.dia),[yy,mm2,dd]=m.dia.split("-");
+  for(const v of VIATURAS){const x=Dd.sv[v.nome];if(!x)continue;let k=0;
+    for(const fid of x.fotos||[]){try{const b=await FOTOS.blob(fid);k++;fics.push(new File([b],"carga-"+v.nome.normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^A-Za-z0-9]+/g,"-").replace(/^-|-$/g,"").toLowerCase()+"-"+dd+mm2+"-"+k+".jpg",{type:"image/jpeg"}));}catch(e){}}}
+  let partilha=false,usar=fics;
+  try{if(navigator.share&&navigator.canShare){if(navigator.canShare({files:fics,title:m.assunto,text:m.corpo}))partilha=true;else if(navigator.canShare({files:[fic],title:m.assunto,text:m.corpo})){partilha=true;usar=[fic];}}}catch(e){}
+  let pr=null;if(partilha){try{pr=navigator.share({title:m.assunto,text:m.corpo,files:usar});}catch(e){pr=Promise.reject(e);}pr.catch(()=>{});}
+  const copiado=await copiar(m.assunto);if(copiado){$("mCopAss").textContent="Copiado ✓";$("mCopAss").classList.add("ok");}
+  if(pr){
+    try{await pr;fecharMail();msg("msgX","Email preparado na app escolhida com o ficheiro "+c.nome+(usar.length>1?" e "+(usar.length-1)+" fotografia"+(usar.length>2?"s":""):"")+"."+(copiado?" O assunto foi copiado — cole-o se não aparecer.":"")+(m.para?" Destinatário: "+m.para+".":""),true);return;}
+    catch(e){if(e&&e.name==="AbortError")return;$("mMsg").textContent="O telemóvel não abriu a partilha ("+(e&&e.name||"erro")+"). Carregue de novo em “Abrir email com o ficheiro”.";$("mMsg").className="msg err";return;}
+  }
+  const x=gerarExcel(m.dia);if(x)descarregarX(x);
+  const href="mailto:"+mailEnc(m.para)+"?"+(m.cc?"cc="+mailEnc(m.cc)+"&":"")+"subject="+encodeURIComponent(m.assunto)+"&body="+encodeURIComponent(m.corpo);
+  setTimeout(()=>{const a=document.createElement("a");a.href=href;document.body.appendChild(a);a.click();a.remove();},500);
+  fecharMail();msg("msgX","Email aberto com destinatário, assunto e texto. O Excel foi descarregado (ver Transferências): anexe-o ao email.",true);
+};
+
+SJT.barra(LIG,document.querySelector("header"));
+render();
+try{navigator.storage&&navigator.storage.persist&&navigator.storage.persist();}catch(e){}
+if("serviceWorker" in navigator&&location.protocol!=="file:"){navigator.serviceWorker.register("sw.js").catch(()=>{});}
+</script>
+</body>
+</html>

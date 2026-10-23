@@ -111,6 +111,8 @@ input:focus-visible,textarea:focus-visible,button:focus-visible{outline:2px soli
       <label for="lPneus">Voltas que trazem pneus<textarea id="lPneus" spellcheck="false"></textarea></label>
       <label for="lInter">Carros extra <small>(interruptor nas chegadas)</small><textarea id="lInter" spellcheck="false"></textarea></label>
     </div>
+    <label for="lBidi">Bidiário — rotas e recolhas <small>— uma linha por cliente: rota | zona | cliente | localidade | hora | motorista. Pode colar diretamente do Excel da folha: as células vazias (juntas) repetem a linha de cima e só uma rota preenchida começa uma rota nova. O motorista basta na primeira linha da rota; o telemóvel pode ir no mesmo campo (ex. Danilson Varela - 934903188).</small><textarea id="lBidi" spellcheck="false" style="min-height:200px"></textarea></label>
+    <label for="lBidiV">Bidiário — viaturas de saída <small>— uma por linha; acrescente (extra) às que só saem às vezes (ex. 2ª viatura Leiria (extra)). Vazio = Algarve, Leiria, Évora.</small><textarea id="lBidiV" spellcheck="false"></textarea></label>
     <label for="lPrev">Hora prevista de chegada <small>— uma linha por volta: volta = hora (ex. 1201 = 13:44). Opcional.</small><textarea id="lPrev" spellcheck="false" style="min-height:160px"></textarea></label>
     <label for="lMatriz">Subcontratados por volta <small>— uma linha por volta: volta = subcontratado (ex. 1201 = LG)</small><textarea id="lMatriz" spellcheck="false" style="min-height:180px"></textarea></label>
     <label for="pEmailPen">Email para penalizações <small>— para onde se envia o ficheiro semanal (opcional; vários separados por vírgula)</small><input id="pEmailPen" type="email" inputmode="email" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="ex. operacoes@empresa.pt" multiple></label>
@@ -155,7 +157,7 @@ function espaco(f){
   el.className="dica"+(!f.r2&&f.naBaseDados>300*1048576?" alerta":"");
 }
 /* ---- Apagar dados (testes ou registos antigos) ---- */
-const APPS_L=[["pneus","Incompletos (pneus)"],["chegadas","Horários (chegadas e saídas)"],["penalizacoes","Penalizações"],["frota","Frota"],["ocorrencias","Ocorrências (com fotografias)"],["contactos","Pedidos (contactos e documentos)"],["resumos","Resumos do dia"],["turno","Mural (com fotografias)"],["codigos","Códigos e opções de pneus (comuns a todos os armazéns)"]];
+const APPS_L=[["pneus","Incompletos (pneus)"],["chegadas","Horários (chegadas e saídas)"],["bidiario","Bidiário (chamadas, chegadas e saídas)"],["penalizacoes","Penalizações"],["frota","Frota"],["ocorrencias","Ocorrências (com fotografias)"],["contactos","Pedidos (contactos e documentos)"],["resumos","Resumos do dia"],["turno","Mural (com fotografias)"],["codigos","Códigos e opções de pneus (comuns a todos os armazéns)"]];
 let planoL=null;
 const chk=(cls,v,txt,el)=>{const l=document.createElement("label");l.className="chk";const c=document.createElement("input");c.type="checkbox";c.value=v;c.className=cls;c.onchange=()=>{planoL=null;botaoL();};l.append(c," "+txt);el.appendChild(l);return c;};
 function desenharLimpar(){
@@ -268,6 +270,8 @@ function preencher(c){
   $("lPneus").value=(c.voltasPneus||[]).join("\n");$("lInter").value=(c.interruptor||[]).join("\n");
   $("lPrev").value=Object.entries(c.previsoes||{}).map(([v,h])=>v+" = "+h).join("\n");
   $("lMatriz").value=Object.entries(c.matriz||{}).map(([v,s])=>v+" = "+s).join("\n");
+  $("lBidi").value=(c.bidiario||[]).flatMap(g=>g.clientes.map((x,i)=>[i?"":g.rota,i?"":g.zona,x[0],x[1],x[2],i?"":(g.motorista||"")].join(" | ").replace(/(\s\|\s*)+$/,""))).join("\n");
+  $("lBidiV").value=(c.bidiarioViaturas||[]).map(v=>v.nome+(v.extra?" (extra)":"")).join("\n");
   $("lMotivos").value=(c.motivos||[]).map(([m,v])=>m+" = "+v).join("\n");
   $("pEmail").value=c.emailOcorrencias||"";
   $("pEmailPen").value=c.emailPenalizacoes||"";
@@ -288,6 +292,28 @@ function abrir(p){
   preencher(p?p.config:{});
   $("fPolo").scrollIntoView({behavior:"smooth",block:"start"});
 }
+/* Bidiário: linhas rota | zona | cliente | localidade | hora | motorista (separadas por | ; ou tabulação do Excel).
+   As células vazias repetem a linha de cima; só uma rota preenchida começa uma rota nova. */
+function lerBidiario(txt){
+  const grupos=[],erros=[];let g=null,ant=["","","","",""];
+  String(txt).split(/\r?\n/).forEach(l=>{
+    if(!l.trim())return;
+    let c=(l.includes("\t")?l.split("\t"):l.split(/\s*[|;]\s*/)).map(x=>x.replace(/\s+/g," ").trim());
+    /* colado do Excel com as colunas da folha (chamada e chegada vazias pelo meio): o motorista é a última */
+    const mot=c.length>6?c.slice(5).filter(Boolean).pop()||"":c[5]||"";
+    if(!c.slice(0,5).some(Boolean)&&!mot)return;
+    const rota=c[0]||"",zona=c[1]||"",cli=c[2]||"",loc=c[3]||"",hr=c[4]||"";
+    if(rota||!g){g={rota:rota||ant[0],zona:zona||(rota?"":ant[1]),motorista:"",clientes:[]};grupos.push(g);}
+    if(mot&&!g.motorista)g.motorista=mot;
+    const h=(hr||(cli&&!rota&&!hr?ant[4]:"")).match(/^(\d{1,2})[:.hH](\d{2})$/);
+    if(hr&&!/^(\d{1,2})[:.hH](\d{2})$/.test(hr))erros.push("Bidiário: hora inválida em “"+l.trim()+"”");
+    if(cli)g.clientes.push([cli,loc||ant[3],h?String(+h[1]).padStart(2,"0")+":"+h[2]:""]);
+    ant=[g.rota,g.zona,cli||ant[2],loc||ant[3],hr||ant[4]];
+  });
+  grupos.forEach(x=>{if(!x.rota)erros.push("Bidiário: há clientes sem rota no início da lista");});
+  const vistos=new Set();grupos.forEach(x=>{const k=x.rota+"|"+x.zona;if(vistos.has(k))erros.push("Bidiário: a rota “"+x.rota+" "+x.zona+"” aparece duas vezes");vistos.add(k);});
+  return {grupos:grupos.filter(x=>x.rota),erros};
+}
 function lerConfig(){
   const erros=[],matriz={},motivos=[];
   linhas($("lMatriz").value).forEach(l=>{const m=l.match(/^(.+?)\s*[=;:\t]\s*(.+)$/);if(m)matriz[m[1].trim()]=m[2].trim();else erros.push("Subcontratados: falta o “=” em “"+l+"”");});
@@ -301,6 +327,8 @@ function lerConfig(){
   if(semVolta.length)erros.push("Hora prevista para voltas que não estão nas voltas de chegada: "+semVolta.join(", ")+" (o nome tem de ser igual)");
   const c={voltasC:linhas($("lVoltasC").value),voltasS:linhas($("lVoltasS").value),voltasPneus:linhas($("lPneus").value),interruptor:linhas($("lInter").value),matriz};
   if(motivos.length)c.motivos=motivos;
+  {const r=lerBidiario($("lBidi").value);erros.push(...r.erros);if(r.grupos.length)c.bidiario=r.grupos;}
+  {const v=linhas($("lBidiV").value).map(l=>{const ex=/\(\s*extra\s*\)\s*$/i.test(l);return {nome:l.replace(/\(\s*extra\s*\)\s*$/i,"").replace(/[\s-]+$/,"").trim(),extra:ex};}).filter(v=>v.nome);if(v.length)c.bidiarioViaturas=v;}
   if(Object.keys(previsoes).length)c.previsoes=previsoes;
   const em=$("pEmail").value.split(/[,;\s]+/).map(x=>x.trim()).filter(Boolean);
   em.forEach(x=>{if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(x))erros.push("Email para ocorrências inválido: “"+x+"”");});

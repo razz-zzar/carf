@@ -1,5 +1,5 @@
-const CACHE="carf-v115";
-const FILES=["./","index.html","pneus.html","chegadas.html","penalizacoes.html","frota.html","ocorrencias.html","contactos.html","resumos.html","mural.html","sjt-leitor.js","gestao.html","sjt-online.js","sjt-listas.js","carf-tema.js","carf-tema.css","manifest.webmanifest","carf-icon-192.png","carf-icon-512.png"];
+const CACHE="carf-v116";
+const FILES=["./","index.html","pneus.html","chegadas.html","bidiario.html","penalizacoes.html","frota.html","ocorrencias.html","contactos.html","resumos.html","mural.html","sjt-leitor.js","gestao.html","sjt-online.js","sjt-listas.js","carf-tema.js","carf-tema.css","manifest.webmanifest","carf-icon-192.png","carf-icon-512.png"];
 self.addEventListener("install",e=>{e.waitUntil(caches.open(CACHE).then(c=>c.addAll(FILES.map(f=>new Request(f,{cache:"reload"})))).then(()=>self.skipWaiting()));});
 self.addEventListener("activate",e=>{e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==CACHE&&k!=="carf-letras").map(k=>caches.delete(k)))).then(()=>self.clients.claim()));});
 self.addEventListener("fetch",e=>{

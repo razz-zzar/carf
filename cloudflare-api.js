@@ -26,7 +26,7 @@ const ORIGENS = [
   "http://localhost:8000",
   "http://127.0.0.1:8000",
 ];
-const APPS = new Set(["pneus", "chegadas", "penalizacoes", "frota", "ocorrencias", "contactos", "turno", "codigos", "resumos"]);
+const APPS = new Set(["pneus", "chegadas", "penalizacoes", "frota", "ocorrencias", "contactos", "turno", "codigos", "resumos", "bidiario"]);
 // Apps partilhadas por TODOS os armazéns (ex. códigos de pneus aprendidos): guardadas no polo "*"
 const GLOBAIS = new Set(["codigos"]);
 const poloDe = (app, s) => GLOBAIS.has(app) ? "*" : s.polo.id;
