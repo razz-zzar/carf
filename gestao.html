@@ -48,6 +48,14 @@ input:focus-visible,textarea:focus-visible,button:focus-visible{outline:2px soli
 .opcG button.confirm{border-color:var(--danger,#e0574f);color:var(--danger,#e0574f)}
 .campoL{display:flex;flex-direction:column;gap:8px}.rotL{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}.rotL small{text-transform:none;letter-spacing:0;font-weight:400}
 .btn.perigo{border-color:var(--danger,#e0574f);color:#fff;background:var(--danger,#e0574f)}
+.abrirS{display:flex;align-items:center;gap:10px;width:100%;background:none;border:0;padding:0;margin:0;color:inherit;text-align:left;cursor:pointer}
+.abrirS h2{flex:1;min-width:0}
+.contaS{font:600 13px var(--body);color:var(--muted);white-space:nowrap}
+.setaS{font:700 24px/1 var(--body);color:var(--green);transition:transform .15s}
+.abrirS[aria-expanded=true] .setaS{transform:rotate(90deg)}
+.corpoS{display:flex;flex-direction:column;gap:14px}
+#sOpc .msg:empty{display:none}
+@media (prefers-reduced-motion:reduce){.setaS{transition:none}}
 .dica.alerta{color:var(--danger,#e0574f);font-weight:600}
 .bidi{display:flex;flex-direction:column;gap:8px}
 .rota{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:0 12px}
@@ -113,11 +121,14 @@ input:focus-visible,textarea:focus-visible,button:focus-visible{outline:2px soli
   </section>
 
   <section class="card" id="sOpc" hidden>
-    <h2>Pneus: opções e códigos acrescentados</h2>
+    <button type="button" class="abrirS" id="abrirO" aria-expanded="false" aria-controls="corpoO"><h2>Pneus: opções e códigos acrescentados</h2><span class="contaS" id="contaO"></span><span class="setaS" aria-hidden="true">›</span></button>
+    <div class="corpoS" id="corpoO" hidden>
     <p class="dica">O que os supervisores acrescentaram em "Outra" (marcas, modelos, medidas, índices) e os códigos de pneus preenchidos à mão. É partilhado por todos os armazéns: apague o que estiver mal e desaparece em todos os telemóveis.</p>
     <div class="filtroO" id="filtroO" role="group" aria-label="Mostrar"></div>
     <input type="search" id="procuraO" placeholder="Procurar (texto, nome ou armazém)" autocomplete="off" aria-label="Procurar">
     <div class="lista" id="opcoes"></div>
+    <button class="btn sec" type="button" id="maisO" hidden></button>
+    </div>
     <div class="msg" id="msgO" role="status"></div>
   </section>
 
@@ -262,15 +273,21 @@ async function carregarOpcoes(){
   try{const j=await SJT.pedido("/gestao/opcoes",{admin:ADMIN});OPCOES=j.itens||[];$("sOpc").hidden=false;desenharOpcoes();}
   catch(e){$("sOpc").hidden=false;$("opcoes").textContent="";msg("msgO",e.estado===404||/não encontrad|desconhecid/i.test(e.message)?"Atualize a API (cloudflare-api.js, versão 7) para ver esta lista.":e.message,false);}
 }
+/* Lista fechada por omissão; aberta mostra 10 de cada vez */
+let limiteO=10;
+$("abrirO").onclick=()=>{const ab=$("corpoO").hidden;$("corpoO").hidden=!ab;$("abrirO").setAttribute("aria-expanded",ab);if(ab){limiteO=10;desenharOpcoes();}};
+$("maisO").onclick=()=>{limiteO+=20;desenharOpcoes();};
 function desenharOpcoes(){
+  $("contaO").textContent=OPCOES.length?OPCOES.length+(OPCOES.length===1?" registo":" registos"):"";
   const f=$("filtroO");f.textContent="";
-  GRUPOS_O.forEach(([id,nome])=>{const b=document.createElement("button");b.type="button";b.textContent=nome;b.setAttribute("aria-pressed",filtroO===id?"true":"false");b.onclick=()=>{filtroO=id;apagarO=null;desenharOpcoes();};f.appendChild(b);});
+  GRUPOS_O.forEach(([id,nome])=>{const b=document.createElement("button");b.type="button";b.textContent=nome;b.setAttribute("aria-pressed",filtroO===id?"true":"false");b.onclick=()=>{filtroO=id;apagarO=null;limiteO=10;desenharOpcoes();};f.appendChild(b);});
   const q=$("procuraO").value.trim().toLowerCase();
   const l=OPCOES.map(o=>({o,d:descO(o)})).filter(({o,d})=>(filtroO==="todos"||(filtroO==="indices"?["carga","vel","ref"].includes(d.tipo):d.tipo===filtroO))&&
     (!q||[d.txt,d.sub,o.autor,(o.dados||{}).polo].join(" ").toLowerCase().includes(q)));
-  const el=$("opcoes");el.textContent="";
+  const el=$("opcoes");el.textContent="";$("maisO").hidden=true;
   if(!l.length){const p=document.createElement("p");p.className="dica";p.textContent=OPCOES.length?"Nada corresponde ao filtro.":"Ainda ninguém acrescentou opções nem códigos.";el.appendChild(p);return;}
-  l.forEach(({o,d})=>{
+  if(l.length>limiteO){$("maisO").hidden=false;$("maisO").textContent="Mostrar mais ("+(l.length-limiteO)+" por ver)";}
+  l.slice(0,limiteO).forEach(({o,d})=>{
     const r=document.createElement("div");r.className="opcG";
     const i=document.createElement("div");const b=document.createElement("b");b.textContent=d.txt;
     const s1=document.createElement("small");s1.textContent=TIPO_O[d.tipo]+(d.sub?" · "+d.sub:"");
@@ -282,7 +299,7 @@ function desenharOpcoes(){
     r.append(i,x);el.appendChild(r);
   });
 }
-$("procuraO").addEventListener("input",()=>{apagarO=null;desenharOpcoes();});
+$("procuraO").addEventListener("input",()=>{apagarO=null;limiteO=10;desenharOpcoes();});
 async function apagarOpcao(o){
   if(apagarO!==o.id){apagarO=o.id;desenharOpcoes();setTimeout(()=>{if(apagarO===o.id){apagarO=null;desenharOpcoes();}},4000);return;}
   apagarO=null;
