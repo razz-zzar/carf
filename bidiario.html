@@ -191,7 +191,7 @@ body.preso{overflow:hidden}
     <button class="btn enviar" id="email" type="button">Enviar Excel por email</button>
     <button class="btn" id="excel" type="button">Exportar Excel do dia</button>
     <div class="msg" id="msgX" role="status"></div>
-    <div class="hint">O Excel tem duas folhas: as saídas das viaturas (hora de saída, chegada prevista, ocupação e fotografia) e as recolhas de cada rota (hora da última chamada, hora de chegada e motorista). No email, as fotografias da carga vão em anexo. Vai para o email dos horários definido na gestão.</div>
+    <div class="hint">O Excel tem duas folhas: Saídas (hora de saída, chegada prevista, ocupação e fotografia de cada viatura) e Chegadas (rota, nome da rota, motorista e hora de chegada). No email, as fotografias da carga vão em anexo. Vai para o email dos horários definido na gestão.</div>
   </section>
 </div>
 
@@ -612,7 +612,7 @@ function criarXlsx(folhas){
   const e=new TextEncoder(),extra=[];let nImg=0;
   /* fotografias dentro das células (uma drawing por folha) */
   folhas.forEach((f,i)=>{if(!f.imgs||!f.imgs.length)return;const n=i+1,EMU=9525;
-    const anc=f.imgs.map((im,k)=>`<xdr:oneCellAnchor><xdr:from><xdr:col>${im.col}</xdr:col><xdr:colOff>${im.ox*EMU}</xdr:colOff><xdr:row>${im.row}</xdr:row><xdr:rowOff>${im.oy*EMU}</xdr:rowOff></xdr:from><xdr:ext cx="${im.cx*EMU}" cy="${im.cy*EMU}"/><xdr:pic><xdr:nvPicPr><xdr:cNvPr id="${k+2}" name="Foto ${k+1}"/><xdr:cNvPicPr><a:picLocks noChangeAspect="1"/></xdr:cNvPicPr></xdr:nvPicPr><xdr:blipFill><a:blip r:embed="rId${k+1}"/><a:stretch><a:fillRect/></a:stretch></xdr:blipFill><xdr:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="${im.cx*EMU}" cy="${im.cy*EMU}"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></xdr:spPr></xdr:pic><xdr:clientData/></xdr:oneCellAnchor>`).join("");
+    const anc=f.imgs.map((im,k)=>`<xdr:twoCellAnchor editAs="oneCell"><xdr:from><xdr:col>${im.col}</xdr:col><xdr:colOff>${im.x1*EMU}</xdr:colOff><xdr:row>${im.row}</xdr:row><xdr:rowOff>${im.y1*EMU}</xdr:rowOff></xdr:from><xdr:to><xdr:col>${im.col}</xdr:col><xdr:colOff>${im.x2*EMU}</xdr:colOff><xdr:row>${im.row}</xdr:row><xdr:rowOff>${im.y2*EMU}</xdr:rowOff></xdr:to><xdr:pic><xdr:nvPicPr><xdr:cNvPr id="${k+2}" name="Foto ${k+1}"/><xdr:cNvPicPr><a:picLocks noChangeAspect="1"/></xdr:cNvPicPr></xdr:nvPicPr><xdr:blipFill><a:blip r:embed="rId${k+1}"/><a:stretch><a:fillRect/></a:stretch></xdr:blipFill><xdr:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="${(im.x2-im.x1)*EMU}" cy="${(im.y2-im.y1)*EMU}"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></xdr:spPr></xdr:pic><xdr:clientData/></xdr:twoCellAnchor>`).join("");
     extra.push(["xl/drawings/drawing"+n+".xml",e.encode(`${H}<xdr:wsDr xmlns:xdr="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="${R}">${anc}</xdr:wsDr>`)]);
     extra.push(["xl/drawings/_rels/drawing"+n+".xml.rels",e.encode(`${H}<Relationships xmlns="${P}">${f.imgs.map((im,k)=>`<Relationship Id="rId${k+1}" Type="${R}/image" Target="../media/image${nImg+k+1}.jpeg"/>`).join("")}</Relationships>`)]);
     f.imgs.forEach((im,k)=>extra.push(["xl/media/image"+(nImg+k+1)+".jpeg",im.bytes]));nImg+=f.imgs.length;
@@ -645,8 +645,12 @@ async function folhaSaidas(dia){
     const v=vi[i],x=D.sv[v.nome],r=5+i,ch=x?chegadaPrev(v,x):null,fid=x&&(x.fotos||[])[0];
     let temFoto=false;
     if(fid){try{const b=await FOTOS.blob(fid),bm=await createImageBitmap(b);
-      const W=LARG_G*7+5-8,Hh=ALT*96/72-8,k=Math.min(W/bm.width,Hh/bm.height),cx=Math.round(bm.width*k),cy=Math.round(bm.height*k);
-      imgs.push({bytes:new Uint8Array(await b.arrayBuffer()),col:6,row:r-1,cx,cy,ox:Math.round((W+8-cx)/2),oy:Math.round((Hh+8-cy)/2)});if(bm.close)bm.close();temFoto=true;}catch(e){}}
+      /* recorta a fotografia ao formato da célula (ao centro), para encaixar certa em qualquer Excel */
+      const cw=LARG_G*7+5,chh=Math.round(ALT*96/72),IN=4,tw=cw-2*IN,th=chh-2*IN,ESC=2;
+      const ar=tw/th,sw=Math.min(bm.width,bm.height*ar),sh=sw/ar,sx=(bm.width-sw)/2,sy=(bm.height-sh)/2;
+      const cv=document.createElement("canvas");cv.width=tw*ESC;cv.height=th*ESC;cv.getContext("2d").drawImage(bm,sx,sy,sw,sh,0,0,cv.width,cv.height);if(bm.close)bm.close();
+      const jb=await new Promise(ok=>cv.toBlob(ok,"image/jpeg",.82));
+      imgs.push({bytes:new Uint8Array(await jb.arrayBuffer()),col:6,row:r-1,x1:IN,y1:IN,x2:cw-IN,y2:chh-IN});temFoto=true;}catch(e){}}
     rows+=`<row r="${r}" ht="${temFoto?ALT:24}" customHeight="1">${cel("B"+r,v.nome,7)}${cel("C"+r,"CARF",8)}${cel("D"+r,x?hora(x.t):"",8)}${cel("E"+r,ch?hora(ch):"",8)}${cel("F"+r,x&&x.carga!=null?x.carga/100:"",x&&x.carga!=null?9:8)}${cel("G"+r,x&&!temFoto?((x.fotos||[]).length?"(fotografia não disponível neste telemóvel)":"sem fotografia"):"",8)}</row>`;
   }
   const W=[["A",3],["B",18],["C",17],["D",16],["E",18],["F",15],["G",LARG_G]];
@@ -654,16 +658,32 @@ async function folhaSaidas(dia){
   const NS='xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"';
   return {folha:"Saídas",cab:[],linhas:[],imgs,xml:`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet ${NS}><sheetViews><sheetView workbookViewId="0" showGridLines="0"/></sheetViews><sheetFormatPr defaultRowHeight="15"/><cols>${cols}</cols><sheetData>${rows}</sheetData><mergeCells count="2"><mergeCell ref="D2:G3"/><mergeCell ref="B3:C3"/></mergeCells><pageMargins left="0.5" right="0.5" top="0.6" bottom="0.6" header="0.3" footer="0.3"/><pageSetup paperSize="9" orientation="landscape"/>${imgs.length?'<drawing r:id="rId1"/>':""}</worksheet>`};
 }
+/* Folha das chegadas, no mesmo estilo: uma linha por rota com o nome da rota, o motorista e a hora de chegada */
+function folhaChegadas(dia){
+  const D=doDia(dia),[y,m,d]=dia.split("-");
+  const X=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+  const cel=(ref,v,st)=>v===""||v==null?`<c r="${ref}" s="${st}"/>`:typeof v==="number"?`<c r="${ref}" s="${st}"><v>${v}</v></c>`:`<c r="${ref}" s="${st}" t="inlineStr"><is><t xml:space="preserve">${X(v)}</t></is></c>`;
+  const C="BCDE";
+  let rows=`<row r="2" ht="22" customHeight="1">${cel("B2","DATA",7)}${cel("C2",d+"/"+m+"/"+y,8)}${cel("D2","",11)}${cel("E2","",11)}</row>`;
+  rows+=`<row r="3" ht="22" customHeight="1">${[..."BCDE"].map(c=>cel(c+"3","",11)).join("")}</row>`;
+  rows+=`<row r="4" ht="24" customHeight="1">`+["Rota","Nome da rota","Motorista","Hora de chegada"].map((t,i)=>cel(C[i]+"4",t,7)).join("")+`</row>`;
+  ROTAS.forEach((g,i)=>{const r=5+i,mo=D.mo[g.k],mot=motDe(mo&&mo.nome?mo.nome:(g.motorista||"")).nome;
+    rows+=`<row r="${r}" ht="22" customHeight="1">${cel("B"+r,/^\d+$/.test(g.rota)?+g.rota:g.rota,7)}${cel("C"+r,g.zona,8)}${cel("D"+r,mot,8)}${cel("E"+r,D.cg[g.k]?hora(D.cg[g.k].t):"",8)}</row>`;});
+  const cols=[[1,3],[2,14],[3,26],[4,28],[5,18]].map(([n,w])=>`<col min="${n}" max="${n}" width="${w}" customWidth="1"/>`).join("");
+  const NS='xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"';
+  return {folha:"Chegadas",cab:[],linhas:[],xml:`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet ${NS}><sheetViews><sheetView workbookViewId="0" showGridLines="0"/></sheetViews><sheetFormatPr defaultRowHeight="15"/><cols>${cols}</cols><sheetData>${rows}</sheetData><mergeCells count="2"><mergeCell ref="D2:E3"/><mergeCell ref="B3:C3"/></mergeCells><pageMargins left="0.5" right="0.5" top="0.6" bottom="0.6" header="0.3" footer="0.3"/><pageSetup paperSize="9" orientation="portrait"/></worksheet>`};
+}
 const CAB_R=["Rota","Zona","Cliente","Localidade","Hora da recolha","Hora da última chamada","Hora de chegada","Motorista"];
 async function gerarExcel(dia){
   const x=dadosDia(dia);if(!x.tem)return null;const [y,m,d]=dia.split("-");
-  return {bytes:criarXlsx([await folhaSaidas(dia),
-    {titulo:"RECOLHAS OBRIGATÓRIAS PARA ALGARVE E LEIRIA — "+d+"/"+m+"/"+y+" — "+S.polo.nome,folha:"Recolhas",cab:CAB_R,linhas:x.rec,larguras:[10,20,22,22,12,14,12,28]}]),nome:`bidiario-${y}-${m}-${d}.xlsx`};
+  return {bytes:criarXlsx([await folhaSaidas(dia),folhaChegadas(dia)]),nome:`bidiario-${y}-${m}-${d}.xlsx`};
 }
 function gerarCsv(dia){
   const x=dadosDia(dia);if(!x.tem)return null;const [y,m,d]=dia.split("-");
   const q=t=>/[";\n]/.test(t)?'"'+t.replace(/"/g,'""')+'"':t;
-  const l=[CAB_R,...x.rec,[],["Viatura","Hora de saída","Carga (%)","Fotografias"],...x.vi.map(r=>[r[0],r[1],r[2]===""?"":Math.round(r[2]*100),r[3]])];
+  const D=doDia(dia);
+  const l=[["Destinatário","Transportadora","Hora de saída","Horário chegada","Ocupação (%)"],...VIATURAS.filter(v=>!v.extra||D.sv[v.nome]).map(v=>{const s=D.sv[v.nome],c=s?chegadaPrev(v,s):null;return [v.nome,"CARF",s?hora(s.t):"",c?hora(c):"",s&&s.carga!=null?s.carga:""];}),[],
+    ["Rota","Nome da rota","Motorista","Hora de chegada"],...ROTAS.map(g=>{const mo=D.mo[g.k];return [g.rota,g.zona,motDe(mo&&mo.nome?mo.nome:(g.motorista||"")).nome,D.cg[g.k]?hora(D.cg[g.k].t):""];})];
   return {texto:"﻿"+l.map(r=>r.map(v=>q(String(v))).join(";")).join("\r\n")+"\r\n",nome:`bidiario-${y}-${m}-${d}.csv`};
 }
 function descarregarX(x){const url=URL.createObjectURL(new Blob([x.bytes],{type:MIME_XLSX}));const a=document.createElement("a");a.href=url;a.download=x.nome;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),15000);}
