@@ -284,7 +284,7 @@ function render(){
   const vazio=txt=>l.appendChild(el("div","grupo-vazio",txt));
   if(modo==="r"){
     $("t-lista").textContent="Recolhas obrigatórias";$("lOk").textContent="Chegaram";$("lFalta").textContent="Por chegar";
-    $("dica").textContent="Carregue em “Ligar” para telefonar ao motorista: a hora da chamada fica registada (sem telemóvel na lista, use “Liguei”). Quando a rota chegar ao armazém, carregue em “Chegou”. Toque numa hora para a corrigir. Os registos são partilhados com todo o armazém; sem internet ficam no telemóvel e são enviados quando a rede voltar.";
+    $("dica").textContent="Carregue em “Ligar” para telefonar ao motorista: a hora da chamada fica registada. Quando a rota chegar ao armazém, carregue em “Chegou”. Toque numa hora para a corrigir. Os registos são partilhados com todo o armazém; sem internet ficam no telemóvel e são enviados quando a rede voltar.";
     const ok=ROTAS.filter(r=>D.cg[r.k]).length;
     $("sOk").textContent=ok;$("sFalta").textContent=ROTAS.length-ok;$("barra").style.width=(ROTAS.length?ok/ROTAS.length*100:0)+"%";
     if(!ROTAS.length){vazio("Este armazém ainda não tem as rotas do bidiário. Peça ao administrador para as acrescentar na gestão (Bidiário — rotas e recolhas).");return;}
@@ -332,7 +332,6 @@ function cartaoRota(r,dia,eHoje,D){
       if(m.tel){const a=el("a","ligar");a.href="tel:"+m.tel;a.innerHTML='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.79 19.79 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.9.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/></svg>';
         a.append("Ligar");a.setAttribute("aria-label","Ligar a "+(m.nome||"motorista")+" — rota "+r.rota);
         if(eHoje)a.addEventListener("click",()=>chamou(r));lm.appendChild(a);}
-      else if(eHoje){const b=el("button","ligar","Liguei");b.type="button";b.setAttribute("aria-label","Registar chamada à rota "+r.rota);b.onclick=()=>chamou(r);lm.appendChild(b);}
     }
     if(eHoje){const b=el("button","lk fraco",m.nome||m.tel?"Mudar":"Indicar");b.type="button";b.setAttribute("aria-label","Mudar o motorista da rota "+r.rota);b.onclick=()=>abrir(r.k,"mo");lm.appendChild(b);}
     info.appendChild(lm);
